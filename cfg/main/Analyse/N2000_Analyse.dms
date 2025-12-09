@@ -1,0 +1,226 @@
+container N2000_Analyse :  using = "units;classifications/bag;geography;sourcedata"
+{
+	attribute<bool> IsNatura2000_2008           (rdc_100m) := Policies/Natura2000_2008;
+	attribute<bool> IsNatura2000_2024           (rdc_100m) := Policies/N2000_2024/n2000_processed/per_100m;
+	attribute<bool> IsNatura2000_SG_2024        (rdc_100m) := Policies/N2000_2024/StikstofGevoelig/per_100m;
+	attribute<bool> IsEHS_1990                  (rdc_100m) := Policies/EHS1990/per_100m;
+	attribute<bool> IsEHS_uitkleed_2011         (rdc_100m) := Policies/EHS_uitgekleed;
+	attribute<bool> IsNNN_2023                  (rdc_100m) := Policies/IsNNN;
+	attribute<bool> IsVR_HR_BN_2014             (rdc_100m) := Policies/IsVogelrichtlijn_Habitatrichtlijn_Natuurbeschermingswet_2014;
+	attribute<bool> IsVH_HR_2003                (rdc_100m) := Policies/VHR_2003;
+	attribute<bool> IsRelevantHabitats_2024     (rdc_100m) := Policies/AERIUS_relevante_habitatkartering/per_100m;
+	
+	attribute<bool> AnyHistorischNatuurBeleid   (rdc_100m) := OR(IsNatura2000_2008, IsNatura2000_2024, IsEHS_1990, IsEHS_uitkleed_2011, IsNNN_2023, IsVR_HR_BN_2014, IsVH_HR_2003, IsRelevantHabitats_2024);
+	
+	unit<uint32> RelevantHabitats := Policies/AERIUS_relevante_habitatkartering;
+	unit<uint32> BAG_Tabel := /Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel;
+	
+	unit<uint32> uq_vbo := Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/uq_vbo
+	{
+		attribute<rdc>                  geometry                        := last(BAG_Tabel/geometry, Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/uq_vbo_rel);
+		attribute<vbo_gebruiksdoel_ext> gebruiksdoel_rel                := last(BAG_Tabel/gebruiksdoel_rel, Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/uq_vbo_rel);
+		attribute<vbo_status>           vbo_status_rel                  := last(BAG_Tabel/vbo_status_rel, Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/uq_vbo_rel);
+		attribute<jaar>                 pand_bouwjaar                   := last(BAG_Tabel/pand_bouwjaar, Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/uq_vbo_rel);
+		
+		attribute<rdc_100m>             vbo_grid_rel                    := geometry[rdc_100m];
+		attribute<bool>                 LigtInAnyHistorischNatuurBeleid := AnyHistorischNatuurBeleid[vbo_grid_rel];
+		attribute<Pand_BouwvergunningVerleend> Pand_BouwvergunningVerleend_rel := rlookup(pand_bag_nr, Pand_BouwvergunningVerleend/pand_bag_nr);
+	}
+	
+	unit<uint32> ObjectenInNatuur := select_with_org_rel(uq_vbo/LigtInAnyHistorischNatuurBeleid)
+	, Descr = "Export deze unit voor analyses voor Huub. Op object niveau."
+	{
+		attribute<rdc>                  geometry                      := uq_vbo/geometry[org_rel];
+		attribute<vbo_gebruiksdoel_ext> gebruiksdoel_rel              := uq_vbo/gebruiksdoel_rel[org_rel];
+		attribute<vbo_status>           vbo_status_rel                := uq_vbo/vbo_status_rel[org_rel];
+		attribute<jaar>                 pand_bouwjaar                 := uq_vbo/pand_bouwjaar[org_rel];
+		
+		attribute<bool>                 VBO_IsWonen                   := gebruiksdoel_rel == vbo_gebruiksdoel_ext/v/woon;
+		attribute<bool>                 VBO_IsVoorraad                := vbo_status/isVoorraad[vbo_status_rel];
+
+		attribute<rdc_100m>             vbo_grid_rel                  := geometry[rdc_100m];
+
+		attribute<bool>                 IsNatura2000_2008             := ../IsNatura2000_2008[vbo_grid_rel], Descr = "Natura 2000-gebieden zoals Nederland die rond 2008 bij de Europese Commissie had aangemeld; geeft een historische momentopname vóór de golf aanwijzingsbesluiten van 2009–2010.";
+		attribute<bool>                 IsNatura2000_2024             := ../IsNatura2000_2024[vbo_grid_rel], Descr = "Natura 2000-gebieden in 2024.";
+		attribute<bool>                 IsNatura2000_SG_2024          := ../IsNatura2000_SG_2024[vbo_grid_rel], Descr = "Natura 2000-gebieden in de stand van ca. 2024, waarbij is aangegeven welke habitats stikstofgevoelig zijn; relevant omdat alleen díe onderdelen juridisch een depositietoets vereisen.";
+		attribute<bool>                 IsEHS_1990                    := ../IsEHS_1990[vbo_grid_rel], Descr = "De oorspronkelijke Ecologische Hoofdstructuur uit de Nota Natuurbeleid (1989/1990), bedoeld als planologische reservering van toekomstige natuurverbindingen en kerngebieden.";
+		attribute<bool>                 IsEHS_uitkleed_2011           := ../IsEHS_uitkleed_2011[vbo_grid_rel], Descr = "De herijkte, ingekrompen versie van de EHS zoals vastgesteld rond 2010–2011, na de bezuinigingen onder Bleker waarbij vooral robuuste verbindingen zijn geschrapt.";
+		attribute<bool>                 IsNNN_2023                    := ../IsNNN_2023[vbo_grid_rel], Descr = "Het Natuurnetwerk Nederland zoals provincies dat in 2023 hebben vastgelegd; dit is de actuele opvolger van de EHS, maar kan sinds 2023 nog marginaal zijn aangepast (bv. door provinciale bijstellingen of kavelruil).";
+		attribute<bool>                 IsVR_HR_BN_2014               := ../IsVR_HR_BN_2014[vbo_grid_rel], Descr = "Samengevoegde laag met zowel Vogelrichtlijn- als Habitatrichtlijngebieden, en de nationale Natuurbeschermingswet contouren zijn juridisch bindend en kunnen ruimer zijn; deze gecombineerde laag bevat dus het volledige Natura 2000-netwerk zoals in Nederland in 2014 van kracht.";
+		attribute<bool>                 IsVR_HR_2003                  := ../IsVR_HR_BN_2014[vbo_grid_rel], Descr = "Samengevoegde laag met zowel Vogelrichtlijn- als Habitatrichtlijngebieden in 2003.";
+		attribute<bool>                 IsRelevantHabitats_2024       := ../IsRelevantHabitats_2024[vbo_grid_rel], Descr = "";
+	}
+
+	unit<uint32> Nieuwbouw       := Analyse/Redev_obv_hele_bag/PrepDomains/N/domain
+	, Descr = "Export deze unit voor analyses voor Huub. Op object niveau."
+	{
+		attribute<uint64>          pand_bag_nr           := Analyse/Redev_obv_hele_bag/PrepDomains/N/domain/pand_bag_nr;
+		attribute<uint64>          vbo_bag_nr            := Analyse/Redev_obv_hele_bag/PrepDomains/N/domain/vbo_bag_nr;
+		attribute<uint32>          x                     := uint32(Get_X(vbo_geometry));
+		attribute<uint32>          y                     := uint32(Get_Y(vbo_geometry));
+		attribute<int32>           MutatieMaand          := Analyse/Redev_obv_hele_bag/PrepDomains/N/domain/MutatieMaand;
+		attribute<int32>           vbo_oppervlakte       := Analyse/Redev_obv_hele_bag/PrepDomains/N/domain/vbo_oppervlakte;
+		attribute<string>          pand_status           := classifications/bag/pand_status/name[Analyse/Redev_obv_hele_bag/PrepDomains/N/domain/pand_status_rel];
+		attribute<jaar>            pand_bouwjaar         := Analyse/Redev_obv_hele_bag/PrepDomains/N/domain/pand_bouwjaar;
+		attribute<int32>           last_pand_bouwvergunningberleend_datum := Analyse/Redev_obv_hele_bag/PrepDomains/N/domain/LastDatum_BouwvergunningVerleend;
+		
+		attribute<uint32>          dist2N2000_m          := uint32(dist_info(RelevantHabitats/geometry, vbo_geometry));
+		attribute<uint32>          Cluster_rel           := Cluster_obv_VergunningDatum/subset/connected_parts/part_rel;
+		
+		attribute<uint32>          GM_CODE               := SourceData/RegioIndelingen/Impl/CBS/Y2024/Gemeente/gem_nr[point_in_polygon(vbo_geometry, /SourceData/RegioIndelingen/Impl/CBS/Y2024/Gemeente/geometry)];
+		attribute<string>          PRV_CODE              := SourceData/RegioIndelingen/Impl/CBS/Y2024/Provincie/PRV_CODE[point_in_polygon(vbo_geometry, /SourceData/RegioIndelingen/Impl/CBS/Y2024/Provincie/geometry)];
+		attribute<string>          PRV_NAAM              := SourceData/RegioIndelingen/Impl/CBS/Y2024/Provincie/name[point_in_polygon(vbo_geometry, /SourceData/RegioIndelingen/Impl/CBS/Y2024/Provincie/geometry)];
+		
+		
+		unit<uint32> Cluster_obv_VergunningDatum := join_near_values(vbo_geometry, vbo_geometry,  100d)
+		{
+			attribute<int32> First_DatumVergunning  := ../last_pand_bouwvergunningberleend_datum[first_rel] / 100i;
+			attribute<int32> Second_DatumVergunning := ../last_pand_bouwvergunningberleend_datum[second_rel] / 100i;
+			
+			attribute<bool> HasSimilarDate         := First_DatumVergunning >= Second_DatumVergunning - 6i &&  First_DatumVergunning <= Second_DatumVergunning + 6i;
+			attribute<bool> NonDoublures           := first_rel < second_rel;
+			
+			unit<uint32> subset := select_with_org_rel(HasSimilarDate && NonDoublures)
+			{
+				attribute<...> F1 := org_rel -> first_rel;
+				attribute<...> F2 := org_rel -> second_rel;
+				unit<uint32>   connected_parts := connected_parts(F1, F2);
+			}
+		}
+	}
+
+	
+	unit<uint32> Object_BouwvergunningVerleend := select_with_org_rel(IsDefined(uq_vbo/Pand_BouwvergunningVerleend_rel))
+	, Descr = "Export deze unit voor analyses voor Huub. Op object niveau."
+	{
+		attribute<rdc>         geometry                                := uq_vbo/geometry[org_rel];
+		attribute<uint64>      vbo_bag_nr                              := uq_vbo/values[org_rel];
+		attribute<uint64>      pand_bag_nr                             := uq_vbo/pand_bag_nr[org_rel];
+		attribute<uint32>      x                                       := uint32(Get_X(geometry));
+		attribute<uint32>      y                                       := uint32(Get_Y(geometry));
+		attribute<int32>       last_pand_bouwvergunningberleend_datum  := Pand_BouwvergunningVerleend/last_pand_bouwvergunningberleend_datum[Pand_BouwvergunningVerleend_rel];
+		attribute<string>      last_pand_status                        := Pand_BouwvergunningVerleend/last_pand_status[Pand_BouwvergunningVerleend_rel];
+		attribute<string>      last_pand_gebruiksdoel                  := Pand_BouwvergunningVerleend/last_gebruiksdoel[Pand_BouwvergunningVerleend_rel];
+		attribute<string>      last_vbo_gebruiksdoel                   := vbo_gebruiksdoel_ext/name[uq_vbo/gebruiksdoel_rel[org_rel]];
+		attribute<string>      last_vbo_status                         := vbo_status/name[uq_vbo/vbo_status_rel[org_rel]];
+		attribute<jaar>        pand_bouwjaar                           := Pand_BouwvergunningVerleend/pand_bouwjaar[Pand_BouwvergunningVerleend_rel];
+		attribute<uint32>      last_pand_aantal_woon_obj               := Pand_BouwvergunningVerleend/last_aantal_woon_obj[Pand_BouwvergunningVerleend_rel];
+		attribute<uint32>      last_pand_aantal_woon_obj_voorraad      := Pand_BouwvergunningVerleend/last_aantal_woon_obj_voorraad[Pand_BouwvergunningVerleend_rel];
+		
+		attribute<uint32>      dist2N2000_m                            := uint32(dist_info(RelevantHabitats/geometry, geometry));
+		attribute<uint32>      cluster_rel                             := Cluster_obv_VergunningDatum/subset/connected_parts/part_rel;
+		
+		attribute<uint32>      GM_CODE                                 := SourceData/RegioIndelingen/Impl/CBS/Y2024/Gemeente/gem_nr[point_in_polygon(geometry, /SourceData/RegioIndelingen/Impl/CBS/Y2024/Gemeente/geometry)];
+		attribute<string>      PRV_CODE                                := SourceData/RegioIndelingen/Impl/CBS/Y2024/Provincie/PRV_CODE[point_in_polygon(geometry, /SourceData/RegioIndelingen/Impl/CBS/Y2024/Provincie/geometry)];
+		attribute<string>      PRV_NAAM                                := SourceData/RegioIndelingen/Impl/CBS/Y2024/Provincie/name[point_in_polygon(geometry, /SourceData/RegioIndelingen/Impl/CBS/Y2024/Provincie/geometry)];
+		
+		
+		attribute<Pand_BouwvergunningVerleend> Pand_BouwvergunningVerleend_rel := rlookup(pand_bag_nr, Pand_BouwvergunningVerleend/pand_bag_nr);
+		
+		unit<uint32> Cluster_obv_VergunningDatum := join_near_values(geometry, geometry,  100d)
+		{
+			attribute<int32> First_DatumVergunning  := ../last_pand_bouwvergunningberleend_datum[first_rel] / 100i;
+			attribute<int32> Second_DatumVergunning := ../last_pand_bouwvergunningberleend_datum[second_rel] / 100i;
+			
+			attribute<bool> HasSimilarDate         := First_DatumVergunning >= Second_DatumVergunning - 6i &&  First_DatumVergunning <= Second_DatumVergunning + 6i;
+			attribute<bool> NonDoublures           := first_rel < second_rel;
+			
+			unit<uint32> subset := select_with_org_rel(HasSimilarDate && NonDoublures)
+			{
+				attribute<...> F1 := org_rel -> first_rel;
+				attribute<...> F2 := org_rel -> second_rel;
+				unit<uint32>   connected_parts := connected_parts(F1, F2);
+			}
+		}
+	}
+	
+	unit<uint32> IsochronenMap_Gemeente := SourceData/RegioIndelingen/Impl/CBS/Y2024/Gemeente
+	{
+		attribute<uint32>          GM_CODE                           := gem_nr;
+		attribute<string>          GM_NAAM                           := name;
+		attribute<.>               per_10m_grid (NL_grid/domain_10m) := poly2grid(geometry, NL_grid/domain_10m);
+		attribute<km2>             area                              := area(geometry, m2)[km2];
+		
+		//opp van afstandsband tot n2000 gebied
+		attribute<km2>             opp_0m                := sum_uint32(impl/Dist2N2000 == 0[m]                                , per_10m_grid)[float64] * NL_grid/domain_10m/NrKm2PerCell;
+		attribute<km2>             opp_0_50m             := sum_uint32(impl/Dist2N2000 > 0[m]    && impl/Dist2N2000 <= 50[m]  , per_10m_grid)[float64] * NL_grid/domain_10m/NrKm2PerCell;
+		attribute<km2>             opp_50_100m           := sum_uint32(impl/Dist2N2000 > 50[m]   && impl/Dist2N2000 <= 100[m] , per_10m_grid)[float64] * NL_grid/domain_10m/NrKm2PerCell;
+		attribute<km2>             opp_100_500m          := sum_uint32(impl/Dist2N2000 > 100[m]  && impl/Dist2N2000 <= 500[m] , per_10m_grid)[float64] * NL_grid/domain_10m/NrKm2PerCell;
+		attribute<km2>             opp_500_1000m         := sum_uint32(impl/Dist2N2000 > 500[m]  && impl/Dist2N2000 <= 1000[m], per_10m_grid)[float64] * NL_grid/domain_10m/NrKm2PerCell;
+		attribute<km2>             opp_1000_2500m        := sum_uint32(impl/Dist2N2000 > 1000[m] && impl/Dist2N2000 <= 2500[m], per_10m_grid)[float64] * NL_grid/domain_10m/NrKm2PerCell;
+		attribute<km2>             opp_2500_5000m        := sum_uint32(impl/Dist2N2000 > 2500[m] && impl/Dist2N2000 <= 5000[m], per_10m_grid)[float64] * NL_grid/domain_10m/NrKm2PerCell;
+		attribute<km2>             opp_5000m_grt         := sum_uint32(impl/Dist2N2000 > 5000[m], per_10m_grid)[float64]                               * NL_grid/domain_10m/NrKm2PerCell;
+		
+		unit<uint32> impl := RelevantHabitats/seq2point
+		{
+			attribute<rdc>                geometry                             := RelevantHabitats/seq2point/point;
+			attribute<NL_grid/domain_10m> grid_rel                             := geometry[NL_grid/domain_10m];
+			attribute<bool>               IsN2000         (NL_grid/domain_10m) := IsDefined(poly2grid(Policies/N2000_2024/StikstofGevoelig/geometry, NL_grid/domain_10m));
+			attribute<m>                  DistTo          (NL_grid/domain_10m) := GridDist(resistance_grid, grid_rel, const(0, ., m));
+			attribute<m>                  resistance_grid (NL_grid/domain_10m) := const(10, NL_grid/domain_10m, m);
+			
+			attribute<m>                  Dist2N2000      (NL_grid/domain_10m) := IsN2000 ? 0[m] : DistTo;
+		}
+	}
+	
+	unit<uint32> Uq_Pand_Nr := Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/uq_pand_nr
+	, Descr = "Nodig voor bouwvergunning analyse"
+	{
+		attribute<rdc>         geometry                      (poly) := last(Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/pand_geometry, Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/uq_pand_nr_rel);
+		attribute<int32>       Last_Datum_BouwvergunningVerleend    := last(Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/Datum_BouwvergunningVerleend, Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/uq_pand_nr_rel);
+		attribute<pand_status> Last_pand_status_rel                 := last(Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/pand_status_rel, Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/uq_pand_nr_rel);
+		attribute<jaar>        Last_pand_bouwjaar                   := last(Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/pand_bouwjaar, Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/uq_pand_nr_rel);
+		attribute<vbo_gebruiksdoel_ext> Last_pand_gebruiksdoel_rel  := last(Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/pand_modus_gebruiksdoel_rel, Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/uq_pand_nr_rel);
+		attribute<uint32>      Last_pand_count_woonobj              := last(Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/pand_count_WoonFuncties, Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/uq_pand_nr_rel);
+		attribute<uint32>      Last_pand_count_woonobj_voorraad     := last(Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/pand_count_WoonFuncties_voorraad, Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/uq_pand_nr_rel);
+		attribute<uint32>      Max_pand_count_woonobj               := max(Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/pand_count_WoonFuncties, Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/uq_pand_nr_rel);
+		
+		attribute<bool>        IsNieuwbouw      := IsDefined(rlookup(values, Nieuwbouw/pand_bag_nr));
+		attribute<bool>        IsOoitBVverleend := IsDefined(Last_Datum_BouwvergunningVerleend);
+		attribute<bool>        IsWoon           := Last_pand_gebruiksdoel_rel == vbo_gebruiksdoel_ext/v/woon;
+		
+		attribute<bool>        IsNB_and_Woon    := IsWoon && IsNieuwbouw;
+		attribute<bool>        IsNB_and_BV      := IsWoon && IsNieuwbouw && IsOoitBVverleend;
+		attribute<bool>        IsNB_and_niet_BV := IsWoon && IsNieuwbouw && NOT(IsOoitBVverleend);
+		
+		unit<uint32> NB_and_niet_BV := select_with_attr_by_cond(., IsNB_and_niet_BV)
+		{
+			attribute<uint32>      dist2N2000_m := uint32(dist_info(RelevantHabitats/geometry, centroid_or_mid(geometry)));
+			
+			parameter<uint32> cnt_0_250     := sum_uint32(dist2N2000_m < 250);
+			parameter<uint32> cnt_250_500   := sum_uint32(dist2N2000_m >= 250  && dist2N2000_m < 500);
+			parameter<uint32> cnt_500_1000  := sum_uint32(dist2N2000_m >= 500  && dist2N2000_m < 1000);
+			parameter<uint32> cnt_1000_2500 := sum_uint32(dist2N2000_m >= 1000 && dist2N2000_m < 2500);
+			parameter<uint32> cnt_2500_5000 := sum_uint32(dist2N2000_m >= 2500 && dist2N2000_m < 5000);
+			parameter<uint32> cnt_5000_     := sum_uint32(dist2N2000_m >= 5000);
+		}
+	}
+	
+	unit<uint32> Pand_BouwvergunningVerleend := select_with_org_rel(IsDefined(Uq_Pand_Nr/Last_Datum_BouwvergunningVerleend) && Uq_Pand_Nr/Last_pand_gebruiksdoel_rel == vbo_gebruiksdoel_ext/v/woon)
+	{
+		attribute<uint64>      pand_bag_nr                             := uq_pand_nr/values[org_rel];
+		// attribute<uint32>      x                                       := uint32(Get_X(centroid));
+		// attribute<uint32>      y                                       := uint32(Get_Y(centroid));
+		attribute<int32>       last_pand_bouwvergunningberleend_datum  := Uq_Pand_Nr/Last_Datum_BouwvergunningVerleend[org_rel];
+		attribute<string>      last_pand_status                        := pand_status/name[Uq_Pand_Nr/Last_pand_status_rel[org_rel]];
+		attribute<string>      last_gebruiksdoel                       := vbo_gebruiksdoel_ext/name[Uq_Pand_Nr/Last_pand_gebruiksdoel_rel[org_rel]];
+		attribute<jaar>        pand_bouwjaar                           := Uq_Pand_Nr/Last_pand_bouwjaar[org_rel];
+		attribute<uint32>      last_aantal_woon_obj                    := Uq_Pand_Nr/Last_pand_count_woonobj[org_rel];
+		attribute<uint32>      last_aantal_woon_obj_voorraad           := Uq_Pand_Nr/Last_pand_count_woonobj_voorraad[org_rel];
+		
+		// attribute<uint32>      dist2N2000_m                            := uint32(dist_info(RelevantHabitats/geometry, centroid));
+		// attribute<uint32>      cluster_rel                             := Cluster_obv_VergunningDatum/subset/connected_parts/part_rel;
+		
+		// attribute<uint32>      GM_CODE                                 := SourceData/RegioIndelingen/Impl/CBS/Y2024/Gemeente/gem_nr[point_in_polygon(centroid, /SourceData/RegioIndelingen/Impl/CBS/Y2024/Gemeente/geometry)];
+		// attribute<string>      PRV_CODE                                := SourceData/RegioIndelingen/Impl/CBS/Y2024/Provincie/PRV_CODE[point_in_polygon(centroid, /SourceData/RegioIndelingen/Impl/CBS/Y2024/Provincie/geometry)];
+		// attribute<string>      PRV_NAAM                                := SourceData/RegioIndelingen/Impl/CBS/Y2024/Provincie/name[point_in_polygon(centroid, /SourceData/RegioIndelingen/Impl/CBS/Y2024/Provincie/geometry)];
+
+		// attribute<rdc>         geometry                         (poly) := Uq_Pand_Nr/geometry[org_rel];
+		// attribute<rdc>         centroid                                := centroid_or_mid(geometry);
+		
+	}
+	
+	
+}
+
+

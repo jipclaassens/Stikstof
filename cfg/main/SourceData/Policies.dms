@@ -20,6 +20,18 @@ container Policies
 		}
 	}
 	
+	unit<uint32> AERIUS_relevante_habitatkartering 
+	:	StorageName     = "%Redev_DataDir%/Beleid/Overigen/AERIUS relevante habitatkartering.shp"
+	,	StorageType     = "gdal.vect"
+	,	StorageReadOnly = "True"
+	, 	URL             = "https://www.nationaalgeoregister.nl/geonetwork/srv/dut/catalog.search#/metadata/4e214ddf-4384-42a3-89d9-4074541b640d"
+	, 	Descr           = "stikstofgevoelige habitattypen binnen een Natura2000-bied die ook daadwerkelijk relevant zijn bevonden voor AERIUS 2025, uitgaande van de beleidsmatig vastgestelde voorwaarden voor relevantie."
+	{
+		attribute<rdc> 	geometry (poly);
+		attribute<bool> per_100m (rdc_100m) := IsDefined(poly2grid(geometry, rdc_100m));
+		
+		unit<uint32>    seq2point           := sequence2points(geometry);
+	}
 
 	attribute<uint8> Natura2000_2008_src (rdc_100m)
 	:	StorageName     = "%Alt_DataDir%/Overig/Beleid/natura2000_0908.tif"

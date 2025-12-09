@@ -170,7 +170,11 @@ container PrepBAG : using = "AdditionalClassifications"
 																								, Descr = "afname: overgang wonen -> logies; periode 201201-201406";
 		
 		// Extra stappen om Nieuwbouw (N+) te identificeren, ipv T+ of C+
-		unit<uint32> uq_vbo := unique(vbo_bag_nr); attribute<uq_vbo>        uq_vbo_rel := rlookup(vbo_bag_nr, uq_vbo/values);
+		unit<uint32> uq_vbo := unique(vbo_bag_nr)
+		{
+			attribute<uint64>           pand_bag_nr                   := modus(../pand_bag_nr, uq_vbo_rel);
+		}
+		attribute<uq_vbo>               uq_vbo_rel                    := rlookup(vbo_bag_nr, uq_vbo/values);
 		attribute<int32>                vbo_vormingsfase_begindatum   := min(vbo_status_rel == vbo_status/v/verblijfsobject_gevormd ? begindatum : null_i, uq_vbo_rel)[uq_vbo_rel] > max(vbo_status_rel == vbo_status/v/verblijfsobject_gevormd ? einddatum : null_i, uq_vbo_rel)[uq_vbo_rel] ? null_i : min(vbo_status_rel == vbo_status/v/verblijfsobject_gevormd ? begindatum : null_i, uq_vbo_rel)[uq_vbo_rel];
 		attribute<int32>                vbo_vormingsfase_einddatum    := min(vbo_status_rel == vbo_status/v/verblijfsobject_gevormd ? begindatum : null_i, uq_vbo_rel)[uq_vbo_rel] > max(vbo_status_rel == vbo_status/v/verblijfsobject_gevormd ? einddatum : null_i, uq_vbo_rel)[uq_vbo_rel] ? null_i : max(vbo_status_rel == vbo_status/v/verblijfsobject_gevormd ? einddatum : null_i, uq_vbo_rel)[uq_vbo_rel];
 		attribute<bool>                 Pand_InBouwfase               := pand_status_rel == pand_status/v/bouwvergunning_verleend || pand_status_rel == pand_status/v/bouw_gestart;
@@ -1167,8 +1171,8 @@ container PrepBAG : using = "AdditionalClassifications"
 																		 , null_b
 																	);
 		
-		attribute<Read_PerObject_Export>    Read_PerObject_Export_rel := rlookup(vbo_bag_nr, Read_PerObject_Export/vbo_bag_nr);
-		attribute<bool>                     IsNotCategorised          := IsNull(Read_PerObject_Export_rel) ;
+		// attribute<Read_PerObject_Export>    Read_PerObject_Export_rel := rlookup(vbo_bag_nr, Read_PerObject_Export/vbo_bag_nr);
+		// attribute<bool>                     IsNotCategorised          := IsNull(Read_PerObject_Export_rel) ;
 	}
 	
 	unit<uint32> FinalMutationTable := = Parameters/Use_Ontkoppelde_FinalMutations ? 'Read_FinalMutationTable' : 'Write_FinalMutationTable';
