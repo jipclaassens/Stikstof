@@ -1,0 +1,183 @@
+container geography : using = "units"
+{
+	unit<dpoint> rdc_base         : SpatialReference = "EPSG:28992", 	DialogData = "ngr_layer"; // wms achtergrondlaag voor kaarten met rd coordinaten
+	unit<dpoint> rdc              := range(rdc_base, point_xy(x_min,y_min), point_xy(x_max,y_max));
+	unit<ipoint> rdc_mm           := gridset(rdc, point_xy(0.001,0.001), point_xy(0.0, 0.0), ipoint);
+	unit<ipoint> rdc_cm           := gridset(rdc, point_xy(0.01,0.01), point_xy(0.0, 0.0), ipoint);
+	unit<dpoint> wgs84_base       : SpatialReference = "EPSG:4326";
+	unit<fpoint> LambertEA_base   : SpatialReference = "EPSG:3035", DialogData = "ngr_layer_lea";
+	unit<fpoint> LambertEA        := range(LambertEA_base, point_xy(2500000f, 1300000f), point_xy(4900000f, 4300000f));
+	unit<fpoint> WebMercator_base : SpatialReference = "EPSG:3857";
+	
+	//BOUNDING BOX OF THE NETHERLANDS
+	parameter<m> x_min := 0[m];
+	parameter<m> x_max := 280000[m];
+	parameter<m> y_min := 300000[m];
+	parameter<m> y_max := 625000[m];
+	
+	unit<ipoint> rdc_100m := NL_grid/domain_100m;
+	unit<ipoint> rdc_25m  := NL_grid/domain_25m;
+	
+	
+	unit<uint32> BoundingBox_NL : nrofrows = 1
+	{
+		parameter<rdc> top_left     := point_xy(x_min, y_max, rdc); //XY
+		parameter<rdc> top_right    := point_xy(x_max, y_max, rdc);
+		parameter<rdc> bottom_left  := point_xy(x_min, y_min, rdc);
+		parameter<rdc> bottom_right := point_xy(x_max, y_min, rdc);
+		
+		unit<uint32> point_set : nrofrows = 5
+		{
+			attribute<rdc>  point        := union_data(., top_left, top_right, bottom_right, bottom_left, top_left);
+			attribute<..>   sequence_rel := const(0, .);
+			attribute<.>    ordinal      := id(.);
+		}
+		
+		attribute<rdc> geometry (poly)      := points2sequence(point_set/point, point_set/sequence_rel, point_set/ordinal);
+		parameter<rdc> geometry_param (poly) := geometry[0[.]];
+	}
+	
+	unit<uint32> selection_polygon : nrofrows = 1
+	{
+		parameter<rdc> top_left     := point_xy(114000[m], 490000[m], rdc); //XY
+		parameter<rdc> top_right    := point_xy(127000[m], 490000[m], rdc);
+		parameter<rdc> bottom_left  := point_xy(114000[m], 480000[m], rdc);
+		parameter<rdc> bottom_right := point_xy(127000[m], 480000[m], rdc);
+		
+		unit<uint32> point_set : nrofrows = 5
+		{
+			attribute<rdc>  point        := union_data(., top_left, top_right, bottom_right, bottom_left, top_left);
+			attribute<..>   sequence_rel := const(0, .);
+			attribute<.>    ordinal      := id(.);
+		}
+		
+		attribute<rdc> geometry (poly)      := points2sequence(point_set/point, point_set/sequence_rel, point_set/ordinal);
+	}
+	
+	#include <ngr_layer.dms>
+	
+	container potentialen
+	{
+		unit<uint32> Dist2Range;
+		
+		container pot100m   := potrange_T(10[m] , 100[m]);
+		container pot200m   := potrange_T(100[m], 200[m]);
+		container pot500m   := potrange_T(100[m], 500[m]);
+		container pot600m   := potrange_T(100[m], 600[m]);
+		container pot1000m  := potrange_T(100[m],1000[m]);
+		container pot2000m  := potrange_T(100[m],2000[m]);
+		container pot5000m  := potrange_T(100[m],5000[m]);
+		container pot10000m  := potrange_T(100[m],10000[m]);
+		container pot50000m  := potrange_T(100[m],50000[m]);
+		container pot100000m  := potrange_T(100[m],100000[m]);
+		container pot5000m_25m  := potrange_T(25[m],5000[m]);
+
+		Template potrange_T
+		{
+			parameter<m>       gridgrootte;
+			parameter<m>       afkapstraal;
+			parameter<float32> straal                 := float32(afkapstraal / gridgrootte);
+			unit<spoint>       potRange               := range(spoint, point_xy(-straal[int16], -straal[int16]), point_xy(straal[int16] + 1s, straal[int16] + 1s))
+			{
+				attribute<Dist2Range> distMatr        := dist2(point_xy(0s, 0s, potRange), Dist2Range);
+				attribute<float32> AbsWeight          := distMatr[float32] <= (straal * straal) ? 1f / (distMatr[float32] ^ 2f) : 0f;
+				attribute<float32> AbsWeight_w_center := distMatr[float32] == 0f ? 1f : distMatr[float32] <= (straal * straal) ? 1f / (distMatr[float32] ^ 2f) : 0f;
+				attribute<float32> AbsWeight_wo_center := distMatr[float32] == 0f ? 0f : distMatr[float32] <= (straal * straal) ? 1f / (distMatr[float32] ^ 2f) : 0f;
+				attribute<float32> RelWeightSqrt      := AbsWeight / Sum(AbsWeight);
+				attribute<float32> binair             := distMatr <= 100 ? 1f : 0f;
+				attribute<float32> const              := rev_dist > 0f ? 1f : 0f;
+				attribute<float32> dist               := sqrt(float32(distMatr));
+				attribute<float32> rev_dist           := max_elem(straal - dist, 0f);
+				parameter<float32> rev_dist_max       := max(rev_dist);
+				attribute<float32> rev_dist_scaled    := rev_dist / rev_dist_max;
+			}
+		}
+	}
+	
+	unit<uint32> TileDomain       := NL_grid/perGridsize/size_1000m/points
+	{
+		attribute<rdc>         geometry                 := NL_grid/perGridsize/size_1000m/points/geometry;
+		attribute<rdc>         geometry_poly     (poly) := points2sequence(makepoly/Point, makepoly/SeqNr, makepoly/Ordinal);
+		
+		unit<uint32> makepoly:= union_unit(., ., ., ., .) 
+		{
+			attribute<rdc>                point   := union_data(., 
+														geometry + const(point_xy(-500d,  500d, rdc), .., rdc), 
+														geometry + const(point_xy( 500d,  500d, rdc), .., rdc), 
+														geometry + const(point_xy( 500d, -500d, rdc), .., rdc), 
+														geometry + const(point_xy(-500d, -500d, rdc), .., rdc),
+														geometry + const(point_xy(-500d,  500d, rdc), .., rdc));
+			attribute<..>                 SeqNr   := union_data(., id(..), id(..), id(..), id(..), id(..));
+			attribute<uint32>             Ordinal := id(.) / #..;
+		}
+	}
+	container NL_grid: Using = "units"
+	{
+		unit<uint32> Gridsizes : nrofrows = 6
+		{
+			attribute<m>      size : [5, 10, 25, 100, 500, 1000];
+			attribute<string> name := 'size_'+string(size)+'m';
+		}
+		
+		unit<ipoint> domain       := perGridsize/size_100m/domain;
+		unit<ipoint> domain_5m    := perGridsize/size_5m/domain;
+		unit<ipoint> domain_10m   := perGridsize/size_10m/domain;
+		unit<ipoint> domain_25m   := perGridsize/size_25m/domain;
+		unit<ipoint> domain_100m  := perGridsize/size_100m/domain;
+		unit<ipoint> domain_500m  := perGridsize/size_500m/domain;
+		unit<ipoint> domain_1000m := perGridsize/size_1000m/domain;
+	
+		parameter<m> x_min := 0[m];
+		parameter<m> x_max := 280000[m];
+		parameter<m> y_min := 300000[m];
+		parameter<m> y_max := 625000[m];
+		
+		container perGridsize :=
+			for_each_ne(
+				Gridsizes/name
+				, 'Create_GridDomain_T('+string(Gridsizes/size)+'[m])'
+			);
+		
+		Template Create_GridDomain_T
+		{
+			parameter<m> gridsize;
+			
+			parameter<int32> nr_cols := int32((x_max - x_min) / gridsize);
+			parameter<int32> nr_rows := int32((y_max - y_min) / gridsize);
+			
+			unit<ipoint> domain :=
+				range(
+					 gridset(
+						 rdc
+						,point_xy(gridsize, -gridsize, rdc)
+						,point_xy(x_min, y_max, rdc)
+						,ipoint
+					)
+					,point_xy(0i, 0i)
+					,point_xy(nr_cols, nr_rows)
+				),	DialogData = "rdc"
+			{
+				attribute<.>                    id               := id(.);
+				attribute<rdc>                  point_rd         := id[rdc] + point_xy(0.5d * gridsize, -0.5d * gridsize, rdc);
+				attribute<uint32>               id_nr            := (pointcol(id)[uint32] + 1) + ((pointrow(id)[uint32]) * (x_max[uint32] / gridsize[uint32]));
+				attribute<NL_grid/domain_25m>   grid_25m_rel     := id(.)[NL_grid/domain_25m];
+				attribute<NL_grid/domain_100m>  grid_100m_rel    := id(.)[NL_grid/domain_100m];
+				attribute<NL_grid/domain_500m>  grid_500m_rel    := id(.)[NL_grid/domain_500m];
+				
+				parameter<ha>                   NrHaPerCell     := convert(gridsize * gridsize, ha);
+				parameter<km2>                  NrKm2PerCell    := NrHaPerCell[km2];
+			}
+			
+			unit<uint32> points := select_uint32_with_org_rel(isDefined(domain/id))
+			{
+				attribute<rdc> 	                geometry  := org_rel -> point_rd;
+				attribute<uint32>               id        := org_rel -> id_nr;
+				
+				attribute<float32>              x         := PointCol(geometry);
+				attribute<float32>              y         := PointRow(geometry);
+				
+				attribute<domain>               NL_grid_domain_rel  := geometry[domain];
+			}
+		}
+	} 
+}

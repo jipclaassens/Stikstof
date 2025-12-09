@@ -1,0 +1,222 @@
+container BBG : using = "classifications/bbg"
+{
+	unit<uint32> BBG_Reeks_1996_2017
+	:	StorageName     = "%Redev_DataDir%/Grondgebruik/BBG/CBS_MutatiebestandBBG1996_2017_v1.gpkg"
+	,	StorageType     = "gdal.vect"
+	,	StorageReadOnly = "True"
+	,	Source          = "https:\//geodata.cbs.nl/files/Bodemgebruik/BBG2017/CBS_MutatiebestandBBG1996_2017_v1_GPKG.zip"
+	{
+		attribute<rdc> Geometry (poly);
+
+		attribute<gg_src> CBSKlasse_rel_1996 := bbg_ek/CBSKlasseNr[value(BG96, bbg_ek)];
+		attribute<gg_src> CBSKlasse_rel_2000 := bbg_ek/CBSKlasseNr[value(BG00, bbg_ek)];
+		attribute<gg_src> CBSKlasse_rel_2003 := bbg_ek/CBSKlasseNr[value(BG03, bbg_ek)];
+		attribute<gg_src> CBSKlasse_rel_2006 := bbg_ek/CBSKlasseNr[value(BG06, bbg_ek)];
+		attribute<gg_src> CBSKlasse_rel_2008 := bbg_ek/CBSKlasseNr[value(BG08, bbg_ek)];
+		attribute<gg_src> CBSKlasse_rel_2010 := bbg_ek/CBSKlasseNr[value(BG10, bbg_ek)];
+		attribute<gg_src> CBSKlasse_rel_2012 := bbg_ek/CBSKlasseNr[value(BG12, bbg_ek)];
+		attribute<gg_src> CBSKlasse_rel_2015 := bbg_ek/CBSKlasseNr[value(BG15, bbg_ek)];
+		attribute<gg_src> CBSKlasse_rel_2017 := bbg_ek/CBSKlasseNr[value(BG17, bbg_ek)];
+		
+		attribute<bool>   IsWoongebied_2000  := CBSKlasse_rel_2000 == gg_src/V/woongebied;
+		
+		unit<uint32> IsWonen_1996 := select_with_org_rel(CBSKlasse_rel_1996 == gg_src/v/woongebied)
+		{
+			attribute<rdc> geometry (poly) := ../geometry[org_rel];
+		}
+		unit<uint32> IsWonen_2010 := select_with_org_rel(CBSKlasse_rel_2010 == gg_src/v/woongebied)
+		{
+			attribute<rdc> geometry (poly) := ../geometry[org_rel];
+		}
+		
+		unit<uint32> IsVerblijfsrecreatie_2017 := select_with_org_rel(CBSKlasse_rel_2017 == gg_src/V/verblijfsrecreatie)
+		{
+			attribute<rdc> geometry (poly) := ../geometry[org_rel];
+		}
+		
+		unit<uint32> IsWater_2017 := select_with_org_rel(gg_src/gg_10k_rel[CBSKlasse_rel_2017] == gg_10k/V/water && shape_area >= 10000d)
+		{
+			attribute<rdc> geometry (poly) := ../geometry[org_rel];
+		}
+	}
+	
+	container Dominant
+	{
+		parameter<string> domain_grid_ref_short := '100m';
+		parameter<string> Aggregation_method    := 'modus';
+		
+		attribute<gg_10k>    bbg2000_100m_10k  (NL_grid/domain)     := gg_src/gg_10k_rel[per_100m_modus/j2000];
+		attribute<gg_10k>    bbg2012_100m_10k  (NL_grid/domain)     := gg_src/gg_10k_rel[per_100m_modus/j2012];
+		attribute<gg_10k>    bbg2017_100m_10k  (NL_grid/domain)     := gg_src/gg_10k_rel[per_100m_modus/j2017];
+	
+		attribute<gg_3K>     bbg2000_100m_3k   (NL_grid/domain)     := gg_10K/gg_3K_rel[bbg2000_100m_10k];
+		attribute<gg_3K>     bbg2012_100m_3k   (NL_grid/domain)     := gg_10K/gg_3K_rel[bbg2012_100m_10k];
+		attribute<gg_3K>     bbg2017_100m_3k   (NL_grid/domain)     := gg_10K/gg_3K_rel[bbg2017_100m_10k];
+		
+		attribute<gg_10k>    bbg2000_augm_100m_10k  (NL_grid/domain)     := gg_src/gg_10k_rel[per_100m_modus/j2000_augm];
+		attribute<gg_10k>    bbg2012_augm_100m_10k  (NL_grid/domain)     := gg_src/gg_10k_rel[per_100m_modus/j2012_augm];
+		attribute<gg_3K>     bbg2000_augm_100m_3k   (NL_grid/domain)     := gg_10K/gg_3K_rel[bbg2000_augm_100m_10k];
+		attribute<gg_3K>     bbg2012_augm_100m_3k   (NL_grid/domain)     := gg_10K/gg_3K_rel[bbg2012_augm_100m_10k];
+	
+		attribute<bool>      IsGreyBrownField_1996      (NL_grid/domain_25m) := gg_src/IsGreyBrownfield[per_25m_modus/J1996];
+		attribute<bool>      IsGreyBrownField_1996_augm (NL_grid/domain_25m) := gg_src/IsGreyBrownfield[per_25m_modus/J1996_bouwterreinupdate];
+		// attribute<bool>      IsWater_y2017 (NL_grid/domain_25m) := per_25m_modus/J2017
+	
+		// container Make_per_10m
+		// {
+			// attribute<BBG_Reeks_1996_2017>               per_10m_rel        (NL_grid/domain_10m) := poly2grid(BBG_Reeks_1996_2017/Geometry, NL_grid/domain_10m);
+			// attribute<gg_src>                            CBSKlasse_rel_1996 (NL_grid/domain_10m) := BBG_Reeks_1996_2017/CBSKlasse_rel_1996[per_10m_rel], StorageName = "%LocalDataProjDir%/UnlinkedData/BBG/bbg1996_10m.tif", StorageType = "gdalwrite.grid";
+			// attribute<gg_src>                            CBSKlasse_rel_2000 (NL_grid/domain_10m) := BBG_Reeks_1996_2017/CBSKlasse_rel_2000[per_10m_rel], StorageName = "%LocalDataProjDir%/UnlinkedData/BBG/bbg2000_10m.tif", StorageType = "gdalwrite.grid";
+			// attribute<gg_src>                            CBSKlasse_rel_2003 (NL_grid/domain_10m) := BBG_Reeks_1996_2017/CBSKlasse_rel_2003[per_10m_rel], StorageName = "%LocalDataProjDir%/UnlinkedData/BBG/bbg2003_10m.tif", StorageType = "gdalwrite.grid";
+			// attribute<gg_src>                            CBSKlasse_rel_2006 (NL_grid/domain_10m) := BBG_Reeks_1996_2017/CBSKlasse_rel_2006[per_10m_rel], StorageName = "%LocalDataProjDir%/UnlinkedData/BBG/bbg2006_10m.tif", StorageType = "gdalwrite.grid";
+			// attribute<gg_src>                            CBSKlasse_rel_2008 (NL_grid/domain_10m) := BBG_Reeks_1996_2017/CBSKlasse_rel_2008[per_10m_rel], StorageName = "%LocalDataProjDir%/UnlinkedData/BBG/bbg2008_10m.tif", StorageType = "gdalwrite.grid";
+			// attribute<gg_src>                            CBSKlasse_rel_2010 (NL_grid/domain_10m) := BBG_Reeks_1996_2017/CBSKlasse_rel_2010[per_10m_rel], StorageName = "%LocalDataProjDir%/UnlinkedData/BBG/bbg2010_10m.tif", StorageType = "gdalwrite.grid";
+			// attribute<gg_src>                            CBSKlasse_rel_2012 (NL_grid/domain_10m) := BBG_Reeks_1996_2017/CBSKlasse_rel_2012[per_10m_rel], StorageName = "%LocalDataProjDir%/UnlinkedData/BBG/bbg2012_10m.tif", StorageType = "gdalwrite.grid";
+			// attribute<gg_src>                            CBSKlasse_rel_2015 (NL_grid/domain_10m) := BBG_Reeks_1996_2017/CBSKlasse_rel_2015[per_10m_rel], StorageName = "%LocalDataProjDir%/UnlinkedData/BBG/bbg2015_10m.tif", StorageType = "gdalwrite.grid";
+			// attribute<gg_src>                            CBSKlasse_rel_2017 (NL_grid/domain_10m) := BBG_Reeks_1996_2017/CBSKlasse_rel_2017[per_10m_rel], StorageName = "%LocalDataProjDir%/UnlinkedData/BBG/bbg2017_10m.tif", StorageType = "gdalwrite.grid";
+		// }
+		container Make_per_5m
+		{
+			attribute<BBG_Reeks_1996_2017>               per_5m_rel         (NL_grid/domain_5m) := poly2grid(BBG_Reeks_1996_2017/Geometry, NL_grid/domain_5m);
+			attribute<gg_src>                            CBSKlasse_rel_1996 (NL_grid/domain_5m) := BBG_Reeks_1996_2017/CBSKlasse_rel_1996[per_5m_rel], StorageName = "%LocalDataProjDir%/UnlinkedData/BBG/bbg1996_5m.tif", StorageType = "gdalwrite.grid";
+			attribute<gg_src>                            CBSKlasse_rel_2000 (NL_grid/domain_5m) := BBG_Reeks_1996_2017/CBSKlasse_rel_2000[per_5m_rel], StorageName = "%LocalDataProjDir%/UnlinkedData/BBG/bbg2000_5m.tif", StorageType = "gdalwrite.grid";
+			// attribute<gg_src>                            CBSKlasse_rel_2003 (NL_grid/domain_5m) := BBG_Reeks_1996_2017/CBSKlasse_rel_2003[per_5m_rel], StorageName = "%LocalDataProjDir%/UnlinkedData/BBG/bbg2003_5m.tif", StorageType = "gdalwrite.grid";
+			// attribute<gg_src>                            CBSKlasse_rel_2006 (NL_grid/domain_5m) := BBG_Reeks_1996_2017/CBSKlasse_rel_2006[per_5m_rel], StorageName = "%LocalDataProjDir%/UnlinkedData/BBG/bbg2006_5m.tif", StorageType = "gdalwrite.grid";
+			// attribute<gg_src>                            CBSKlasse_rel_2008 (NL_grid/domain_5m) := BBG_Reeks_1996_2017/CBSKlasse_rel_2008[per_5m_rel], StorageName = "%LocalDataProjDir%/UnlinkedData/BBG/bbg2008_5m.tif", StorageType = "gdalwrite.grid";
+			// attribute<gg_src>                            CBSKlasse_rel_2010 (NL_grid/domain_5m) := BBG_Reeks_1996_2017/CBSKlasse_rel_2010[per_5m_rel], StorageName = "%LocalDataProjDir%/UnlinkedData/BBG/bbg2010_5m.tif", StorageType = "gdalwrite.grid";
+			attribute<gg_src>                            CBSKlasse_rel_2012 (NL_grid/domain_5m) := BBG_Reeks_1996_2017/CBSKlasse_rel_2012[per_5m_rel], StorageName = "%LocalDataProjDir%/UnlinkedData/BBG/bbg2012_5m.tif", StorageType = "gdalwrite.grid";
+			// attribute<gg_src>                            CBSKlasse_rel_2015 (NL_grid/domain_5m) := BBG_Reeks_1996_2017/CBSKlasse_rel_2015[per_5m_rel], StorageName = "%LocalDataProjDir%/UnlinkedData/BBG/bbg2015_5m.tif", StorageType = "gdalwrite.grid";
+			attribute<gg_src>                            CBSKlasse_rel_2017 (NL_grid/domain_5m) := BBG_Reeks_1996_2017/CBSKlasse_rel_2017[per_5m_rel], StorageName = "%LocalDataProjDir%/UnlinkedData/BBG/bbg2017_5m.tif", StorageType = "gdalwrite.grid";
+		}
+		
+		container per_5m := 
+			for_each_ndva(
+				  BBG_ReeksJaren/naam
+				, NL_grid/domain_5m
+				, gg_src
+				, '%LocalDataProjDir%/UnlinkedData/BBG/bbg'+BBG_ReeksJaren/jaar+'_5m.tif'
+			)
+		{
+			attribute<gg_src> J2000_augm (NL_grid/domain_5m) :=  J2000 == gg_src/v/bouwterrein ? J1996 : J2000;
+			attribute<gg_src> J2012_augm (NL_grid/domain_5m) :=  J2012 == gg_src/v/bouwterrein ? J1996 : J2012;
+		}
+		// container per_10m := 
+			// for_each_ndva(
+				  // BBG_ReeksJaren/naam
+				// , NL_grid/domain_10m
+				// , gg_src
+				// , '%LocalDataProjDir%/UnlinkedData/BBG/bbg'+BBG_ReeksJaren/jaar+'_10m.tif'
+			// );
+		
+		container per_domain_grid := 
+			for_each_nedv(
+				  BBG_ReeksJaren/naam
+				, 'per_100m_modus/'+BBG_ReeksJaren/naam
+				, NL_grid/domain
+				, gg_src
+			);
+			
+		container per_100m_modus := 
+			for_each_ndva(
+				  BBG_ReeksJaren/naam
+				, NL_grid/domain
+				, gg_src
+				, '%LocalDataProjDir%/UnlinkedData/BBG/bbg'+BBG_ReeksJaren/jaar+'_100m_modus.tif'
+			)
+		{
+			attribute<gg_src> j2000_augm (NL_grid/domain) : StorageName = "%LocalDataProjDir%/UnlinkedData/BBG/bbg2000_augm_100m_modus.tif";
+			attribute<gg_src> j2012_augm (NL_grid/domain) : StorageName = "%LocalDataProjDir%/UnlinkedData/BBG/bbg2012_augm_100m_modus.tif";
+			
+			attribute<gg_src> J1996_bouwterreinupdate (NL_grid/domain) := J1996 == gg_src/v/bouwterrein ? J2017 : J1996;
+		}
+			
+		container per_25m_modus := 
+			for_each_ndva(
+				  BBG_ReeksJaren/naam
+				, NL_grid/domain_25m
+				, gg_src
+				, '%LocalDataProjDir%/UnlinkedData/BBG/bbg'+BBG_ReeksJaren/jaar+'_25m_modus.tif'
+			)
+		{
+			attribute<gg_src> J1996_bouwterreinupdate (NL_grid/domain_25m) := J1996 == gg_src/v/bouwterrein ? J2017 : J1996;
+		}
+			
+			
+		container per_domaingrid_perKlasse
+		{
+			container J2015 := 
+				for_each_ndva(
+					gg_src/name
+					, NL_grid/domain
+					, bool
+					, '%LocalDataProjDir%/UnlinkedData/BBG/bbg2015_'+gg_src/name+'_100m.tif'
+			);
+		}
+		
+		
+		container MakePerFunctie := 
+			for_each_ne(
+				gg_src/name
+				, 'MakePerFunctieT('+quote(gg_src/name)+')'
+			)
+		{
+			parameter<String> Generate := 'Ready',
+				ExplicitSuppliers = "=AsList(''+gg_src/name+'/PerJaar/J2015',';')";
+		}
+
+			
+		container Make100mgrids_modus := 
+			for_each_ne(
+				BBG_ReeksJaren/naam
+				,'Modus100mT('+string(BBG_ReeksJaren/jaar)+')'
+			)
+		{
+			container j2000_augm
+			{
+				attribute<gg_src>   DominantCBSKlasse_100m  (NL_grid/domain)    := ='MakeDefined(modus(dominant/per_5m/J2000_augm,  NL_grid/domain_5m/grid_100m_rel), 0[gg_src])', StorageName = "='%LocalDataProjDir%/UnlinkedData/BBG/bbg2000_augm_100m_modus.tif'", StorageType = "gdalwrite.grid";
+			}
+			container j2012_augm
+			{
+				attribute<gg_src>   DominantCBSKlasse_100m  (NL_grid/domain)    := ='MakeDefined(modus(dominant/per_5m/J2012_augm,  NL_grid/domain_5m/grid_100m_rel), 0[gg_src])', StorageName = "='%LocalDataProjDir%/UnlinkedData/BBG/bbg2012_augm_100m_modus.tif'", StorageType = "gdalwrite.grid";
+			}
+		}
+			
+		container Make25mgrids_modus := 
+			for_each_ne(
+				BBG_ReeksJaren/naam
+				,'Modus25mT('+string(BBG_ReeksJaren/jaar)+')'
+			);
+		
+		Template Modus100mT
+		{
+			//
+			parameter<uint32> year;
+			//
+			attribute<gg_src>   DominantCBSKlasse_100m  (NL_grid/domain)    := ='MakeDefined(modus(dominant/per_5m/J'+string(year)+',  NL_grid/domain_5m/grid_100m_rel), 0[gg_src])', StorageName = "='%LocalDataProjDir%/UnlinkedData/BBG/bbg'+string(year)+'_100m_modus.tif'", StorageType = "gdalwrite.grid";
+		}
+		
+		Template Modus25mT
+		{
+			//
+			parameter<uint32> year;
+			//
+			attribute<gg_src>   DominantCBSKlasse_25m  (NL_grid/domain_25m)    := ='MakeDefined(modus(dominant/per_5m/J'+string(year)+',  NL_grid/domain_5m/grid_25m_rel), 0[gg_src])', StorageName = "='%LocalDataProjDir%/UnlinkedData/BBG/bbg'+string(year)+'_25m_modus.tif'", StorageType = "gdalwrite.grid";
+		}
+		
+		template MakePerFunctieT
+		{
+			// template parameters
+			parameter<string> Name;
+			// end template parameters
+
+			container PerJaar :=
+				for_each_nedva(
+					BBG_ReeksJaren/naam
+					,'per_domain_grid/'+BBG_ReeksJaren/naam+' == gg_src/V/'+Name+' ? IsDefined(per_domain_grid/'+BBG_ReeksJaren/naam+') : FALSE'
+					, NL_grid/domain
+					, bool
+					, '%ProjDir%/Data/UnlinkedData/BBG/bbg'+BBG_ReeksJaren/jaar+'_'+Name+'_'+domain_grid_ref_short+'_'+Aggregation_method+'.tif'
+				);
+		}
+	}
+}

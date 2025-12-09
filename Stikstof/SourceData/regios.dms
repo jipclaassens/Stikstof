@@ -1,0 +1,317 @@
+container RegioIndelingen : using = "geography"
+{ 
+	container impl
+	{
+		unit<uint32> CBS_Gebiedsindelingen_jaren := range(uint32, 2012, 2025)
+		{
+			attribute<uint32> jaar            := id(.);
+			attribute<string> name            := 'Y'+string(jaar);
+			attribute<bool>   IsGeneraliseerd := jaar < 2019;
+		}
+		container CBS :=
+			for_each_ne(
+				CBS_Gebiedsindelingen_jaren/name
+				, 'Read_Gebiedsindelingen_gpkg_T('+quote(string(CBS_Gebiedsindelingen_jaren/jaar))+')'
+			)
+		{
+			container Last := =last(CBS_Gebiedsindelingen_jaren/name);
+		}
+
+		Template Read_Gebiedsindelingen_gpkg_T
+		{
+			parameter<string> jaar;
+			//
+			parameter<bool>   IsGeneraliseerd     := rjoin('Y'+jaar, CBS_Gebiedsindelingen_jaren/name, CBS_Gebiedsindelingen_jaren/IsGeneraliseerd);
+			parameter<string> gegeneraliseerd_str := IsGeneraliseerd ? '_gegeneraliseerd' : '_niet_gegeneraliseerd';
+			
+			container gpkg
+			:	StorageName     = "='%Redev_DataDir%/RegioIndelingen/cbsgebiedsindelingen'+jaar+'.gpkg'"
+			, 	StorageType     = "gdal.vect"
+			,	StorageReadOnly = "True"
+			,	SyncMode        = "alltables"
+			,	DialogData      = "rdc"
+			,	URL             = "https://www.cbs.nl/nl-nl/dossier/nederland-regionaal/geografische-data/cbs-gebiedsindelingen"
+			,	KeepData        = "true"
+			{
+				unit<uint32> provincie_gegeneraliseerd
+				{
+					attribute<string>    label := statnaam;	
+				}
+			}
+			
+			unit<uint32> Buurt     := ='gpkg/buurt'+gegeneraliseerd_str
+			{
+				attribute<rdc> geometry                                 (poly) := ='gpkg/buurt'+gegeneraliseerd_str+'/geometry[rdc]';
+				attribute<string>    label                                           := statnaam;
+				attribute<string>    name                                            := AsItemName(statnaam);
+				container V := for_each_nedv(name, string(id(.))+'[..]', void, .);
+			}
+			unit<uint32> Wijk      := ='gpkg/wijk'+gegeneraliseerd_str
+			{
+				attribute<rdc>         geometry                                 (poly) := ='gpkg/wijk'+gegeneraliseerd_str+'/geometry[rdc]';
+				attribute<string>      code                                            := statcode;
+				attribute<string>      WK_CODE                                         := statcode;
+				attribute<string>      label                                           := statnaam;
+				attribute<string>      name                                            := AsItemName(statnaam);
+				attribute<Provincie>   provincie_rel                                   := point_in_polygon(centroid_or_mid(geometry), provincie/geometry);
+				attribute<.>           per_NL_grid_domain             (NL_grid/domain) := poly2grid(geometry, NL_grid/domain);
+				attribute<m2>          area                                            := area(geometry, m2);
+			}
+			unit<uint32> Gemeente  := ='gpkg/gemeente'+gegeneraliseerd_str
+			{
+				attribute<rdc>       geometry                                 (poly) := ='gpkg/gemeente'+gegeneraliseerd_str+'/geometry[rdc]';
+				attribute<string>    label                                           := statnaam;
+				attribute<string>    name                                            := AsItemName(statnaam);
+				attribute<uint32>    gem_nr                                          := uint32(right(statcode, 4));
+				container V := for_each_nedv(name, string(id(.))+'[..]', void, .);
+			}
+			unit<uint32> COROP     := gpkg/coropgebied_gegeneraliseerd
+			{
+				attribute<rdc> geometry                                 (poly) := gpkg/coropgebied_gegeneraliseerd/geometry[rdc];
+				attribute<string>    label                                           := statnaam;
+				attribute<string>    name                                            := AsItemName(statnaam);
+				container V := for_each_nedv(name, string(id(.))+'[..]', void, .);
+			}
+			unit<uint32> Provincie := gpkg/provincie_gegeneraliseerd
+			{
+				attribute<rdc> geometry                                 (poly) := gpkg/provincie_gegeneraliseerd/geometry[rdc];
+				attribute<string>    label                                           := statnaam;
+				attribute<string>    name                                            := replace(AsItemName(statnaam), 'Fryslân', 'Friesland');
+				attribute<string>    prv_code                                        := statcode;
+				container V := for_each_nedv(name, string(id(.))+'[..]', void, .);
+			}
+		}
+	
+		container Gebiedsindelingen
+		:	StorageName     = "%Redev_DataDir%/RegioIndelingen/cbsgebiedsindelingen2023.gpkg"
+		, 	StorageType     = "gdal.vect"
+		,	StorageReadOnly = "True"
+		,	SyncMode        = "alltables"
+		,	DialogData      = "rdc";
+		
+		unit<uint32>  Buurt := Gebiedsindelingen/buurt_niet_gegeneraliseerd 
+		{
+			attribute<rdc>       geometry (poly) := Gebiedsindelingen/buurt_niet_gegeneraliseerd/geometry;
+			attribute<string>    statcode        := Gebiedsindelingen/buurt_niet_gegeneraliseerd/statcode;
+			attribute<string>    statnaam        := Gebiedsindelingen/buurt_niet_gegeneraliseerd/statnaam;
+			attribute<string>    BU_NAAM         := statnaam;
+			attribute<string>    BU_CODE         := statcode;
+			attribute<string>    name            := AsItemName(statnaam);
+		}
+		
+		unit<uint32>  Wijk := Gebiedsindelingen/wijk_niet_gegeneraliseerd 
+		{
+			attribute<rdc>       geometry (poly)     := Gebiedsindelingen/wijk_niet_gegeneraliseerd/geometry;
+			attribute<string>    statcode            := Gebiedsindelingen/wijk_niet_gegeneraliseerd/statcode;
+			attribute<string>    statnaam            := Gebiedsindelingen/wijk_niet_gegeneraliseerd/statnaam;
+			attribute<string>    WK_NAAM             := statnaam;
+			attribute<string>    WK_CODE             := statcode;
+			attribute<string>    name                := AsItemName(statnaam);
+		}
+		
+		unit<uint32>  Gemeente := Gebiedsindelingen/gemeente_niet_gegeneraliseerd 
+		{
+			attribute<rdc>       geometry (poly) := Gebiedsindelingen/gemeente_niet_gegeneraliseerd/geometry;
+			attribute<string>    statcode        := Gebiedsindelingen/gemeente_niet_gegeneraliseerd/statcode;
+			attribute<string>    statnaam        := Gebiedsindelingen/gemeente_niet_gegeneraliseerd/statnaam;
+			attribute<string>    GM_NAAM         := Gebiedsindelingen/gemeente_niet_gegeneraliseerd/statnaam;
+			attribute<string>    GM_CODE         := statcode;
+			attribute<string>    name            := AsItemName(statnaam);
+		}
+		
+		unit<uint32>  Arbeidsregio := Gebiedsindelingen/arbeidsmarktregio_gegeneraliseerd
+		{
+			attribute<rdc>       geometry (poly) := Gebiedsindelingen/arbeidsmarktregio_gegeneraliseerd/geometry;
+			attribute<string>    statcode        := Gebiedsindelingen/arbeidsmarktregio_gegeneraliseerd/statcode;
+			attribute<string>    statnaam        := Gebiedsindelingen/arbeidsmarktregio_gegeneraliseerd/statnaam;
+			attribute<string>    name            := AsItemName(statnaam);
+		}
+		
+		unit<uint32>  Corop := Gebiedsindelingen/coropgebied_gegeneraliseerd
+		{
+			attribute<rdc>       geometry (poly) := Gebiedsindelingen/coropgebied_gegeneraliseerd/geometry;
+			attribute<string>    statcode        := Gebiedsindelingen/coropgebied_gegeneraliseerd/statcode;
+			attribute<string>    statnaam        := Gebiedsindelingen/coropgebied_gegeneraliseerd/statnaam;
+			attribute<string>    name            := AsItemName(statnaam);
+		}
+		
+		unit<uint32>  Provincie := Gebiedsindelingen/provincie_gegeneraliseerd
+		{
+			attribute<rdc>       geometry (poly) := Gebiedsindelingen/provincie_gegeneraliseerd/geometry;
+			attribute<string>    statcode        := Gebiedsindelingen/provincie_gegeneraliseerd/statcode;
+			attribute<string>    statnaam        := Gebiedsindelingen/provincie_gegeneraliseerd/statnaam;
+			attribute<uint32>    prvnr           := Gebiedsindelingen/provincie_gegeneraliseerd/id[uint32];
+			attribute<string>    prvnm           := statnaam;
+		}
+	}
+	
+	unit<uint32> Buurt := impl/buurt
+	{
+		attribute<Wijk>             wijk_rel := point_in_polygon(centroid_or_mid(geometry), wijk/geometry);
+		attribute<.>                per_grid   (NL_grid/domain) := poly2grid(geometry, NL_grid/domain);
+	}
+	unit<uint32> Wijk := impl/wijk
+	{
+		attribute<geography/rdc>   centroid                   := centroid_or_mid(geometry);
+		attribute<string>           label                      := WK_NAAM ;
+		attribute<.>                per_grid      (NL_grid/domain) := poly2grid(geometry, NL_grid/domain);
+	}
+	
+	unit<uint32> Gemeente := impl/gemeente
+	{
+		attribute<string>         label     := GM_NAAM, DialogType = "LabelText";
+		attribute<.>              per_grid (NL_grid/domain)         := poly2grid(geometry, NL_grid/domain);
+		attribute<uq>             uq_rel                            := rlookup(GM_CODE, uq/GM_CODE);
+	}
+	
+	unit<uint32>  COROP := impl/corop
+	{
+		attribute<String>    Label           := name;
+	}
+	
+	unit<uint32>  Provincie := impl/Provincie
+	{
+		attribute<string>    label        := replace(AsItemName(prvnm), 'Fryslân', 'Friesland');
+		container V := for_each_nedv(label, 'value('+string(id(.))+', ..)', void, .);
+	}
+	
+	unit<uint32> Nederland := range(uint32, 0, 1) 
+	{
+		attribute<rdc>               geometry       (poly) := bp_union_polygon(Corop/geometry[rdc_cm], const(0[.],Corop))[rdc];
+		attribute<string>            name                  : [ 'Nederland' ];
+		attribute<.>                 per_domain   (NL_grid/domain) := poly2grid(geometry, NL_grid/domain);
+		attribute<bool>              IsNederland  (NL_grid/domain) := IsDefined(per_domain);
+	}
+	
+	// container MRA
+	// {
+		// unit<uint32> GemMRA8
+		// : StorageName = "%Redev_DataDir%/CBS/RegioindelingMRA2016.csv"
+		// , StorageType = "gdal.vect"
+		// , StorageReadOnly = "True"
+		// {
+			// attribute<string>  gem_name  := replace(gemeente, '/', '_', '-', '_', ' ', '_');
+			// attribute<string>  MRA8_name := replace(regio, '/', '_', '-', '_', ' ', '_');
+			// attribute<MRA8>    MRA8_rel  := rjoin(MRA8_name, MRA8/name, id(MRA8));
+		// }
+		
+		// unit<uint32> MRA8 := unique(GemMRA8/MRA8_name)
+		// {
+			// attribute<rdc_cm>    geometry0 (poly) := bp_union_polygon(gemeenten/j2015/Geometry[rdc_cm], gemeenten/j2015/MRA8_rel);
+			// attribute<rdc>       geometry (poly)  := geometry0[rdc];
+			// attribute<string>    name             := replace(values, '/', '_', '-', '_', ' ', '_');
+			// attribute<string>    Label            := name, DialogType = "LabelText";
+			// attribute<MRA1_src>  MRA1_rel         := const(0[MRA1_src], .);
+		// }
+		
+		// unit<uint32> MRA1_src: NrOfRows = 1
+		// ,	StorageName = "%Redev_DataDir%/CBS/RegioindelingMRA2016.fss"
+		// {
+			// attribute<rdc_cm>    geometry0 (poly) := bp_union_polygon(MRA8/geometry0[rdc_cm], MRA8/MRA1_rel), DisableStorage = "true";
+			// attribute<rdc>       geometry (poly)  := geometry0[rdc];
+			// attribute<string>    name             : ['MRA'];
+			// attribute<string>    Label            := name, DialogType = "LabelText";
+			// attribute<.>         MRA1_rel         := const(0[.], .), DisableStorage = "true";
+		// }
+		
+		// unit<uint32> MRA1
+		// :	StorageName = "%Redev_DataDir%/CBS/RegioindelingMRA2016.fss"
+		// ,	StorageReadOnly = "true"
+		// {
+			// attribute<rdc>       geometry (poly);
+			// attribute<string>    Label : DialogType = "LabelText";
+		// }
+	
+	// }
+	
+	// unit<uint32> PC6_vlakken
+	// :	StorageName     = "%LocalDataProjDir%/UnlinkedData/RegioIndelingen/pc6_2020_areas.fss"
+	// ,	StorageReadOnly = "True"
+	// { 
+		// attribute<rdc>                  geometry (poly);
+		// attribute<string>               PC6;
+		// attribute<rdc>                  centroid            := centroid_or_mid(geometry);
+		// attribute<.>                    PC4_rel             := point_in_polygon(centroid, PC4_vlakken/geometry);
+		// attribute<m2>                   area                := abs(area(geometry, m2));
+		// attribute<string>               label               : DialogType = "LabelText";
+	// }
+	
+	// unit<uint32> BBG_2000
+	// :	StorageName     = "%Redev_DataDir%/CBS/Begrenzing_Bebouwd_Gebied/bg00.shp"
+	// ,	StorageReadOnly = "true"
+	// ,	StorageType     = "gdal.vect"
+	// {
+		// attribute<geography/rdc> geometry (poly);
+	// }
+	
+	// unit<uint32> BBG_2003 
+	// :	StorageName     = "%Redev_DataDir%/CBS/Begrenzing_Bebouwd_Gebied/BBG_2003.fss"
+	// ,	StorageReadOnly = "true"
+	// {
+		// attribute<geography/rdc> geometry (poly);
+	// }
+
+	// unit<uint32> Randstad
+	// :	StorageName     = "%Redev_DataDir%/CBS/Randstad.shp"
+	// ,	StorageType     = "gdal.vect"
+	// ,	StorageReadOnly = "True"
+	// {
+		// attribute<geography/rdc> geometry   (poly) ;
+		// attribute<.>              per_grid   (NL_grid/domain) := poly2grid(geometry, NL_grid/domain);
+		// attribute<bool>           IsRandstad (NL_grid/domain) := IsDefined(per_grid);
+	// }
+	
+	// container grootstedelijke_agglomeratie
+	// {
+		// unit<uint32> j2012 
+		// :	StorageName     = "%Redev_DataDir%/RegioIndelingen/CBS_grootstedelijke_agglomeratie_2012.shp"
+		// ,	StorageType     = "gdal.vect"
+		// ,	StorageReadOnly = "True"
+		// {
+			// attribute<geography/rdc>   geometry  (polygon) ;
+			// attribute<string>           label                      := statnaam ;
+			
+			// unit<uint32> Defined := select_with_attr_by_cond(., IsDefined(statnaam));
+		// }
+	// }
+
+	// unit<uint32> NVM
+	// :	StorageName     = "%Redev_DataDir%/CBS/NVMregios.shp"
+	// ,	StorageType     = "gdal.vect"
+	// ,	StorageReadOnly = "True"
+	// {
+		// attribute<geography/rdc> geometry (poly) ;
+		// attribute<string>         label := NVMREG_NAA ;
+		// attribute<.>              per_grid   (NL_grid/domain) := poly2grid(geometry, NL_grid/domain);
+	// }
+	
+	
+	// parameter<string> JaarVanOudeGebiedsIndelingen := '2000';
+	// container Gebiedsindelingen_oud
+	// :	StorageName     = "='%Redev_DataDir%/RegioIndelingen/cbsgebiedsindelingen'+JaarVanOudeGebiedsIndelingen+'.gpkg'"
+	// , 	StorageType     = "gdal.vect"
+	// ,	StorageReadOnly = "True"
+	// ,	SyncMode        = "alltables"
+	// ,	DialogData      = "rdc";
+	
+	// unit<uint32>  Gemeente_oud := ='Gebiedsindelingen_oud/cbs_gemeente_'+JaarVanOudeGebiedsIndelingen+'_gegeneraliseerd'
+	// {
+		// attribute<rdc>     geometry (poly) := ='Gebiedsindelingen_oud/cbs_gemeente_'+JaarVanOudeGebiedsIndelingen+'_gegeneraliseerd/geometry';
+		// attribute<string>  GM_NAAM         := ='Gebiedsindelingen_oud/cbs_gemeente_'+JaarVanOudeGebiedsIndelingen+'_gegeneraliseerd/statnaam';
+		// attribute<string>  GM_CODE         := ='Gebiedsindelingen_oud/cbs_gemeente_'+JaarVanOudeGebiedsIndelingen+'_gegeneraliseerd/statcode';
+		
+		// attribute<provincie> prov_rel := point_in_polygon(centroid_or_mid(geometry), Provincie/geometry);
+		
+		// attribute<string>  GM_NAAM_edit    := switch(
+												// case(GM_NAAM == 'Hengelo' && prov_rel == provincie/v/gelderland, 'Hengelo_GE')
+												// ,case(GM_NAAM == 'Bergen' && prov_rel == provincie/v/noord_holland, 'Bergen_NH')
+												// ,GM_NAAM
+												// );
+		
+		// attribute<string>  label            := GM_NAAM_edit;
+		// attribute<string>  name            := AsItemName(GM_NAAM_edit);
+		
+		// container V := for_each_nedv(name, 'value('+string(id(.))+', ..)', void, .);
+	// }
+	
+}

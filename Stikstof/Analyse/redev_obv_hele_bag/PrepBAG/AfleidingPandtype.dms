@@ -1,0 +1,129 @@
+container AfleidingPandtype
+{
+	parameter<uint32>  nr_x_tiles         :=  50; //oude setting 7   zie hier performance afweging: https://github.com/ObjectVision/GeoDMS/issues/816#issuecomment-2426041271
+	parameter<uint32>  nr_y_tiles         :=  50; //oude setting 13
+	parameter<float64> inflate_size       := 0.2d; //in meters
+	unit<uint8>        WP6                := /classifications/BAG/type_woonpand_src;
+	unit<uint8>        WP5                := /classifications/BAG/type_woonpand;
+	unit<uint8>        WP4                := /classifications/BAG/type_woonpand_4;
+		
+	unit<uint32> domain := ..
+	{
+		attribute<uint32> count_vbos        := sum(select/VBO_IsVoorraad ? 1 : 0, uq_pand_nr_rel);
+		attribute<uint32> count_woon_vbos   := sum(select/VBO_IsVoorraad && select/VBO_IsWonen ? 1 : 0, uq_pand_nr_rel);
+	}
+	container results
+	{
+		attribute<uint32>        nr_buurpanden     (domain) := functioneel_pand/NeighbourCount[invert(functioneel_pand/org_rel)]; 
+		attribute<WP6>           WP6_rel           (domain) := functioneel_pand/WP6_rel[invert(functioneel_pand/org_rel)];
+		attribute<WP5>           WP5_rel           (domain) := WP6/WP5_rel[WP6_rel];
+		attribute<WP4>           WP4_rel           (domain) := WP5/WP4_rel[WP5_rel];
+	}
+
+	container extents
+	{
+		attribute<rdc>          NW     (domain) := lower_bound(domain/pand_geometry);
+		attribute<rdc>          SE     (domain) := upper_bound(domain/pand_geometry);
+		attribute<float32>      X_ext  (domain) := PointCol(SE) - PointCol(NW);
+		attribute<float32>      Y_ext  (domain) := PointRow(SE) - PointRow(NW);
+	}
+	
+	
+	unit<uint32> functioneel_pand := select_with_org_rel(domain/count_vbos > 0 && extents/X_ext < 1000f && extents/Y_ext < 1000f)
+	{
+		attribute<rdc>    geometry (poly) := org_rel -> pand_geometry;
+		// attribute<rdc>    geometry_inflated_20cm (poly) := org_rel -> geometry_inflated_20cm;
+		attribute<rdc>    geometry_inflated_20cm (poly) := bg_buffer_multi_polygon(geometry, 0.2d, 4b);
+		attribute<rdc>    NW              := extents/NW[org_rel];
+		attribute<rdc>    SE              := extents/SE[org_rel];
+	
+		attribute<uint32> NeighbourCount   := pcount(unique_neighbour_pair/F1) + pcount(unique_neighbour_pair/F2);
+		attribute<bool>   HasOneNeighbour  := NeighbourCount == 1;
+		attribute<bool>   IsSemiAttached   := HasOneNeighbour &&
+			HasOneNeighbour[
+				MakeDefined(
+					unique_neighbour_pair/F2[invert(unique_neighbour_pair/F1)],
+					unique_neighbour_pair/F1[invert(unique_neighbour_pair/F2)]
+				)
+			];
+
+		attribute<uint32> nr_woning := domain/count_woon_vbos[org_rel];
+
+		
+		attribute<WP6> WP6_rel  :=
+			  nr_woning == 0      ? WP6/V/geen_woonpand
+			: nr_woning >  1      ? WP6/V/appartement
+			: NeighbourCount == 0 ? WP6/V/vrijstaand
+			: HasOneNeighbour
+				? IsSemiAttached
+					? WP6/V/twee_onder_1_kap
+					: WP6/V/hoekwoning
+			: WP6/V/tussenwoning;
+	}
+
+	// parameter<uint32>  nr_x         := ModelParameters/BAG_woonpand_typering/nr_x_tiles;
+	// parameter<uint32>  nr_y         := ModelParameters/BAG_woonpand_typering/nr_y_tiles;
+	// parameter<float64> inflate_size := ModelParameters/BAG_woonpand_typering/inflate_size;
+
+	unit<uint32> rectangle := range(uint32, 0, nr_x_tiles * nr_y_tiles)
+	{
+		attribute<uint32> seq_y  := id(.) / nr_x_tiles;
+		attribute<uint32> seq_x  := id(.) % nr_x_tiles;
+		attribute<string> name   := 'R'+string(seq_y)+'_C'+string(seq_x);
+
+		parameter<uint32> size_x := uint32(pointcol(BoundRange(rdc))) / uint32(nr_x_tiles);
+		parameter<uint32> size_y := uint32(pointrow(BoundRange(rdc))) / uint32(nr_y_tiles);
+
+		attribute<uint32> min_x  := uint32(pointcol(lowerbound(rdc))) + seq_x * size_x;
+		attribute<uint32> max_x  := min_x + size_x;
+		attribute<uint32> min_y  := uint32(pointrow(lowerbound(rdc))) + seq_y * size_y;
+		attribute<uint32> max_y  := min_y + size_y;
+		
+		// for visualisation
+		attribute<rdc> geometry (poly) := points2sequence(point_set/point, point_set/sequence_rel); //, point_set/ordinal);
+		attribute<rdc> top_left     := point_xy(float32(min_x), float32(max_y), rdc); 
+		attribute<rdc> top_right    := point_xy(float32(max_x), float32(max_y), rdc);
+		attribute<rdc> bottom_left  := point_xy(float32(min_x), float32(min_y), rdc);
+		attribute<rdc> bottom_right := point_xy(float32(max_x), float32(min_y), rdc);
+		
+		unit<uint32> point_set := union_unit(.,.,.,.,.)
+		{
+			attribute<rdc>  point        := union_data(., top_left, top_right, bottom_right, bottom_left, top_left);
+			attribute<..>      sequence_rel := union_data(., id(..), id(..), id(..), id(..), id(..));
+		}
+	}
+
+	container rectangles := for_each_ne(rectangle/name, 'Connect_neighbours_T('+string(ID(rectangle))+')');
+
+	template Connect_neighbours_T
+	{
+		parameter<rectangle> rectangle_sel;
+		// end case parameters
+
+		unit<uint32> domain :=
+			select_with_org_rel(
+				uint32(PointCol(functioneel_pand/NW)) <= rectangle/max_x[rectangle_sel]
+			&&	uint32(PointRow(functioneel_pand/NW)) <= rectangle/max_y[rectangle_sel]
+			&&	uint32(PointCol(functioneel_pand/SE)) >= rectangle/min_x[rectangle_sel]
+			&&	uint32(PointRow(functioneel_pand/SE)) >= rectangle/min_y[rectangle_sel]
+			);
+
+		attribute<rdc> buffer (domain, poly) := domain/org_rel -> functioneel_pand/geometry_inflated_20cm; 
+
+		unit<uint32> neighbours := polygon_connectivity(buffer[rdc_cm])
+		{
+			attribute<upoint> coded_pair := point_yx(domain/org_rel[F1], domain/org_rel[F2]);
+		}
+	}
+	
+	unit<uint32> neighbour_pair := ='union_unit('+AsItemList('rectangles/' + rectangle/name + '/neighbours')+')'
+	{
+		attribute<upoint> coded_pair := ='union_data(., '+AsItemList('rectangles/' + rectangle/name + '/neighbours/coded_pair')+')';
+	}
+	
+	unit<uint32> unique_neighbour_pair := unique(neighbour_pair/coded_pair)
+	{
+		attribute<functioneel_pand> F1 := pointrow(values)[functioneel_pand];
+		attribute<functioneel_pand> F2 := pointcol(values)[functioneel_pand];
+	}
+}

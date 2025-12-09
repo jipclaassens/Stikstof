@@ -1,0 +1,252 @@
+container AdditionalClassifications : using = "classifications/tijd"
+{
+	unit<uint8> Redev_ObjectTypes : nrofrows = 10
+	{
+		attribute<string> name : ['SN_Sloop','SN_Sloop_nw','SN_Nieuwbouw','Nieuwbouw','Toevoeging','Onttrekking','Transformatie_Plus','Transformatie_Min','Sloop','Onveranderd'];
+		attribute<string> label := name;
+		
+		attribute<bool> IsRelevantSaldi := name != 'Onveranderd' && name != 'Sloop' && name != 'SN_Sloop_nw';
+		
+		container V := for_each_nedv(name, String(ID(.))+'[..]', void, .);
+		
+		unit<uint8> Plus := select_with_attr_by_cond(., name == 'SN_Nieuwbouw' || name == 'Nieuwbouw' || name == 'Toevoeging' || name == 'Transformatie_Plus')
+		{
+			container V := for_each_nedv(name, String(ID(.))+'[..]', void, .);
+		}
+		unit<uint8> RelevantSaldi := select_with_attr_by_cond(., name != 'Onveranderd' && name != 'Sloop' && name != 'SN_Sloop_nw')
+		{
+			container V := for_each_nedv(name, String(ID(.))+'[..]', void, .);
+		}
+	}
+	
+	unit<uint8> HighMedLow : nrofrows = 3
+	{
+		attribute<string> name         : ['High','Medium','Low'];
+	}
+	unit<uint8> ObjectTypes_Saldi : nrofrows = 4
+	{
+		attribute<string> name         : ['SN','Nieuwbouw','Toevoeging','Transformatie'];
+		attribute<string> name_engl    : ['Replacement','NewBuilt','Addition','Transformation'];
+		attribute<string> label        := name;
+		attribute<uint32> PenColor     := Brushcolor, DialogType = "PenColor";
+		attribute<uint32> BrushColor   : [rgb(112,48,160),rgb(237,125,49), rgb(112,173,71), rgb(118,113,113)] , DialogType = "BrushColor";
+		container V := for_each_nedv(name, String(ID(.))+'[..]', void, .);
+	}
+	unit<uint32> ObjectTypes_Saldi_HML := combine(ObjectTypes_Saldi, HighMedLow)
+	{
+		attribute<string> label        := name_engl;
+		attribute<string> ObjectTypes  := ObjectTypes_Saldi/name[first_rel];
+		attribute<string> ObjectTypes_Eng  := ObjectTypes_Saldi/name_engl[first_rel];
+		attribute<string> HML          := HighMedLow/name[second_rel];
+		attribute<string> name         := ObjectTypes + '_' + HML;
+		attribute<string> name_engl    := ObjectTypes_Eng + '_' + HML;
+		
+		attribute<uint32> LB : [
+			 204,  62, 11, //sn
+			 216,  63, 11, //nb
+			 205,  49, 11, //toev
+			  65,  30, 11  //trf
+			];
+		container V := for_each_nedv(name, String(ID(.))+'[..]', void, .);
+		
+		attribute<uint32> BrushColor   : [
+		rgb(50,0,100), rgb(112,48,160), rgb(162,101,208),  //sn
+		rgb(169,77,14), rgb(237,125,49), rgb(245,184,142), //nb
+		rgb(65,100,41), rgb(112,173,71), rgb(166,207,138), //t
+		// rgb(30,30,30), rgb(118,113,113), rgb(168,164,164)  //tr
+		rgb(118,113,113), rgb(168,164,164), rgb(210,210,210)  //tr
+		] , DialogType = "BrushColor";
+				
+		//sn   max = 7038  1-416, 416-2918, >
+		//nb   max = 3562  1-657, 657-4240, >
+		//toev max =  461  1-308, 308-1370, >
+		//trf  max = 8340  1-49, 49-189, >
+		
+		// if dom process
+		//sn: 11, 62, 204
+		//T:  11, 49, 205
+		//Tr  11, 30, 65
+		//NB  11, 63, 216
+		
+	}
+	
+	
+	
+	
+	
+	// unit<uint8> Redev_SiteTypes : nrofrows = 7
+	// {
+		// attribute<string> name : ['SN','Toevoeging','Transformatie','Onttrekking','Onveranderd','Nieuwbouw','Sloop'];
+		// attribute<string> label := name;
+		// container V := for_each_nedv(name, String(ID(.))+'[..]', void, .);
+	// }
+
+	unit<uint8> MutatieTypen_All := union_unit_uint8(MutatieTypen, MutatieTypen_UnID, MutatieTypen_Uitgesloten)
+	{
+		attribute<string>                   name                          := union_data(., MutatieTypen/name          , MutatieTypen_UnID/name           , MutatieTypen_Uitgesloten/name);
+		attribute<MutatieTypen>             MutatieTypen_rel              := union_data(., id(MutatieTypen)           , const(null_b, MutatieTypen_UnID) , const(null_b, MutatieTypen_Uitgesloten));
+		attribute<MutatieTypen_UnID>        MutatieTypen_UnID_rel         := union_data(., const(null_b, MutatieTypen), id(MutatieTypen_UnID)            , const(null_b, MutatieTypen_Uitgesloten));
+		attribute<MutatieTypen_Uitgesloten> MutatieTypen_Uitgesloten_rel  := union_data(., const(null_b, MutatieTypen),  const(null_b, MutatieTypen_UnID), id(MutatieTypen_Uitgesloten));
+		attribute<string> label := name;
+	}
+	
+	unit<uint8> MutatieTypen : nrofrows = 9
+	{
+		attribute<string> name  : ['N', 'T', 'S', 'O', 'TMplus', 'TMmin', 'Cplus', 'Cmin','S_nw'];
+		attribute<string> label := name;
+		container V := for_each_nedv(name, String(ID(.))+'[..]', void, .);
+	}
+	unit<uint8> MutatieTypen_Uitgesloten : nrofrows = 5
+	{
+		attribute<string> name  : ['S_rest', 'O_rest', 'TMmin_rest', 'Cplus_rest', 'Cmin_rest'];
+		attribute<string> label := name;
+		container V := for_each_nedv(name, String(ID(.))+'[..]', void, .);
+	}
+	unit<uint8> MutatieTypen_UnID : nrofrows = 6
+	{
+		attribute<string> name  : ['Wp', 'Wm', 'NWp', 'NWm', 'Tp', 'Tm'];
+		attribute<string> label := name;
+		container V := for_each_nedv(name, String(ID(.))+'[..]', void, .);
+	}
+	
+	unit<uint32> Verslagmaanden0 := combine(JarenMin1, Maanden)
+	{
+		attribute<string> jaar  := string(JarenMin1/value)[first_rel];
+		attribute<string> maand := Maanden/name[second_rel];
+	}
+	
+	unit<uint32> Verslagmaanden_additional : nrofrows = 10 //7
+	{
+		attribute<string> jaar  : ['2025','2025','2025','2025','2025','2025','2025','2025','2025','2025'];
+		attribute<string> maand : ['01','02','03','04','05','06','07','08','09','10'];
+	}
+	
+	unit<uint32> Verslagmaanden := union_unit(Verslagmaanden0, Verslagmaanden_additional)
+	{
+		attribute<string> label := 'Y'+name;
+		attribute<string> name  := jaar + maand + '01';
+		attribute<string> jaar  := union_data(., Verslagmaanden0/jaar, Verslagmaanden_additional/jaar);
+		attribute<string> maand := union_data(., Verslagmaanden0/maand, Verslagmaanden_additional/maand);
+		
+		attribute<bool>   IsFirst   := first(label) == label;
+		attribute<string> prev_name := MakeDefined(name[sub_or_null(id(.), 1)], 'Start');
+	}
+	
+
+	unit<uint8> Overgangen_Vbo := combine_uint8(vbo_status, vbo_status) 
+	{	
+		attribute<vbo_status>  van_status         := first_rel;
+		attribute<vbo_status>  naar_status        := second_rel;
+		
+		attribute<bool>        Overgang_Onveranderd   := van_status == naar_status;                          // overgang blijft hetzelfde -> nieuwbouw/toevoeging/sloop/onttrekking
+		attribute<bool>        Overgang_Onlogisch     := not(Overgang_Logisch) && not(Overgang_Onveranderd); // overgang is niet logisch -> correctie
+		attribute<bool>        Overgang_Logisch   :=   switch(                                               // overgang is logisch -> nieuwbouw/toevoeging/sloop/onttrekking
+														  case(van_status == vbo_status/V/verblijfsobject_gevormd                   && naar_status == vbo_status/V/Niet_gerealiseerd_verblijfsobject, TRUE)
+														 ,case(van_status == vbo_status/V/verblijfsobject_gevormd                   && naar_status == vbo_status/V/Verblijfsobject_in_gebruik, TRUE)
+														 ,case(van_status == vbo_status/V/verblijfsobject_gevormd                   && naar_status == vbo_status/V/Verblijfsobject_in_gebruik_niet_ingemeten, TRUE)
+														 
+														 ,case(van_status == vbo_status/V/Verblijfsobject_in_gebruik_niet_ingemeten && naar_status == vbo_status/V/Verbouwing_verblijfsobject, TRUE)
+														 ,case(van_status == vbo_status/V/Verblijfsobject_in_gebruik_niet_ingemeten && naar_status == vbo_status/V/Verblijfsobject_in_gebruik, TRUE)
+														 ,case(van_status == vbo_status/V/Verblijfsobject_in_gebruik_niet_ingemeten && naar_status == vbo_status/V/Verblijfsobject_ingetrokken, TRUE)
+														 
+														 ,case(van_status == vbo_status/V/Verbouwing_verblijfsobject                && naar_status == vbo_status/V/Verblijfsobject_in_gebruik_niet_ingemeten, TRUE)
+														 ,case(van_status == vbo_status/V/Verbouwing_verblijfsobject                && naar_status == vbo_status/V/Verblijfsobject_in_gebruik, TRUE)
+														 
+														 ,case(van_status == vbo_status/V/Verblijfsobject_in_gebruik                && naar_status == vbo_status/V/Verblijfsobject_buiten_gebruik, TRUE)
+														 ,case(van_status == vbo_status/V/Verblijfsobject_in_gebruik                && naar_status == vbo_status/V/Verblijfsobject_ten_onrechte_opgevoerd, TRUE)
+														 ,case(van_status == vbo_status/V/Verblijfsobject_in_gebruik                && naar_status == vbo_status/V/Verblijfsobject_ingetrokken, TRUE)
+														 ,case(van_status == vbo_status/V/Verblijfsobject_in_gebruik                && naar_status == vbo_status/V/Verbouwing_verblijfsobject, TRUE)
+														 , FALSE
+														);
+		attribute<string>      key                    := string(van_status) + '_' + string(naar_status); 
+	}
+	
+	unit<uint8> Undefined : nrofrows = 1
+	{
+		attribute<string> name : ['Undefined'];
+	}
+	
+	unit<uint8> pand_status_w_Undefined := union_unit_uint8(Undefined, pand_status)
+	{
+		attribute<string>      name            := union_data(., Undefined/name, pand_status/name);
+		attribute<bool>        IsVoorraad      := union_data(., const(FALSE, Undefined), pand_status/IsVoorraad);
+		attribute<string>      label           := name;
+		attribute<pand_status> pand_status_rel := rlookup(name, pand_status/name);
+		
+		
+		container V := for_each_nedv(name, String(ID(.))+'[..]', void, .);
+	}
+	
+	unit<uint8> Overgangen_Pand := combine_uint8(pand_status_w_Undefined, pand_status) 
+	{	
+		attribute<pand_status_w_Undefined> van_status         := first_rel;
+		attribute<pand_status>             naar_status        := second_rel;
+		
+		attribute<bool>        Overgang_Onveranderd   := pand_status_w_Undefined/name[van_status] == pand_status/name[naar_status];                          // overgang blijft hetzelfde -> nieuwbouw/toevoeging/sloop/onttrekking
+		attribute<bool>        Overgang_Onlogisch     := not(Overgang_Logisch) && not(Overgang_Onveranderd); // overgang is niet logisch -> correctie
+		attribute<bool>        Overgang_Logisch   :=   switch(                                               // overgang is logisch -> nieuwbouw/toevoeging/sloop/onttrekking
+														  case(van_status == pand_status_w_Undefined/V/Undefined                      && naar_status == pand_status/V/bouwvergunning_verleend, TRUE)
+														 ,case(van_status == pand_status_w_Undefined/V/Undefined                      && naar_status == pand_status/V/bouw_gestart, TRUE)
+														 
+														 ,case(van_status == pand_status_w_Undefined/V/bouwvergunning_verleend        && naar_status == pand_status/V/bouw_gestart, TRUE)
+														 ,case(van_status == pand_status_w_Undefined/V/bouwvergunning_verleend        && naar_status == pand_status/V/pand_in_gebruik, TRUE)
+														 ,case(van_status == pand_status_w_Undefined/V/bouwvergunning_verleend        && naar_status == pand_status/V/pand_in_gebruik_niet_ingemeten, TRUE)
+														 ,case(van_status == pand_status_w_Undefined/V/bouwvergunning_verleend        && naar_status == pand_status/V/verbouwing_pand, TRUE)
+														 ,case(van_status == pand_status_w_Undefined/V/bouwvergunning_verleend        && naar_status == pand_status/V/pand_buiten_gebruik, TRUE)
+														 
+														 ,case(van_status == pand_status_w_Undefined/V/bouw_gestart                   && naar_status == pand_status/V/pand_in_gebruik, TRUE)
+														 ,case(van_status == pand_status_w_Undefined/V/bouw_gestart                   && naar_status == pand_status/V/pand_in_gebruik_niet_ingemeten, TRUE)
+														 ,case(van_status == pand_status_w_Undefined/V/bouw_gestart                   && naar_status == pand_status/V/verbouwing_pand, TRUE)
+														 
+														 ,case(van_status == pand_status_w_Undefined/V/pand_in_gebruik                && naar_status == pand_status/V/verbouwing_pand, TRUE)
+														 ,case(van_status == pand_status_w_Undefined/V/pand_in_gebruik                && naar_status == pand_status/V/pand_buiten_gebruik, TRUE)
+														 ,case(van_status == pand_status_w_Undefined/V/pand_in_gebruik                && naar_status == pand_status/V/sloopvergunning_verleend, TRUE)
+														 ,case(van_status == pand_status_w_Undefined/V/pand_in_gebruik                && naar_status == pand_status/V/pand_gesloopt, TRUE)
+														 
+														 ,case(van_status == pand_status_w_Undefined/V/pand_in_gebruik_niet_ingemeten && naar_status == pand_status/V/verbouwing_pand, TRUE)
+														 ,case(van_status == pand_status_w_Undefined/V/pand_in_gebruik_niet_ingemeten && naar_status == pand_status/V/pand_in_gebruik, TRUE)
+														 ,case(van_status == pand_status_w_Undefined/V/pand_in_gebruik_niet_ingemeten && naar_status == pand_status/V/pand_buiten_gebruik, TRUE)
+														 ,case(van_status == pand_status_w_Undefined/V/pand_in_gebruik_niet_ingemeten && naar_status == pand_status/V/sloopvergunning_verleend, TRUE)
+														 ,case(van_status == pand_status_w_Undefined/V/pand_in_gebruik_niet_ingemeten && naar_status == pand_status/V/pand_gesloopt, TRUE)
+														 
+														 ,case(van_status == pand_status_w_Undefined/V/verbouwing_pand                && naar_status == pand_status/V/pand_in_gebruik, TRUE)
+														 ,case(van_status == pand_status_w_Undefined/V/verbouwing_pand                && naar_status == pand_status/V/pand_in_gebruik_niet_ingemeten, TRUE)
+														 ,case(van_status == pand_status_w_Undefined/V/verbouwing_pand                && naar_status == pand_status/V/pand_buiten_gebruik, TRUE)
+														 ,case(van_status == pand_status_w_Undefined/V/verbouwing_pand                && naar_status == pand_status/V/sloopvergunning_verleend, TRUE)
+														 ,case(van_status == pand_status_w_Undefined/V/verbouwing_pand                && naar_status == pand_status/V/pand_gesloopt, TRUE)
+														 
+														 ,case(van_status == pand_status_w_Undefined/V/pand_buiten_gebruik            && naar_status == pand_status/V/pand_in_gebruik, TRUE)
+														 ,case(van_status == pand_status_w_Undefined/V/pand_buiten_gebruik            && naar_status == pand_status/V/pand_in_gebruik_niet_ingemeten, TRUE)
+														 ,case(van_status == pand_status_w_Undefined/V/pand_buiten_gebruik            && naar_status == pand_status/V/sloopvergunning_verleend, TRUE)
+														 ,case(van_status == pand_status_w_Undefined/V/pand_buiten_gebruik            && naar_status == pand_status/V/pand_gesloopt, TRUE)
+														 
+														 ,case(van_status == pand_status_w_Undefined/V/sloopvergunning_verleend       && naar_status == pand_status/V/pand_gesloopt, TRUE)
+														 , FALSE
+														);
+		attribute<string>      key                    := string(van_status) + '_' + string(naar_status); 
+	}
+	
+	
+	unit<uint8> vbo_status := classifications/bag/vbo_status;
+	unit<uint8> pand_status := classifications/bag/pand_status;
+	
+	unit<uint8> vbo_gebruiksdoel_ext := classifications/bag/vbo_gebruiksdoel_ext
+	{
+		attribute<FunctieK> functie_rel := IsWonen ? FunctieK/V/wonen : FunctieK/V/utiliteit;
+	}
+	unit<uint8> FunctieK : nrofrows = 2
+	{
+		attribute<string> name : ['wonen', 'utiliteit'];
+		attribute<string> name_short : ['W', 'U'];
+		attribute<string> label := name;
+		
+		container V := for_each_nedv(name, String(ID(.))+'[..]', void, .);
+	}
+	
+	// unit<uint32> Jaren := range(uint32, 2012,2023)
+	// {
+		// attribute<string> name := 'Y'+string(id(.));
+	// }
+}
+
+

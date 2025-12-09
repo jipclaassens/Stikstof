@@ -1,0 +1,60 @@
+container units
+{
+	unit<int32>     datum;
+	unit<uint16>     jaar;
+	unit<int16>     maand;
+	unit<float64>  	cm                    := 0.01f * m;
+	unit<float64>  	m                     := BaseUnit('Meter', float64);
+	unit<float64>  	mm                    := 0.001f * m;
+	unit<int32>     NrWoningen            := BaseUnit('NrWoning', int32);
+	unit<float64>   PandUnit              := BaseUnit('Pand', float64);
+	unit<int32>     NrJobs                := BaseUnit('Job', int32);
+	unit<float64>   Jobs                  := BaseUnit('Job', float64);
+	unit<float64>   m2footprint           := BaseUnit('m2footprint', float64);
+	unit<float64>   verblijfsobject       := BaseUnit('verblijfsobject', float64);
+	unit<float64>   Woning                := BaseUnit('woning', float64);
+	unit<float64>   eur                   := BaseUnit('Euro', float64);
+	unit<float64>   procent;
+	
+	
+	unit<float64>  	km              := 1000f * m;
+	unit<float64>   m2              := m * m;
+	unit<float64>   km2             := km * km;
+	// unit<float64>   mm              := 0.001f * m;
+	// unit<float64>   mm2             := mm * mm;
+	unit<float64>  	ha              := 10000.0 * m2;
+	unit<float64>   woning_ha       := woning / ha;
+	unit<float64>   nrwonha         := nrwoningen / ha;
+	unit<float64>   m2_woning       := m2 / Woning;
+	unit<float64>   m2_vbo          := m2 / verblijfsobject;
+	unit<float64>   m2_ha          := m2 / ha;
+	unit<float64>   eur_m2          := eur / m2;
+	unit<float64>  	eur_ha          := eur / ha;
+	unit<float64>  	vbo_ha          := verblijfsobject / ha;
+	unit<float64>  	eur_woning      := eur / Woning;
+	unit<float64>  	eur_vbo         := eur / verblijfsobject;
+	unit<float64>   decibel         : cdf = "classifications/decibel_8_klassen/ClassBreaks";
+	unit<float64>   m2footprint_job := m2footprint / Jobs;
+	
+	unit<uint32>  s         := baseunit('seconde', uint32);
+	unit<float64> s_f       := baseunit('seconde', float64);
+	unit<uint32>  min       := 60 * s;
+	unit<float64> min_f     := float64(60f * s_f);
+	unit<uint32>  hr        := 60 * min;
+	unit<float64> hr_f      := float64(60f * min);
+
+	unit<float64> m_s       := m  / s_f;
+	unit<float64> km_hr     := km / hr_f;
+	
+	unit<string>  string_t;
+	unit<float64> float64_t;
+	unit<bool>    bool_t;
+	unit<uint2>   uint2_t;
+	unit<uint8>   uint8_t;
+	unit<uint16>  uint16_t;
+	unit<uint32>  uint32_t;
+	
+	
+}
+
+

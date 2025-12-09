@@ -1,0 +1,116 @@
+container Policies
+{
+	container N2000_2024
+	: StorageName = "%SourceDataDir%/Overig/Beleid/n2000_stikstofgevoelig_2025.gpkg"
+	, StorageReadOnly = "TRUE"
+	, StorageType = "gdal.vect"
+	, SyncMode = "AllTables"
+	, DialogData = "rdc"
+	{
+		unit<uint32> n2000_processed
+		{
+			attribute<bool> IsStikstofGevoelig := stikstofgevoelig == 'JA';
+			attribute<bool> per_100m (rdc_100m) := IsDefined(poly2grid(geometry, rdc_100m));
+		}
+		unit<uint32> StikstofGevoelig := select_with_org_rel(n2000_processed/IsStikstofGevoelig)
+		{
+			attribute<rdc>  geometry     (poly) := org_rel -> geometry;
+			attribute<bool> per_100m (rdc_100m) := IsDefined(poly2grid(geometry, rdc_100m));
+			unit<uint32>    seq2point           := sequence2points(geometry);
+		}
+	}
+	
+
+	attribute<uint8> Natura2000_2008_src (rdc_100m)
+	:	StorageName     = "%Alt_DataDir%/Overig/Beleid/natura2000_0908.tif"
+	,	StorageType     = "gdal.grid"
+	,	StorageReadOnly = "True";
+	attribute<bool>   Natura2000_2008 (rdc_100m) := bool(Natura2000_2008_src);
+	
+	unit<uint32> Natura2000_2020
+	:	StorageName     = "%Redev_DataDir%/Beleid/EU/Natura2000_20200524_RD_reproject.gdb"
+	,	StorageType     = "gdal.vect"
+	,	StorageReadOnly = "True"
+	,	Source          = "Nationaal georegister download shp-formaat op 20201013, conversie in ArcGIS met project fuunctie (niet via dataframe) naar gdb-formaat ivm grootte"
+						  "check op 20220117 (van het bestand met als datum 2020-05-24) met nieuwer bestand, inhoudelijk niet gewijzigd"
+	,	url             = "http://geodata.nationaalgeoregister.nl/natura2000/atom/natura2000.xml PS_Natura2000_as_is"
+						  "https://www.nationaalgeoregister.nl/geonetwork/srv/api/records/8829e5dd-c861-4639-a6c8-fdbb6e3440d2"
+	,	SyncMode        = "Attr"
+	,	SqlString       = "SELECT * FROM Natura2000_20200524_RD_reproject WHERE KADASTER <> 'niet van toepassing'" 	//skip gebieden ver de Noordzee op op basis van Kadaster-filter
+	{
+		attribute<rdc> geometry (poly);
+		attribute<string>    name := AsItemName(naam_n2k);
+		attribute<string>    label := name;
+		attribute<bool> per_100m (rdc_100m) := IsDefined(poly2grid(geometry, rdc_100m));
+		unit<uint32> PointSet := sequence2points(geometry);
+	}
+	
+	
+	
+	attribute<uint16> EHS_uitgekleed_src (rdc_100m)
+	:	StorageName     = "%Alt_DataDir%/Overig/Beleid/ehs_uitgekleed_2011.tif"
+	,	StorageType     = "gdal.grid"
+	,	StorageReadOnly = "True";
+	
+	attribute<bool> EHS_uitgekleed (rdc_100m) := EHS_uitgekleed_src == 65535w ? FALSE : IsDefined(EHS_uitgekleed_src);
+	
+	unit<uint32> EHS1990 
+	:	StorageName     = "%Alt_DataDir%/Overig/Beleid/EHS1990.shp"
+	,	StorageType     = "gdal.vect"
+	,	StorageReadOnly = "True"
+	{
+		attribute<rdc> 	geometry (poly);
+		attribute<bool> per_100m (rdc_100m) := IsDefined(poly2grid(geometry, rdc_100m));
+	}
+	
+	container NNN_2023 
+	:	StorageName     = "%Alt_DataDir%/Overig/Beleid/NatuurNetwerkNedeland_inspire-pv-ps.nlps-nnn_EPSG28992_20230829.gpkg"
+	,	StorageType     = "gdal.vect"
+	,	StorageReadOnly = "True"
+	, 	SyncMode = "AllTables"
+	, 	DialogData = "rdc"
+	{
+		unit<uint32> ProtectedSite
+		{
+			attribute<uint32> Year := substr(date, 0, 4)[uint32];
+		}
+	}
+	
+	attribute<bool> IsNNN (rdc_100m) := IsDefined(poly2grid(NNN_2023/ProtectedSite/geometry, rdc_100m));
+	
+	attribute<bool> Habitatrichtlijn_HR_2014 (rdc_100m)
+	:	StorageName     = "%Alt_DataDir%/Overig/Beleid/Habitatrichtlijn_HR_2014.tif"
+	,	StorageType     = "gdal.grid"
+	,	StorageReadOnly = "True";
+	attribute<bool> Habitatrichtlijn_HR_en_Natuurbeschermingswet_BN (rdc_100m)
+	:	StorageName     = "%Alt_DataDir%/Overig/Beleid/Habitatrichtlijn_HR_en_Natuurbeschermingswet_BN.tif"
+	,	StorageType     = "gdal.grid"
+	,	StorageReadOnly = "True";
+	attribute<bool> Vogelrichtlijn_VR_2014 (rdc_100m)
+	:	StorageName     = "%Alt_DataDir%/Overig/Beleid/Vogelrichtlijn_VR_2014.tif"
+	,	StorageType     = "gdal.grid"
+	,	StorageReadOnly = "True";
+	attribute<bool> Vogelrichtlijn_VR_en_Natuurbeschermingswet_BN_2014 (rdc_100m)
+	:	StorageName     = "%Alt_DataDir%/Overig/Beleid/Vogelrichtlijn_VR_en_Natuurbeschermingswet_BN_2014.tif"
+	,	StorageType     = "gdal.grid"
+	,	StorageReadOnly = "True";
+	attribute<bool> Vogelrichtlijn_VR_en_Habitatrichtlijn_HR_2014 (rdc_100m)
+	:	StorageName     = "%Alt_DataDir%/Overig/Beleid/Vogelrichtlijn_VR_en_Habitatrichtlijn_HR_2014.tif"
+	,	StorageType     = "gdal.grid"
+	,	StorageReadOnly = "True";
+	attribute<bool> Vogelrichtlijn_Habitatrichtlijn_Natuurbeschermingswet_2014 (rdc_100m)
+	:	StorageName     = "%Alt_DataDir%/Overig/Beleid/Vogelrichtlijn_Habitatrichtlijn_Natuurbeschermingswet_2014.tif"
+	,	StorageType     = "gdal.grid"
+	,	StorageReadOnly = "True";
+	
+	attribute<bool> HR_2003 (rdc_100m)
+	:	StorageName     = "%Alt_DataDir%/Overig/Beleid/HR_2003.tif"
+	,	StorageType     = "gdal.grid"
+	,	StorageReadOnly = "True";
+	attribute<bool> VHR_2003 (rdc_100m)
+	:	StorageName     = "%Alt_DataDir%/Overig/Beleid/VHR2003.tif"
+	,	StorageType     = "gdal.grid"
+	,	StorageReadOnly = "True";
+	
+	attribute<bool> IsVogelrichtlijn_Habitatrichtlijn_Natuurbeschermingswet_2014 (rdc_100m) := OR(Habitatrichtlijn_HR_2014,Habitatrichtlijn_HR_en_Natuurbeschermingswet_BN,Vogelrichtlijn_VR_2014,Vogelrichtlijn_VR_en_Natuurbeschermingswet_BN_2014,Vogelrichtlijn_VR_en_Habitatrichtlijn_HR_2014,Vogelrichtlijn_Habitatrichtlijn_Natuurbeschermingswet_2014);
+}

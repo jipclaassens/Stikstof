@@ -1,0 +1,48 @@
+container SourceData :  using = "units;geography;classifications"
+{
+	#include <bag.dms>
+	#include <bbg.dms>
+	#include <brt.dms>
+	#include <Regios.dms>
+	#include <Policies.dms>
+	
+ 	container EigendomStaat
+	{
+		unit<uint32> Corporatiebezit_data
+		:   StorageName     = "%Redev_DataDir%/Vastgoed/EigendomStaat/CorporatieBezit.shp"
+		,   StorageType     = "gdal.vect"
+		,	StorageReadOnly = "True"
+		,	Source          = "https://pbl.sliksvn.com/vesta/SD51/EigendomStaat revision 640"
+		{
+			attribute<string> Label := 'C_'+string(OBJECTID), DialogType = "LabelText";
+			attribute<rdc> geometry;
+			attribute<classifications/Eigendom> Eigendom_rel := const(classifications/Eigendom/V/WoonCorp,.); //eigendomstatus als attribuut
+		}
+		
+		// inlezen puntenbestand particuliere huur
+		unit<uint32> Particulierehuur_data
+		:   StorageName     = "%Redev_DataDir%/Vastgoed/EigendomStaat/ParticuliereHuur.shp"
+		,   StorageType     = "gdal.vect"
+		,	DialogType      = "Map"
+		,	StorageReadOnly = "True"
+		,	Source          = "https://pbl.sliksvn.com/vesta/SD51/EigendomStaat revision 640"
+		{
+			attribute<string> Label := 'H_'+string(OBJECTID);
+			attribute<rdc> geometry;
+			attribute<classifications/Eigendom> Eigendom_rel := const(classifications/Eigendom/V/PartHuur,.); //eigendomstatus als attribuut
+		}
+		
+		//samenvoegen bovenstaande puntenbestanden tot gezamenlijke entiteit
+		unit<uint32> EigendomStaat_data := union_unit(Corporatiebezit_data, Particulierehuur_data)
+		{
+			attribute<string> Label := union_data(., Corporatiebezit_data/Label, Particulierehuur_data/Label);
+			attribute<rdc> geometry := union_data(., Corporatiebezit_data/geometry, Particulierehuur_data/geometry);
+			attribute<classifications/Eigendom> Eigendom_rel := union_data(., Corporatiebezit_data/Eigendom_rel, Particulierehuur_data/Eigendom_rel);
+			
+			// ruimtelijke matching om bijbehorend BAG pand per punt te bepalen
+			attribute<pand> Pand_rel := point_in_polygon(geometry, pand/Geometry);
+		}
+	}
+ 
+ 
+}

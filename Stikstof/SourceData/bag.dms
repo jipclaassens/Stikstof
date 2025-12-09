@@ -1,0 +1,28 @@
+container BAG : using = "classifications;units"
+{
+	unit<uint32>    RegioUnit_buurt   := /SourceData/RegioIndelingen/buurt;
+	unit<uint32>    RegioUnit_wijk    := /SourceData/RegioIndelingen/wijk;
+	unit<uint32>    RegioUnit_gem     := /SourceData/RegioIndelingen/gemeente;
+	unit<uint32>    RegioUnit_corop   := /SourceData/RegioIndelingen/corop;
+	unit<uint32>    RegioUnit_prov    := /SourceData/RegioIndelingen/provincie;
+	unit<uint32>    RegioUnit_NL      := /SourceData/RegioIndelingen/nederland;
+	
+	unit<uint8>     WP2               := classifications/bag/type_woonpand_2;
+	unit<uint8>     WP3               := classifications/bag/type_woonpand_3;
+	unit<uint8>     WP4               := classifications/bag/type_woonpand_4;
+	unit<uint8>     WP5               := classifications/bag/type_woonpand;
+	unit<uint8>     WP5_src           := classifications/bag/type_woonpand_src;
+	
+	unit<uint8>     vbo_gebruiksdoel         := classifications/bag/vbo_gebruiksdoel;
+	unit<uint8>     vbo_gebruiksdoel_ext     := classifications/bag/vbo_gebruiksdoel_ext;
+	unit<uint8>     vbo_gebruiksdoel_english := classifications/bag/vbo_gebruiksdoel_english;
+	unit<uint8>     vbo_status               := classifications/bag/vbo_status;
+	unit<uint8>     pand_status               := classifications/bag/pand_status;
+	
+	parameter<string> vbo_voorraad_status_str  := 'status_rel == vbo_status/v/verblijfsobject_in_gebruik || status_rel == vbo_status/v/verblijfsobject_in_gebruik_niet_ingemeten || status_rel == vbo_status/v/verblijfsobject_buiten_gebruik || status_rel == vbo_status/v/verbouwing_verblijfsobject';
+	parameter<string> pand_voorraad_status_str := 'status_rel == pand_status/V/pand_in_gebruik || status_rel == pand_status/V/pand_in_gebruik_niet_ingemeten || status_rel == pand_status/V/pand_buiten_gebruik || status_rel == pand_status/V/verbouwing_pand';
+	
+	#include<MaakVolledigeBAG.dms>
+	#include<VolledigeBAG.dms>
+}
+

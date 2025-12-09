@@ -1,0 +1,46 @@
+container Analyse : using = "units;classifications;geography;classifications/bag"
+{  
+	#include<redev_obv_hele_bag.dms>
+	#include<N2000_Analyse.dms>
+	// #include<DetermineUrbanisationK.dms>
+	// #include <RedevelopmentOptionValue.dms>
+	// #include <sloop_nieuwbouw_snapshots_kwartalen.dms>
+	// #include <UAI.dms>
+	// #include <verschil_per_ha.dms> // jaarlijkse verdichting analyse en paper 1
+	
+	// container OppervlakVanNieuwbouw
+	// {
+		// unit<uint32> Voorraad       := select_with_org_rel(Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/Per1Jan/Y2025/select/VBO_IsVoorraad && /Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/Per1Jan/Y2025/select/VBO_IsWonen)
+		// {
+			// attribute<rdc>                  geometry                      := org_rel -> geometry;
+			// attribute<uint64>               vbo_bag_nr                    := org_rel -> vbo_bag_nr;
+			// attribute<int32>                vbo_oppervlakte               := org_rel -> vbo_oppervlakte_UnknownEdit;
+			// attribute<vbo_status>           vbo_status_rel                := org_rel -> vbo_status_rel;
+			// attribute<vbo_gebruiksdoel_ext> gebruiksdoel_rel              := org_rel -> gebruiksdoel_rel;
+			// attribute<jaar>                 pand_bouwjaar                 := org_rel -> pand_bouwjaar;
+
+			// attribute<Bouwjaren>            Bouwjaren_rel                 := pand_bouwjaar <= 1900[jaar] ? 1900[Bouwjaren] : rlookup(uint32(pand_bouwjaar), id(Bouwjaren));
+		// }
+		
+		// unit<uint32> Nieuwbouw       := Analyse/Redev_obv_hele_bag/PrepDomains/N/domain //objecten
+		// {
+			// attribute<string>               pand_vbo_id                   := string(pand_bag_nr) + '_' + string(vbo_bag_nr);
+			// attribute<uint64>               pand_bag_nr                   := Analyse/Redev_obv_hele_bag/PrepDomains/N/domain/pand_bag_nr;
+			// attribute<uint64>               vbo_bag_nr                    := Analyse/Redev_obv_hele_bag/PrepDomains/N/domain/vbo_bag_nr;
+			// attribute<int32>                vbo_oppervlakte               := Analyse/Redev_obv_hele_bag/PrepDomains/N/domain/vbo_oppervlakte;
+			// attribute<string>               pand_status                   := classifications/bag/pand_status/name[Analyse/Redev_obv_hele_bag/PrepDomains/N/domain/pand_status_rel];
+			// attribute<jaar>                 pand_bouwjaar                 := Analyse/Redev_obv_hele_bag/PrepDomains/N/domain/pand_bouwjaar;
+			
+			// attribute<Bouwjaren>            Bouwjaren_rel                 := pand_bouwjaar <= 1900[jaar] ? 1900[Bouwjaren] : rlookup(uint32(pand_bouwjaar), id(Bouwjaren));
+		// }
+		
+		// unit<uint32> Bouwjaren := cat_range(1900, 2025)
+		// {
+			// attribute<string>  name              := 'Y'+string(id(.));
+			// attribute<int32>   Nieuwbouw_avg_opp := mean(Nieuwbouw/vbo_oppervlakte, Nieuwbouw/Bouwjaren_rel);
+			// attribute<uint32>  Nieuwbouw_count   := count(Nieuwbouw/vbo_oppervlakte, Nieuwbouw/Bouwjaren_rel);
+			// attribute<int32>   Voorraad_avg_opp  := mean(Voorraad/vbo_oppervlakte, Voorraad/Bouwjaren_rel);
+			// attribute<uint32>  Voorraad_count    := count(Voorraad/vbo_oppervlakte, Voorraad/Bouwjaren_rel);
+		// }
+	// }
+}

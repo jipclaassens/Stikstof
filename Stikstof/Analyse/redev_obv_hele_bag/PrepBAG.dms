@@ -1,0 +1,1184 @@
+container PrepBAG : using = "AdditionalClassifications"
+{
+	unit<uint32> BAG_Tabel_path := /SourceData/BAG/VolledigeBAG/Historische_Join/SelectNonOverlappingPeriods;
+
+	unit<uint32> BAG_Tabel := BAG_Tabel_path, KeepData = "true"
+	{
+		attribute<rdc>                  geometry                      := BAG_Tabel_path/geometry;
+		attribute<string>               label                         := pv_begindatum_key;
+		attribute<uint64>               pand_bag_nr                   := BAG_Tabel_path/pand_bag_nr;
+		attribute<uint64>               vbo_bag_nr                    := BAG_Tabel_path/vbo_bag_nr;
+		attribute<int32>                vbo_oppervlakte               := BAG_Tabel_path/vbo_oppervlakte;
+		attribute<int32>                vbo_oppervlakte_UnknownEdit   := vbo_oppervlakte == 9999i || vbo_oppervlakte == 99999i ? 0i : vbo_oppervlakte;
+		attribute<int32>                begindatum                    := BAG_Tabel_path/begindatum;
+		attribute<jaar>                 begin_jaar                    := (begindatum / 10000i)[jaar];
+		attribute<int32>                einddatum                     := BAG_Tabel_path/einddatum;
+		attribute<vbo_gebruiksdoel_ext> prev_gebruiksdoel_rel         := gebruiksdoel_rel[pv_begin_eind_rel];
+		attribute<vbo_gebruiksdoel_ext> gebruiksdoel_rel              := BAG_Tabel_path/gebruiksdoel_rel;
+		attribute<vbo_gebruiksdoel_ext> pand_modus_gebruiksdoel_rel   := uq_pand_nr/modus_gebruiksdoel_rel[uq_pand_nr_rel];
+		attribute<bool>                 WasOverigeGebruiksfunctie     := prev_gebruiksdoel_rel == vbo_gebruiksdoel_ext/v/overige_gebruiks; //tbv TM corrigeren van garageboxen wonen>ovfuncties
+		attribute<bool>                 IsOverigeGebruiksfunctie      := gebruiksdoel_rel == vbo_gebruiksdoel_ext/v/overige_gebruiks;//tbv TM corrigeren van garageboxen wonen>ovfuncties
+		
+		attribute<bool>                 VBO_WasLogies     := prev_gebruiksdoel_rel == vbo_gebruiksdoel_ext/v/logies; //tbv TM corrigeren van garageboxen wonen>ovfuncties
+		attribute<bool>                 VBO_IsLogies      := gebruiksdoel_rel == vbo_gebruiksdoel_ext/v/logies;//tbv TM corrigeren van garageboxen wonen>ovfuncties
+		
+		attribute<jaar>                 pand_bouwjaar                 := BAG_Tabel_path/pand_bouwjaar;
+		attribute<FunctieK>             prev_functie_rel              := MakeDefined(vbo_gebruiksdoel_ext/functie_rel[gebruiksdoel_rel[pv_begin_eind_rel]],functie_rel);
+		attribute<FunctieK>             functie_rel                   := vbo_gebruiksdoel_ext/functie_rel[gebruiksdoel_rel];
+		attribute<uint32>               pand_count_ZorgFuncties          := org_rel -> pand_count_ZorgFuncties;
+		attribute<uint32>               pand_count_ZorgFuncties_StartBAG := org_rel -> pand_count_ZorgFuncties_StartBAG;
+
+		attribute<bool>                 IsMogelijkWoningCorporatiePand   := BAG_Tabel_path/IsMogelijkWoningCorporatiePand;
+		attribute<bool>                 IsMutated                        := IsDefined(rlookup(vbo_bag_nr, FinalMutationTable/vbo_bag_nr));
+		attribute<bool>                 IsOnveranderd_Woon_Voorraad      := not(IsMutated) && VBO_IsWonen && VBO_IsVoorraad && EINDDATUM == /SourceData/BAG/VolledigeBAG/MaxDatum;
+		attribute<bool>                 IsOnveranderd_NietWoon_Voorraad  := not(IsMutated) && not(VBO_IsWonen) && not(IsOverigeGebruiksfunctie) && VBO_IsVoorraad && EINDDATUM == /SourceData/BAG/VolledigeBAG/MaxDatum;
+		attribute<bool>                 LigtOpStandplaats_Start_20162017 := IsDefined(point_in_polygon(geometry, /SourceData/BAG/VolledigeBAG/Standplaatsen/src/SelectieMoment/geometry)), Descr = "Er is een sloop piek in 2016/2017, dit betrof foutieve toevoeging van stacaravans als pand. Deze zijn toen allemaal 'gesloopt'. Deze kunnen we vervolgens identiferen doordat ze als nieuwe standplaats zijn toegevoegd aan de BAG.";
+		
+		//laatste bouwvergunning_verleend datum, per pand.
+		attribute<int32>                Datum_BouwvergunningVerleend     := pand_status_rel == pand_status/v/bouwvergunning_verleend ? begindatum : null_i;
+		attribute<int32>                LastDatum_BouwvergunningVerleend     := last(Datum_BouwvergunningVerleend, uq_pand_nr_rel)[uq_pand_nr_rel];
+
+		
+		attribute<uint32>               pand_count_WoonFuncties           := sum_uint32(VBO_IsWonen, uq_pand_nr_rel)[uq_pand_nr_rel];
+		attribute<uint32>               pand_count_WoonFuncties_Voorraad  := sum_uint32(VBO_IsWonen && vbo_IsVoorraad, uq_pand_nr_rel)[uq_pand_nr_rel];
+		attribute<uint32>               pand_count_new_WoonFuncties       := sum_uint32(VBO_IsWonen && vbo_IsVoorraad && not(ActiefOp_StartBAG), uq_pand_nr_rel)[uq_pand_nr_rel];
+		
+		attribute<uq_pand_nr>              uq_pand_nr_rel        := rlookup(pand_bag_nr, uq_pand_nr/values);
+		unit<uint32>                       uq_pand_nr            := unique(pand_bag_nr)
+		{
+			attribute<vbo_gebruiksdoel_ext> modus_gebruiksdoel_rel := modus(../gebruiksdoel_rel,uq_pand_nr_rel); 
+		}
+		
+		unit<uint32> Onveranderd_Woon := select_with_org_rel(IsOnveranderd_Woon_Voorraad)
+		{
+			attribute<uint64>              vbo_bag_nr           := ../vbo_bag_nr[org_rel];
+			attribute<int32>               vbo_oppervlakte      := ../vbo_oppervlakte[org_rel];
+			attribute<rdc>                 geometry             := ../geometry[org_rel];
+			attribute<rdc>                 pand_geometry (poly) := ../pand_geometry[org_rel];
+			attribute<jaar>                pand_bouwjaar        := ../pand_bouwjaar[org_rel];
+			attribute<uq>                  uq_rel               := rlookup(vbo_bag_nr, uq/values);
+			 
+			unit<uint32> uq := unique(vbo_bag_nr)
+			{
+				attribute<uint64>              vbo_bag_nr           := values;
+				attribute<rdc>                 vbo_geometry         := first(../geometry, uq_rel);
+				attribute<rdc>                 pand_geometry (poly) := ../pand_geometry[invert(uq_rel)];
+				attribute<int32>               MutatieMaand         := const(null_i,.);
+				attribute<int32>               vbo_oppervlakte      := last(../vbo_oppervlakte, uq_rel);
+				attribute<jaar>                pand_bouwjaar        := last(../pand_bouwjaar, uq_rel);
+				
+				attribute<bool> IsAmsterdam := IsDefined(point_in_polygon(vbo_geometry, /SourceData/RegioIndelingen/Gemeente/Amsterdam/geometry));
+				
+				unit<uint32> Amsterdam := select_with_org_rel(IsAmsterdam)
+				, DialogData = "pand_geometry"
+				, DialogType = "map"
+				{
+					attribute<rdc> pand_geometry (poly) := ../pand_geometry[org_rel];
+				}
+			}
+		}
+		
+		unit<uint32> Onveranderd_NietWoon := select_with_org_rel(IsOnveranderd_NietWoon_Voorraad)
+		{
+			attribute<uint64>              vbo_bag_nr           := ../vbo_bag_nr[org_rel];
+			attribute<int32>               vbo_oppervlakte      := ../vbo_oppervlakte[org_rel];
+			attribute<rdc>                 geometry             := ../geometry[org_rel];
+			attribute<rdc>                 pand_geometry (poly) := ../pand_geometry[org_rel];
+			attribute<jaar>                pand_bouwjaar        := ../pand_bouwjaar[org_rel];
+			attribute<uq>                  uq_rel               := rlookup(vbo_bag_nr, uq/values);
+			 
+			unit<uint32> uq := unique(vbo_bag_nr)
+			, DialogType = "map", DialogData = "vbo_geometry"
+			{
+				attribute<uint64>              vbo_bag_nr           := values;
+				attribute<rdc>                 vbo_geometry         := first(../geometry, uq_rel);
+				attribute<rdc>                 pand_geometry (poly) := ../pand_geometry[invert(uq_rel)];
+				attribute<int32>               MutatieMaand         := const(null_i,.);
+				attribute<int32>               vbo_oppervlakte      := last(../vbo_oppervlakte, uq_rel);
+				attribute<jaar>                pand_bouwjaar        := last(../pand_bouwjaar, uq_rel);
+				
+				//voor figuren paper
+				attribute<bool> IsAmsterdam := IsDefined(point_in_polygon(vbo_geometry, /SourceData/RegioIndelingen/Gemeente/Amsterdam/geometry));
+				unit<uint32> Amsterdam := select_with_org_rel(IsAmsterdam)
+				{
+					attribute<rdc> pand_geometry (poly) := ../pand_geometry[org_rel];
+				}
+			}
+		}
+		
+		container VoorraadWoningenPer1Jan :=
+			for_each_nedv(
+				classifications/Tijd/Jaren/name
+				, 'sum(VBO_IsVoorraad && VBO_IsWonen && begindatum < int32('+string(classifications/Tijd/Jaren/value)+'0101) && einddatum >= int32('+string(classifications/Tijd/Jaren/value)+'0101) ?  1 :0)'
+				, void
+				, uint32
+			);
+		container VoorraadNietWoningenPer1Jan :=
+			for_each_nedv(
+				classifications/Tijd/Jaren/name
+				, 'sum(VBO_IsVoorraad && !VBO_IsWonen && begindatum < int32('+string(classifications/Tijd/Jaren/value)+'0101) && einddatum >= int32('+string(classifications/Tijd/Jaren/value)+'0101) ?  1 :0)'
+				, void
+				, uint32
+			);
+			
+		container Per1Jan :=
+			for_each_ne(
+				classifications/Tijd/Jaren/name
+				, 'Per1jan_T('+string(classifications/Tijd/Jaren/value)+'[int32], '+string(classifications/Tijd/Jaren/prev_value)+'[int32])'
+			), Descr = "Nodig om transformatie op te kunnen sporen.";
+			
+		unit<uint32> Transformatie_Results := ='union_unit('+AsItemList('Per1Jan/'+classifications/Tijd/Jaren/name+'/select/Sub_IsTr_na_3_en_Plausibel_2_extra')+')'
+		{
+			attribute<uint64> vbo_bag_nr  := ='union_data(.,'+AsItemList('Per1Jan/'+classifications/Tijd/Jaren/name+'/select/Sub_IsTr_na_3_en_Plausibel_2_extra/vbo_bag_nr')+')';
+		}
+		
+		attribute<bool>                 WasObjectVoorraadBijStartBAG      := sum_uint8(VBO_IsVoorraad && begindatum <= 20111201i ? 1b : 0b, uq_vbo_rel)[uq_vbo_rel] > 0b; //nodig voor bepaling 'mutatie in 2e instantie' 
+		
+		attribute<bool>                 IsWaarschijnlijkCorrectieVanStacaravans_NietWonen := gebruiksdoel_rel == vbo_gebruiksdoel_ext/V/logies 
+																								&& VBO_WasVoorraad && not(VBO_IsVoorraad)
+																								&& Pand_WasVoorraad && not(Pand_IsVoorraad)
+																								&& begindatum < 20170201i && begindatum > 20160101i
+																								, Descr = "afname: logies-vbo+pand uit voorraad gehaald, periode 201601-201702";
+																								
+		attribute<bool>                 IsWaarschijnlijkCorrectieVanStacaravans_Wonen     := VBO_WasVoorraad && not(VBO_IsVoorraad)
+																								&& Pand_WasVoorraad && not(Pand_IsVoorraad)
+																								&& begindatum < 20170201i && begindatum > 20160101i
+																								&& IsDefined(point_in_polygon(geometry, /SourceData/BBG/BBG_Reeks_1996_2017/IsVerblijfsrecreatie_2017/geometry))
+																								, Descr = "afname: vbo+pand uit voorraad gehaald, periode 201601-201702, binnen BBG verblijfsrec" //kan elke functie zijn! 
+																											"Er is een sloop piek in 2016/2017, dit betrof foutieve toevoeging van stacaravans als pand. Deze zijn toen allemaal 'gesloopt'.";
+		
+		attribute<bool>                 IsWaarschijnlijkCorrectieVanStudentenComplex_1      := VBO_WasVoorraad && not(VBO_IsVoorraad)
+																								&& Pand_WasVoorraad && Pand_IsVoorraad
+																								&& VBO_WasWonen && VBO_IsWonen
+																								&& begindatum < 20170801i && begindatum > 20160101i
+																								&& IsMogelijkWoningCorporatiePand
+																								, Descr = "afname: woon-vbo uit voorraad gehaald; pand blijft; periode 201601-201708, binnen IsMogelijkWoningCorporatiePand";
+
+		attribute<bool>                 IsWaarschijnlijkCorrectieVanStudentenComplex_2      := pand_count_new_WoonFuncties > 25
+																								&& not(VBO_WasVoorraad) && VBO_IsVoorraad
+																								&& VBO_WasWonen && VBO_IsWonen
+																								&& begindatum < 20130101i && begindatum > 20111201i
+																								, Descr = "toename: woon-vbo aan voorraad toegevoegd; pand minimaal 25 nieuwe woon-vbos sinds 2012; periode 201112-201301";
+
+		attribute<bool>                 IsWaarschijnlijkCorrectieVanZorgNaarZorgwoonunits := pand_count_new_WoonFuncties > (pand_count_ZorgFuncties + 50) 
+																								&& pand_count_ZorgFuncties > 0
+																								&& begindatum < 20180101i && begindatum > 20120101i
+																								, Descr = "toename: pand meer nieuwe woon-vbos sinds 2012 dan zorgfuncties+50; zorgfuncties > 0; periode 201201-201801"; //kan elke functie zijn! 
+																								
+		attribute<bool>                 IsWaarschijnlijkCorrectieVanVakantiehuisWonenNaarLogies := VBO_WasWonen && VBO_IsLogies
+																								&& begindatum < 20140601i && begindatum > 20120101i
+																								, Descr = "afname: overgang wonen -> logies; periode 201201-201406";
+		
+		// Extra stappen om Nieuwbouw (N+) te identificeren, ipv T+ of C+
+		unit<uint32> uq_vbo := unique(vbo_bag_nr); attribute<uq_vbo>        uq_vbo_rel := rlookup(vbo_bag_nr, uq_vbo/values);
+		attribute<int32>                vbo_vormingsfase_begindatum   := min(vbo_status_rel == vbo_status/v/verblijfsobject_gevormd ? begindatum : null_i, uq_vbo_rel)[uq_vbo_rel] > max(vbo_status_rel == vbo_status/v/verblijfsobject_gevormd ? einddatum : null_i, uq_vbo_rel)[uq_vbo_rel] ? null_i : min(vbo_status_rel == vbo_status/v/verblijfsobject_gevormd ? begindatum : null_i, uq_vbo_rel)[uq_vbo_rel];
+		attribute<int32>                vbo_vormingsfase_einddatum    := min(vbo_status_rel == vbo_status/v/verblijfsobject_gevormd ? begindatum : null_i, uq_vbo_rel)[uq_vbo_rel] > max(vbo_status_rel == vbo_status/v/verblijfsobject_gevormd ? einddatum : null_i, uq_vbo_rel)[uq_vbo_rel] ? null_i : max(vbo_status_rel == vbo_status/v/verblijfsobject_gevormd ? einddatum : null_i, uq_vbo_rel)[uq_vbo_rel];
+		attribute<bool>                 Pand_InBouwfase               := pand_status_rel == pand_status/v/bouwvergunning_verleend || pand_status_rel == pand_status/v/bouw_gestart;
+		attribute<bool>                 VBO_in_VormF_EN_Pand_in_BouwF := Pand_InBouwfase && begindatum <= vbo_vormingsfase_einddatum && einddatum >= vbo_vormingsfase_begindatum;
+		attribute<bool>                 Heeft_VBO_in_VormF_EN_Pand_in_BouwF_InChain := any(VBO_in_VormF_EN_Pand_in_BouwF, uq_vbo_rel)[uq_vbo_rel];
+		
+		attribute<bool>                 VBO_WasVoorraad               := vbo_status/isVoorraad[prev_vbo_status_rel];
+		attribute<bool>                 VBO_IsVoorraad                := vbo_status/isVoorraad[vbo_status_rel];
+		attribute<bool>                 VBO_WasWonen                  := prev_functie_rel == FunctieK/v/wonen;
+		attribute<bool>                 VBO_IsWonen                   := functie_rel == FunctieK/v/wonen;
+		attribute<bool>                 Pand_WasVoorraad              := pand_status_w_Undefined/isVoorraad[prev_pand_status_rel];
+		attribute<bool>                 Pand_IsVoorraad               := pand_status/isVoorraad[pand_status_rel];
+		
+		// vbo overgang
+		attribute<vbo_status>           prev_vbo_status_rel           := vbo_status_rel[pv_begin_eind_rel];   // vbo status was
+		attribute<vbo_status>           vbo_status_rel                := BAG_Tabel_path/vbo_status_rel;       // vbo status wordt
+		
+		// pand overgang
+		attribute<pand_status_w_Undefined> prev_pand_status_rel       := MakeDefined(invert(pand_status_w_Undefined/pand_status_rel)[pand_status_rel[pv_begin_eind_rel]], pand_status_w_Undefined/v/undefined); //prev_pand_status_rel_wUndefined
+		attribute<pand_status>             pand_status_rel            := BAG_Tabel_path/pand_status_rel;      // pand status wordt
+		attribute<string>                  pand_overgang_key          := string(prev_pand_status_rel) + '_' + string(pand_status_rel); 
+		attribute<Overgangen_Pand>         pand_overgang_rel          := rlookup(pand_overgang_key, Overgangen_Pand/key); 
+		attribute<bool>                    IsLogische_Pand_overgang   := Overgangen_Pand/Overgang_Logisch[pand_overgang_rel];
+
+		
+		//overgang identificatie
+		attribute<string>                v_begindatum_key             := string(vbo_bag_nr) +'_'+ string(begindatum);
+		attribute<string>                v_einddatum_key              := string(vbo_bag_nr) +'_'+ string(einddatum);
+		attribute<.>                     v_eind_begin_rel             := rlookup(v_einddatum_key, v_begindatum_key); //gives the index number of the next record in the chain. If null, it is the only record in the chain (based on vbo id)
+		attribute<.>                     v_begin_eind_rel             := rlookup(v_begindatum_key, v_einddatum_key); //gives the index number of the next record in the chain. If null, it is the only record in the chain (based on vbo id)
+		
+		attribute<string>                pv_key                       := string(pand_bag_nr) +'_'+ string(vbo_bag_nr);
+		attribute<string>                pv_begindatum_key            := pv_key +'_'+ string(begindatum);
+		attribute<string>                pv_einddatum_key             := pv_key +'_'+ string(einddatum);
+		attribute<.>                     pv_eind_begin_rel            := rlookup(pv_einddatum_key, pv_begindatum_key); //gives the index number of the next record in the chain. If null, it is the only record in the chain (based on pand id/vbo id)
+		attribute<.>                     pv_begin_eind_rel            := rlookup(pv_begindatum_key, pv_einddatum_key); //gives the index number of the next record in the chain. If null, it is the only record in the chain (based on pand id/vbo id)
+	
+		
+		
+		//Identificatie in vooraad Nieuwbouw (N+)
+		attribute<bool>                  IDEN_N_1                     := ((prev_vbo_status_rel == vbo_status/v/verblijfsobject_gevormd  && VBO_IsVoorraad) || (IsNull(prev_vbo_status_rel) && VBO_IsVoorraad))
+																			&& (pand_status_rel == pand_status/v/bouw_gestart || pand_status_rel == pand_status/v/bouwvergunning_verleend)
+																			&& IsLogische_Pand_overgang
+																			&& VBO_WasWonen && VBO_IsWonen
+																			, URL = "%ProjDir%/Analysis/Data/CBS Afleiden_woonvoorraad.pdf";
+		attribute<bool>                  IDEN_N_2                     := ((prev_vbo_status_rel == vbo_status/v/verblijfsobject_gevormd  && VBO_IsVoorraad) || (IsNull(prev_vbo_status_rel) && VBO_IsVoorraad))
+																			&& (prev_pand_status_rel == pand_status_w_Undefined/v/bouw_gestart || prev_pand_status_rel == pand_status_w_Undefined/v/bouwvergunning_verleend)
+																			&& IsLogische_Pand_overgang
+																			&& VBO_WasWonen && VBO_IsWonen;
+		attribute<bool>                  IDEN_N_3                     := ((prev_vbo_status_rel == vbo_status/v/verblijfsobject_gevormd  && VBO_IsVoorraad) || (IsNull(prev_vbo_status_rel) && VBO_IsVoorraad))
+																			&& prev_pand_status_rel == pand_status_w_Undefined/v/undefined
+																			&& (pand_bouwjaar >= (begin_jaar - 1w)  || pand_bouwjaar <= (begin_jaar + 1w))
+																			&& IsLogische_Pand_overgang
+																			&& VBO_WasWonen && VBO_IsWonen;
+		attribute<bool>                  IDEN_N_4                     := not(VBO_WasVoorraad) && VBO_IsVoorraad
+																			&& VBO_WasWonen && VBO_IsWonen
+																			&& Heeft_VBO_in_VormF_EN_Pand_in_BouwF_InChain;
+		attribute<bool>                  IDEN_N                       := IDEN_N_1 || IDEN_N_2 || IDEN_N_3 || IDEN_N_4;
+		
+		//Identificatie in voorraad Toevoeging (T+)
+		attribute<bool>                  IDEN_T_1                     := ((prev_vbo_status_rel == vbo_status/v/verblijfsobject_gevormd  && VBO_IsVoorraad) || (IsNull(prev_vbo_status_rel) && VBO_IsVoorraad))
+																			&& (prev_pand_status_rel == pand_status_w_Undefined/v/pand_in_gebruik || prev_pand_status_rel == pand_status_w_Undefined/v/pand_in_gebruik_niet_ingemeten || prev_pand_status_rel == pand_status_w_Undefined/v/verbouwing_pand)
+																			&& (pand_status_rel == pand_status/v/pand_in_gebruik || pand_status_rel == pand_status/v/pand_in_gebruik_niet_ingemeten || pand_status_rel == pand_status/v/verbouwing_pand)
+																			&& VBO_WasWonen && VBO_IsWonen;
+		attribute<bool>                  IDEN_T_2                     := not(IDEN_N_4) //objecten die op basis van keten analyse als Nieuwbouw worden geclassificeerd, zijn dan geen toeveoging meer.
+																			&& VBO_WasWonen && VBO_IsWonen;
+		attribute<bool>                  IDEN_T                       := IDEN_T_1 && IDEN_T_2; 
+		
+		attribute<bool>                  IDEN_TMplus_status           := VBO_WasVoorraad && VBO_IsVoorraad
+																			&& not(VBO_WasWonen) && VBO_IsWonen
+																			&& not(WasOverigeGebruiksfunctie && VBO_IsWonen);
+		attribute<bool>                  IDEN_TMplus_ExtraAnalysis    := IsDefined(rlookup(vbo_bag_nr, Transformatie_Results/vbo_bag_nr));
+		attribute<bool>                  IDEN_TMplus                  := IDEN_TMplus_status || IDEN_TMplus_ExtraAnalysis;
+		
+		//Identificatie In voorraad correctie (C+)
+		attribute<bool>                  IDEN_Cplus                   := not(VBO_WasVoorraad) && VBO_IsVoorraad
+																			&& not(IDEN_N)
+																			&& not(IDEN_T)
+																			&& VBO_WasWonen && VBO_IsWonen
+																			&& not(IsWaarschijnlijkCorrectieVanZorgNaarZorgwoonunits) //toename: pand meer nieuwe woon-vbos sinds 2012 dan zorgfuncties+50; zorgfuncties > 0; periode 201201-201801
+																			&& not(IsWaarschijnlijkCorrectieVanStudentenComplex_2); //toename: woon-vbo aan voorraad toegevoegd; pand minimaal 25 nieuwe woon-vbos sinds 2012; periode 201112-201301
+																			
+		//Identificatie uit voorraad sloop (S-)
+		attribute<bool>                  IDEN_S                       := VBO_WasVoorraad && vbo_status_rel == vbo_status/v/verblijfsobject_ingetrokken
+																			&& (pand_status_rel == pand_status/v/pand_gesloopt || pand_status_rel == pand_status/v/sloopvergunning_verleend)
+																			&& IsLogische_Pand_overgang
+																			&& VBO_WasWonen && VBO_IsWonen
+																			&& not(IsWaarschijnlijkCorrectieVanStacaravans_Wonen); //afname: vbo+pand uit voorraad gehaald, periode 201601-201702, binnen BBG verblijfsrec
+																			
+		attribute<bool>                  IDEN_S_NW                     := VBO_WasVoorraad && vbo_status_rel == vbo_status/v/verblijfsobject_ingetrokken
+																			&& (pand_status_rel == pand_status/v/pand_gesloopt || pand_status_rel == pand_status/v/sloopvergunning_verleend)
+																			&& IsLogische_Pand_overgang
+																			&& not(VBO_WasWonen) && not(VBO_IsWonen)
+																			&& not(IsWaarschijnlijkCorrectieVanStacaravans_NietWonen); //afname: logies-vbo+pand uit voorraad gehaald, periode 201601-201702
+		//Identificatie uit voorraad onttrekking (O-)
+		attribute<bool>                  IDEN_O                        := VBO_WasVoorraad && vbo_status_rel == vbo_status/v/verblijfsobject_ingetrokken
+																			&& (prev_pand_status_rel == pand_status_w_Undefined/v/pand_in_gebruik || prev_pand_status_rel == pand_status_w_Undefined/v/pand_in_gebruik_niet_ingemeten || prev_pand_status_rel == pand_status_w_Undefined/v/verbouwing_pand)
+																			&& (pand_status_rel == pand_status/v/pand_in_gebruik || pand_status_rel == pand_status/v/pand_in_gebruik_niet_ingemeten || pand_status_rel == pand_status/v/verbouwing_pand)
+																			&& VBO_WasWonen && VBO_IsWonen
+																			&& not(IsWaarschijnlijkCorrectieVanStudentenComplex_1); //afname: woon-vbo uit voorraad gehaald; pand blijft; periode 201601-201708, binnen IsMogelijkWoningCorporatiePand
+		
+		attribute<bool>                  IDEN_TMmin                   := VBO_WasVoorraad && VBO_IsVoorraad
+																			&& VBO_WasWonen && not(VBO_IsWonen)
+																			&& not(VBO_WasWonen && IsOverigeGebruiksfunctie)
+																			&& not(IsWaarschijnlijkCorrectieVanVakantiehuisWonenNaarLogies); //afname: overgang wonen -> logies; periode 201201-201406
+																			
+		//Identificatie uit voorraad correctie (C-)
+		attribute<bool>                  IDEN_Cmin                    := VBO_WasVoorraad && not(VBO_IsVoorraad)
+																			&& not(IDEN_S)
+																			&& not(IDEN_O)
+																			&& VBO_WasWonen && VBO_IsWonen
+																			&& not(IsWaarschijnlijkCorrectieVanStacaravans_Wonen) //afname: vbo+pand uit voorraad gehaald, periode 201601-201702, binnen BBG verblijfsrec
+																			&& not(IsWaarschijnlijkCorrectieVanStudentenComplex_1); //afname: woon-vbo uit voorraad gehaald; pand blijft; periode 201601-201708, binnen IsMogelijkWoningCorporatiePand
+																			
+		parameter<int32>                 PrikMoment                       := 20120101i;   // Voorraad op 20120101 volgens CBS 7,386,743
+		attribute<bool>                  ActiefOp_StartBAG      := VBO_IsVoorraad
+																	&& begindatum < PrikMoment 
+																	&& einddatum >= PrikMoment;
+																	
+																	
+																	
+																	
+																			
+		attribute<bool>                  IDEN_Cplus_Restbakje        := not(IDEN_Cplus) //kopie van IDEN_Cplus, maar dan inverse IsWaarschijnlijk XXX 
+																			&& not(VBO_WasVoorraad) && VBO_IsVoorraad && not(IDEN_N) && not(IDEN_T) && VBO_WasWonen && VBO_IsWonen
+																			&& (IsWaarschijnlijkCorrectieVanZorgNaarZorgwoonunits  //toename: pand meer nieuwe woon-vbos sinds 2012 dan zorgfuncties+50; zorgfuncties > 0; periode 201201-201801
+																				|| IsWaarschijnlijkCorrectieVanStudentenComplex_2); //toename: woon-vbo aan voorraad toegevoegd; pand minimaal 25 nieuwe woon-vbos sinds 2012; periode 201112-201301
+																			
+		attribute<bool>                  IDEN_S_Restbakje            := not(IDEN_S) //kopie van IDEN_S, maar dan inverse IsWaarschijnlijk XXX 
+																			&& VBO_WasVoorraad && vbo_status_rel == vbo_status/v/verblijfsobject_ingetrokken && (pand_status_rel == pand_status/v/pand_gesloopt || pand_status_rel == pand_status/v/sloopvergunning_verleend) && IsLogische_Pand_overgang && VBO_WasWonen && VBO_IsWonen
+																			&& IsWaarschijnlijkCorrectieVanStacaravans_Wonen; //afname: vbo+pand uit voorraad gehaald, periode 201601-201702, binnen BBG verblijfsrec
+		
+		attribute<bool>                  IDEN_O_Restbakje            := not(IDEN_O) //kopie van IDEN_O, maar dan inverse IsWaarschijnlijk XXX 
+																			&& VBO_WasVoorraad && vbo_status_rel == vbo_status/v/verblijfsobject_ingetrokken && (prev_pand_status_rel == pand_status_w_Undefined/v/pand_in_gebruik || prev_pand_status_rel == pand_status_w_Undefined/v/pand_in_gebruik_niet_ingemeten || prev_pand_status_rel == pand_status_w_Undefined/v/verbouwing_pand) && (pand_status_rel == pand_status/v/pand_in_gebruik || pand_status_rel == pand_status/v/pand_in_gebruik_niet_ingemeten || pand_status_rel == pand_status/v/verbouwing_pand) && VBO_WasWonen && VBO_IsWonen
+																			&& IsWaarschijnlijkCorrectieVanStudentenComplex_1; //afname: woon-vbo uit voorraad gehaald; pand blijft; periode 201601-201708, binnen IsMogelijkWoningCorporatiePand
+																			
+		attribute<bool>                  IDEN_TMmin_Restbakje        := not(IDEN_TMmin) //kopie van IDEN_TMmin, maar dan inverse IsWaarschijnlijk XXX 
+																			&& VBO_WasVoorraad && VBO_IsVoorraad && VBO_WasWonen && not(VBO_IsWonen) && not(VBO_WasWonen && IsOverigeGebruiksfunctie)
+																			&& IsWaarschijnlijkCorrectieVanVakantiehuisWonenNaarLogies; //afname: overgang wonen -> logies; periode 201201-201406
+																			
+		attribute<bool>                  IDEN_Cmin_Restbakje         := not(IDEN_TMmin) //kopie van IDEN_Cmin, maar dan inverse IsWaarschijnlijk XXX 
+																			&& VBO_WasVoorraad && not(VBO_IsVoorraad) && not(IDEN_S) && not(IDEN_O) && VBO_WasWonen && VBO_IsWonen
+																			&& (IsWaarschijnlijkCorrectieVanStacaravans_Wonen           //afname: vbo+pand uit voorraad gehaald, periode 201601-201702, binnen BBG verblijfsrec
+																					|| IsWaarschijnlijkCorrectieVanStudentenComplex_1); //afname: woon-vbo uit voorraad gehaald; pand blijft; periode 201601-201708, binnen IsMogelijkWoningCorporatiePand
+		
+		
+		attribute<bool>                  IsUnidentified                         := (Count_Dubbel_Identificatie/count_dubbeltellingen + Count_Dubbel_Identificatie/count_dubbeltellingen_rest) == 0;
+		 
+		attribute<bool>                  UnID_Wp     := IsUnidentified 
+																			&& VBO_IsWonen //maakt niet wat het was. er is wonen toegevoegd.
+																			&& not(VBO_WasVoorraad)
+																			&& VBO_IsVoorraad;
+																			
+																			
+		attribute<bool>                  UnID_Wm      := IsUnidentified 
+																			&& VBO_WasWonen //maakt niet wat het nu is. er is wonen onttrokken.
+																			&& VBO_WasVoorraad
+																			&& not(VBO_IsVoorraad);
+																			
+		attribute<bool>                  UnID_NWp := IsUnidentified 
+																			&& not(VBO_IsWonen) //maakt niet wat het was. er is nietwonen toegevoegd.
+																			&& not(VBO_WasVoorraad)
+																			&& VBO_IsVoorraad;
+		attribute<bool>                  UnID_NWm  := IsUnidentified 
+																			&& not(VBO_WasWonen) //maakt niet wat het nu is. er is nietwonen onttrokken.
+																			&& VBO_WasVoorraad
+																			&& not(VBO_IsVoorraad);
+
+		attribute<bool>                  UnID_W_o := IsUnidentified //onveranderde woonfunctie binnen voorraad
+																			&& VBO_WasWonen && VBO_IsWonen 
+																			&& VBO_WasVoorraad && VBO_IsVoorraad;
+		attribute<bool>                  UnID_W_o_NV := IsUnidentified //onveranderde woonfunctie buiten voorraad
+																				&& VBO_WasWonen && VBO_IsWonen 
+																				&& not(VBO_WasVoorraad) && not(VBO_IsVoorraad);
+		attribute<bool>                  UnID_NW_o := IsUnidentified //onveranderde nietwoonfunctie binnen voorraad
+																				&& not(VBO_WasWonen) && not(VBO_IsWonen)
+																				&& VBO_WasVoorraad && VBO_IsVoorraad;
+		attribute<bool>                  UnID_NW_o_NV := IsUnidentified //onveranderde nietwoonfunctie buiten voorraad
+																				&& not(VBO_WasWonen) && not(VBO_IsWonen)
+																				&& not(VBO_WasVoorraad) && not(VBO_IsVoorraad);
+																				
+		attribute<bool>                  UnID_Tp                 := IsUnidentified //tranformatie van nietwonen naar wonen, maar buiten voorraad
+																				&& not(VBO_WasWonen) && VBO_IsWonen
+																				&& VBO_WasVoorraad && VBO_IsVoorraad;
+		attribute<bool>                  UnID_Tm                 := IsUnidentified //tranformatie van wonen naar nietwonen, maar buiten voorraad
+																				&& VBO_WasWonen && not(VBO_IsWonen)
+																				&& VBO_WasVoorraad && VBO_IsVoorraad;
+		attribute<bool>                  UnID_Tp_NV                 := IsUnidentified //tranformatie van nietwonen naar wonen, maar buiten voorraad
+																				&& not(VBO_WasWonen) && VBO_IsWonen
+																				&& not(VBO_WasVoorraad) && not(VBO_IsVoorraad);
+		attribute<bool>                  UnID_Tm_NV                 := IsUnidentified //tranformatie van wonen naar nietwonen, maar buiten voorraad
+																				&& VBO_WasWonen && not(VBO_IsWonen)
+																				&& not(VBO_WasVoorraad) && not(VBO_IsVoorraad);
+																				
+		attribute<bool>                  IsStillUnidentified := IsUnidentified 
+																&& not(UnID_Wp)
+																&& not(UnID_Wm)
+																&& not(UnID_NWp)
+																&& not(UnID_NWm)
+																&& not(UnID_W_o)
+																&& not(UnID_W_o_NV)
+																&& not(UnID_NW_o)
+																&& not(UnID_NW_o_NV)
+																&& not(UnID_Tp)
+																&& not(UnID_Tm)
+																&& not(UnID_Tp_NV)
+																&& not(UnID_Tm_NV);
+
+
+		unit<uint32> Count_Dubbel_Identificatie := .
+		{
+			parameter<uint32> sum_dubbeltellingen            := sum(count_dubbeltellingen);
+			parameter<uint32> sum_dubbeltellingen_rest       := sum(count_dubbeltellingen_rest);
+			
+			parameter<uint32> sum_unid           := sum_uint32(IsUnidentified);
+			
+			parameter<uint32> sum_unid_w_plus    := sum_uint32(UnID_Wp);
+			parameter<uint32> sum_unid_nw_plus   := sum_uint32(UnID_NWp);
+			parameter<uint32> sum_unid_w_min     := sum_uint32(UnID_Wm);
+			parameter<uint32> sum_unid_nw_min    := sum_uint32(UnID_NWm);
+			
+			parameter<uint32> sum_unid_w_onv     := sum_uint32(UnID_W_o);
+			parameter<uint32> sum_unid_nw_onv    := sum_uint32(UnID_NW_o);
+			parameter<uint32> sum_unid_w_onv_NV  := sum_uint32(UnID_W_o_NV);
+			parameter<uint32> sum_unid_nw_onv_NV := sum_uint32(UnID_NW_o_NV);
+			
+			parameter<uint32> sum_unid_trf_p     := sum_uint32(UnID_Tp);
+			parameter<uint32> sum_unid_trf_m     := sum_uint32(UnID_Tm);
+			parameter<uint32> sum_unid_trf_p_NV  := sum_uint32(UnID_Tp_NV);
+			parameter<uint32> sum_unid_trf_m_NV  := sum_uint32(UnID_Tm_NV);
+			
+			parameter<uint32> sum_still_unid     := sum_uint32(IsStillUnidentified);
+			
+			attribute<uint32> count_dubbeltellingen := uint32(IDEN_N) 
+														+ uint32(IDEN_T)
+														+ uint32(IDEN_S)
+														+ uint32(IDEN_O)
+														+ uint32(IDEN_Cplus)
+														+ uint32(IDEN_Cmin)
+														+ uint32(IDEN_TMplus)
+														+ uint32(IDEN_TMmin)
+														+ uint32(IDEN_S_NW);
+			attribute<uint32> count_dubbeltellingen_rest := uint32(IDEN_S_Restbakje)
+														+ uint32(IDEN_O_Restbakje)
+														+ uint32(IDEN_Cplus_Restbakje)
+														+ uint32(IDEN_Cmin_Restbakje)
+														+ uint32(IDEN_TMmin_Restbakje);
+		}
+		
+		Template Per1jan_T
+		{
+			parameter<int32> Year;
+			parameter<int32> PrevYear;
+			//
+			
+			unit<uint32> PrevDomain := ='Per1Jan/y'+string(PrevYear)+'/select';
+			
+			unit<uint32> select := select_with_org_rel(begindatum < int32(string(Year)+'0101') && einddatum >= int32(string(Year)+'0101'))
+			, Descr = "stand op 1 januari"
+			{
+				attribute<rdc>                  geometry                      := BAG_Tabel/geometry[org_rel];
+				attribute<rdc>                  pand_geometry (poly)          := BAG_Tabel/pand_geometry[org_rel];
+				attribute<uint64>               pand_bag_nr                   := BAG_Tabel/pand_bag_nr[org_rel];
+				attribute<uint64>               vbo_bag_nr                    := BAG_Tabel/vbo_bag_nr[org_rel];
+				attribute<PrevDomain>           PrevDomain_vbo_rel            := =PrevYear == 2011i ? 'const(null_u[PrevDomain],.)' : 'rlookup(vbo_bag_nr, PrevDomain/vbo_bag_nr)';
+				attribute<int32>                vbo_oppervlakte               := BAG_Tabel/vbo_oppervlakte[org_rel];
+				attribute<int32>                vbo_oppervlakte_UnknownEdit   := BAG_Tabel/vbo_oppervlakte_UnknownEdit[org_rel];
+				attribute<vbo_status>           prev_vbo_status_rel           := =PrevYear == 2011i ? 'const(null_b,.)' : 'PrevDomain/vbo_status_rel[PrevDomain_vbo_rel]';
+				attribute<vbo_status>           vbo_status_rel                := BAG_Tabel/vbo_status_rel[org_rel]; 
+				attribute<vbo_gebruiksdoel_ext> prev_gebruiksdoel_rel         := =PrevYear == 2011i ? 'const(null_b,.)' : 'PrevDomain/gebruiksdoel_rel[PrevDomain_vbo_rel]';
+				attribute<vbo_gebruiksdoel_ext> gebruiksdoel_rel              := BAG_Tabel/gebruiksdoel_rel[org_rel];
+				attribute<jaar>                 pand_bouwjaar                 := BAG_Tabel/pand_bouwjaar[org_rel];
+				attribute<bool>                 Pand_WasVoorraad              := =PrevYear == 2011i ? 'const(FALSE,.)' : 'PrevDomain/Pand_IsVoorraad[PrevDomain_vbo_rel]';
+				attribute<bool>                 Pand_IsVoorraad               := BAG_Tabel/Pand_IsVoorraad[org_rel];
+				attribute<bool>                 VBO_WasVoorraad               := =PrevYear == 2011i ? 'const(FALSE,.)' : 'PrevDomain/VBO_IsVoorraad[PrevDomain_vbo_rel]';
+				attribute<bool>                 VBO_IsVoorraad                := BAG_Tabel/VBO_IsVoorraad[org_rel];
+				attribute<bool>                 VBO_WasWonen                  := =PrevYear == 2011i ? 'const(FALSE,.)' : 'PrevDomain/VBO_IsWonen[PrevDomain_vbo_rel]';
+				attribute<bool>                 VBO_IsWonen                   := BAG_Tabel/VBO_IsWonen[org_rel];
+				
+				attribute<bool>                 VBO_WasOverigeGebruiksfunctie := prev_gebruiksdoel_rel == vbo_gebruiksdoel_ext/v/overige_gebruiks;
+				attribute<bool>                 VBO_IsOverigeGebruiksfunctie  := gebruiksdoel_rel == vbo_gebruiksdoel_ext/v/overige_gebruiks;
+		
+				unit<uint32>       Wijk12                 := /SourceData/RegioIndelingen/impl/CBS/Y2012/Wijk;
+				attribute<Wijk12>  wijk12_rel             := point_in_polygon(geometry, Wijk12/geometry);
+					
+				unit<uint32>                    uq_pand_nr                    := unique(pand_bag_nr)
+				{
+					// tbv per wijk regressie analyse
+					attribute<jaar>    pand_bouwjaar          := modus(../pand_bouwjaar, uq_pand_nr_rel);
+					attribute<rdc>     pand_geometry  (poly)  := first(../pand_geometry, uq_pand_nr_rel);
+					attribute<rdc>     pand_centroid          := centroid_or_mid(pand_geometry);
+					attribute<Wijk12>  wijk12_rel             := point_in_polygon(pand_centroid, Wijk12/geometry);
+					attribute<jaar>    mean_bouwjaar (wijk12) := mean(pand_bouwjaar, wijk12_rel);
+					attribute<jaar>    modus_bouwjaar (wijk12) := modus(pand_bouwjaar, wijk12_rel);
+					attribute<jaar>    pand_mean_bouwjaar     := mean_bouwjaar[wijk12_rel];
+					unit<uint8>        WP4                    := /classifications/BAG/type_woonpand_4;
+					attribute<WP4>     pand_type              := AfleidingPandtype/results/WP4_rel;
+					
+					attribute<float32> chi_square    (wijk12) := sum(sqr(pand_bouwjaar[float32] - pand_mean_bouwjaar[float32]) / pand_mean_bouwjaar[float32], wijk12_rel), Descr = "Pearson's chi-square om de mate van uniformiteit te bepalen", URL = "https://en.wikipedia.org/wiki/Pearson%27s_chi-squared_test";
+					// attribute<float32> diversity              := ='1f - add('+asList( + 'sqr(' + Grondgebruik/CBS2010Klasse/gg_12K_wo_OSA/name + ')',',')+')';
+					
+					attribute<float32> count_vrijstaand           (wijk12) := sum(float32(pand_type == WP4/v/vrijstaand), wijk12_rel);
+					attribute<float32> count_twee_onder_1_kap     (wijk12) := sum(float32(pand_type == WP4/v/twee_onder_1_kap), wijk12_rel);
+					attribute<float32> count_rijtjeswoning        (wijk12) := sum(float32(pand_type == WP4/v/rijtjeswoning), wijk12_rel);
+					attribute<float32> count_appartement          (wijk12) := sum(float32(pand_type == WP4/v/appartement), wijk12_rel);
+					attribute<float32> count_all                  (wijk12) := count_vrijstaand + count_twee_onder_1_kap + count_rijtjeswoning + count_appartement;
+					
+					attribute<float32> rel_voork_vrijstaand       (wijk12) := count_vrijstaand / count_all;
+					attribute<float32> rel_voork_twee_onder_1_kap (wijk12) := count_twee_onder_1_kap / count_all;
+					attribute<float32> rel_voork_rijtjeswoning    (wijk12) := count_rijtjeswoning / count_all;
+					attribute<float32> rel_voork_appartement      (wijk12) := count_appartement / count_all;
+					
+					attribute<float32> shanning_index_WP          (wijk12) := ='- add('+AsList('rel_voork_'+WP4/name+' * log(rel_voork_'+WP4/name+')',',')+')';
+					
+					#include<AfleidingPandtype.dms>
+				}
+				attribute<uq_pand_nr>           uq_pand_nr_rel                := rlookup(pand_bag_nr, uq_pand_nr/values);
+				
+				//transformatie identificatie (Goedhuys, M. & van der Wal, E. (2020) Transformaties in de woningvoorraad 2018-2019)
+				//1a pand in gebruik t0 + t1
+				attribute<bool>                      pand_vooraad_prev_current    := Pand_WasVoorraad && Pand_IsVoorraad;
+				//1b pand minimaal 1 vbo in voorraad op t0 en t1
+				attribute<uint32>                    p_count_voorr_vbo_prev       := =PrevYear == 2011i ? 'const(null_u,.)' : 'PrevDomain/p_count_voorr_vbo[PrevDomain_vbo_rel]';
+				attribute<uint32>                    p_count_voorr_vbo            := sum(VBO_IsVoorraad && not(VBO_IsOverigeGebruiksfunctie) ? 1 : 0, uq_pand_nr_rel)[uq_pand_nr_rel];
+				attribute<bool>                      p_min1_vbovoorr_prev_curr    := p_count_voorr_vbo_prev > 0 && p_count_voorr_vbo > 0;
+				
+				//selectie uit 1 waarbij:
+				//2a count 'vbo in voorraad niet wonen' op t0  minimaal 1 is
+				attribute<uint32>                    p_count_voorr_vbo_NW_prev    := =PrevYear == 2011i ? 'const(null_u,.)' : 'PrevDomain/p_count_voorr_vbo_NW[PrevDomain_vbo_rel]';
+				attribute<uint32>                    p_count_voorr_vbo_NW         := sum(VBO_IsVoorraad && not(VBO_IsOverigeGebruiksfunctie) && not(VBO_IsWonen)  ? 1 : 0, uq_pand_nr_rel)[uq_pand_nr_rel];
+				attribute<bool>                      p_min1_vbovoorr_NW_prev      := p_count_voorr_vbo_NW_prev > 0;
+				
+				//2b en count 'vbo in vooraad wonen' met minimaal 1 is toegenomen tussen t0 en t1
+				attribute<uint32>                    p_count_voorr_vbo_W_prev     := =PrevYear == 2011i ? 'const(null_u,.)' : 'PrevDomain/p_count_voorr_vbo_W[PrevDomain_vbo_rel]';
+				attribute<uint32>                    p_count_voorr_vbo_W          := sum(VBO_IsVoorraad  && VBO_IsWonen  ? 1 : 0, uq_pand_nr_rel)[uq_pand_nr_rel];
+				attribute<bool>                      p_toename_vbovoorr_W         := (int32(p_count_voorr_vbo_W) - int32(p_count_voorr_vbo_W_prev)) > 0i;
+				
+				//2c en minimaal een niet-woon vbo verdwijnen of veranderen van oppervlak (afnemen?)
+				attribute<bool>                      p_afname_vbovoorr_NW         := (int32(p_count_voorr_vbo_NW) - int32(p_count_voorr_vbo_NW_prev)) < 0i;
+				
+				attribute<int32>                     p_sum_voorr_vbo_NW_opp_prev  := =PrevYear == 2011i ? 'const(null_i,.)' : 'PrevDomain/p_sum_voorr_vbo_NW_opp[PrevDomain_vbo_rel]';
+				attribute<int32>                     p_sum_voorr_vbo_NW_opp       := sum(VBO_IsVoorraad && not(VBO_IsOverigeGebruiksfunctie) && not(VBO_IsWonen)  ? vbo_oppervlakte_UnknownEdit : 0i, uq_pand_nr_rel)[uq_pand_nr_rel];
+				attribute<bool>                      p_afname_vbovoorr_NW_opp     := (p_sum_voorr_vbo_NW_opp - p_sum_voorr_vbo_NW_opp_prev) < 0i;
+				
+				
+				//3 selectie van objecten die muteren van nietwonen naar wonen of objecten die in t0 niet bestonden en t1 wel
+				attribute<bool>                      v_tr_nw_w                    := VBO_WasVoorraad && VBO_IsVoorraad && not(VBO_WasWonen) && not(VBO_WasOverigeGebruiksfunctie) && VBO_IsWonen;
+				attribute<bool>                      v_NotExit_Voorraad           := IsNull(prev_vbo_status_rel) && VBO_IsVoorraad;
+				
+				//Plausibel? na elke stap kun je afvallen en niet meer erbij komen.
+				//4 objecten kleiner dan 15m2 zijn geen transformatie objecten
+				attribute<bool>                      Plausibel_MinOpp             := not(vbo_oppervlakte < 15i);
+				//5 als het pand max 2 jaar ouders is dan de transformatiedatum, is het geen transformatie, maar nieuwbouw te laat.
+				attribute<bool>                      Plausibel_Bouwjaar           := not(int32(pand_bouwjaar) > year - 2i);  //2020 > 2022 - 2  || 2018 > 2022 -2 || 2021 > 2022-2
+				//BRP criteria
+				//6
+				//7
+				
+				//Plausibel? opp verandering
+				//8 IF woonopp > 80% van totale opp van pand (zowel voor als na opp verandering), EN woonopp is onttrokken --> woningsplitsing
+				attribute<int32>                     p_sum_voorr_vbo_W_opp_prev     := =PrevYear == 2011i ? 'const(null_i,.)' : 'PrevDomain/p_sum_voorr_vbo_W_opp[PrevDomain_vbo_rel]';
+				attribute<int32>                     p_sum_voorr_vbo_W_opp          := sum(VBO_IsVoorraad  && VBO_IsWonen  ? vbo_oppervlakte_UnknownEdit : 0i, uq_pand_nr_rel)[uq_pand_nr_rel];
+				attribute<bool>                      p_afname_vbovoorr_W_opp        := (p_sum_voorr_vbo_W_opp - p_sum_voorr_vbo_W_opp_prev) < 0i;
+				attribute<float32>                   p_share_woonopp_prev           := float32(p_sum_voorr_vbo_W_opp_prev) / float32(p_sum_voorr_vbo_W_opp_prev + p_sum_voorr_vbo_NW_opp_prev);
+				attribute<float32>                   p_share_woonopp                := float32(p_sum_voorr_vbo_W_opp) / float32(p_sum_voorr_vbo_W_opp + p_sum_voorr_vbo_NW_opp);
+				attribute<bool>                      Plausibel_p_share_opp_W        := not(p_share_woonopp_prev > 0.8f && p_share_woonopp > 0.8f && p_afname_vbovoorr_W_opp);
+				
+				//9 IF woonopp < 80% van totale opp van pand (zowel voor als na opp verandering), EN nietwoon opp gelijk, EN woonopp is onttrokken --> woningsplitsing
+				attribute<bool>                      p_vbovoorr_NW_opp_gelijk       := (p_sum_voorr_vbo_NW_opp - p_sum_voorr_vbo_NW_opp_prev) == 0i;
+				attribute<bool>                      Plausibel_p_share_opp_W_NW     := not(p_share_woonopp_prev < 0.8f && p_share_woonopp < 0.8f && p_vbovoorr_NW_opp_gelijk && p_afname_vbovoorr_W_opp);
+				//BAG, BRP, WOZ combinatie criteria
+				//10
+				//11
+				
+				//extra regels:
+				//1.1 pand met een vbo, waarbij functie verandert van logies naar wonen --> geen transformatie
+				attribute<bool>                     VBO_WasLogies                  := prev_gebruiksdoel_rel == vbo_gebruiksdoel_ext/V/logies;
+				attribute<bool>                     Plausibel_logies_wonen         := not(VBO_WasLogies && VBO_IsWonen);
+				//1.2 nvt
+				//1.3 nvt
+				//1.4 ls er meerdere functies zijn, krijgt wonen voorrang.
+				//1.5 onbekende opp 9999 of 99999 worden op 0 gezet en bij uitsplitsingen niet meegeteld
+				//1.6 transformaties zijn onderdeel van overige toevoegingen
+				//1.7 woningen toegevoegd aan volledig woonpanden tellen niet mee
+				//1.8 woningen verdwenen uit getransformeerde panden worden niet geteld.
+				
+				attribute<bool>                      IsTr_na_1                      := pand_vooraad_prev_current && p_min1_vbovoorr_prev_curr;
+				attribute<bool>                      IsTr_na_2                      := IsTr_na_1 && p_min1_vbovoorr_NW_prev && p_toename_vbovoorr_W && (p_afname_vbovoorr_NW || p_afname_vbovoorr_NW_opp);
+				attribute<bool>                      IsTr_na_3                      := IsTr_na_2 && (v_tr_nw_w || v_NotExit_Voorraad);
+				attribute<bool>                      IsTr_na_3_en_Plausibel_1       := IsTr_na_3 && Plausibel_MinOpp && Plausibel_Bouwjaar;
+				attribute<bool>                      IsTr_na_3_en_Plausibel_2       := IsTr_na_3_en_Plausibel_1 && Plausibel_p_share_opp_W && Plausibel_p_share_opp_W_NW;
+				attribute<bool>                      IsTr_na_3_en_Plausibel_2_extra := IsTr_na_3_en_Plausibel_2 && Plausibel_logies_wonen;
+				
+				unit<uint32> Sub_IsTr_na_1 := select_with_attr_by_cond(.,IsTr_na_1);
+				unit<uint32> Sub_IsTr_na_2 := select_with_attr_by_cond(.,IsTr_na_2);
+				unit<uint32> Sub_IsTr_na_3 := select_with_attr_by_cond(.,IsTr_na_3);
+				unit<uint32> Sub_IsTr_na_3_en_Plausibel_1 := select_with_attr_by_cond(.,IsTr_na_3_en_Plausibel_1);
+				unit<uint32> Sub_IsTr_na_3_en_Plausibel_2 := select_with_attr_by_cond(.,IsTr_na_3_en_Plausibel_2);
+				unit<uint32> Sub_IsTr_na_3_en_Plausibel_2_extra := select_with_attr_by_cond(.,IsTr_na_3_en_Plausibel_2_extra);
+			}
+		}
+	}
+	
+	container Mutaties_Per_VerslagMaand := 
+		for_each_ne(
+			Verslagmaanden/label
+			, 'Mutaties_Per_VerslagMaand_T('+quote(Verslagmaanden/name)+'[int32], BAG_Tabel)'
+		), using = "AdditionalClassifications";
+	
+	Template Mutaties_Per_VerslagMaand_T
+	{
+		parameter<int32>  datum;
+		unit<uint32>      src;
+		///
+		// alle nieuwe mutaties van nieuwe objecten identificeer je door de begindatum >= datum en de begindatum < (datum + 100) te nemen. E.g. datum=20130801: begindatum= 20130805
+		unit<uint32> SelectieMoment := select_with_org_rel(
+																src/begindatum >= datum && src/begindatum < (datum + 100i)                            //identificatie van nieuwe (vervangende) objecten
+															)
+		{
+			attribute<rdc>                     geometry              := src/geometry[org_rel];
+			attribute<rdc>                     pand_geometry (poly)  := src/pand_geometry[org_rel];
+			attribute<uint64>                  vbo_bag_nr            := src/vbo_bag_nr[org_rel];
+			attribute<uint64>                  pand_bag_nr           := src/pand_bag_nr[org_rel];
+			attribute<jaar>                    pand_bouwjaar         := src/pand_bouwjaar[org_rel];
+			attribute<string>                  pv_begindatum_key     := src/pv_begindatum_key[org_rel];
+			attribute<bool>                    WasObjectVoorraadBijStartBAG := src/WasObjectVoorraadBijStartBAG[org_rel];
+			attribute<int32>                   vbo_oppervlakte       := src/vbo_oppervlakte[org_rel];
+			attribute<int32>                   MutatieMaand          := const(datum / 100i, .);
+			attribute<int32>                   begindatum            := src/begindatum[org_rel];
+			attribute<vbo_status>              prev_vbo_status_rel   := src/prev_vbo_status_rel[org_rel];
+			attribute<vbo_status>              vbo_status_rel        := src/vbo_status_rel[org_rel];
+			attribute<pand_status_w_Undefined> prev_pand_status_rel  := src/prev_pand_status_rel[org_rel];
+			attribute<pand_status>             pand_status_rel       := src/pand_status_rel[org_rel];
+			
+			attribute<int32>                   LastDatum_BouwvergunningVerleend := src/LastDatum_BouwvergunningVerleend[org_rel];
+			
+			attribute<bool>                    IsWaarschijnlijkCorrectieVanStudentenComplex_2          := src/IsWaarschijnlijkCorrectieVanStudentenComplex_2[org_rel];
+			attribute<bool>                    VBO_WasWonen          := src/VBO_WasWonen[org_rel];
+			attribute<bool>                    VBO_IsWonen           := src/VBO_IsWonen[org_rel];
+			attribute<bool>                    vbo_WasVoorraad       := src/vbo_WasVoorraad[org_rel];
+			attribute<bool>                    vbo_IsVoorraad        := src/vbo_IsVoorraad[org_rel];
+			
+			attribute<uq_pand_nr>              uq_pand_nr_rel        := rlookup(pand_bag_nr, uq_pand_nr/values);
+			unit<uint32>                       uq_pand_nr            := unique(pand_bag_nr);
+			
+			attribute<uq_vbo_nr>               uq_vbo_nr_rel         := rlookup(vbo_bag_nr, uq_vbo_nr/values);
+			unit<uint32>                       uq_vbo_nr             := unique(vbo_bag_nr);
+			
+			unit<uint32> InitialClassification := SelectieMoment
+			{
+				attribute<bool>                    IDEN_N                := src/IDEN_N[org_rel];
+				attribute<bool>                    IDEN_T                := src/IDEN_T[org_rel];
+				attribute<bool>                    IDEN_S                := src/IDEN_S[org_rel];
+				attribute<bool>                    IDEN_O                := src/IDEN_O[org_rel];
+				attribute<bool>                    IDEN_Cplus            := src/IDEN_Cplus[org_rel];
+				attribute<bool>                    IDEN_Cmin             := src/IDEN_Cmin[org_rel];
+				attribute<bool>                    IDEN_TMplus           := src/IDEN_TMplus[org_rel];
+				attribute<bool>                    IDEN_TMmin            := src/IDEN_TMmin[org_rel];
+				
+				attribute<bool>                    IDEN_S_NW             := src/IDEN_S_NW[org_rel];
+				
+				attribute<bool>                    IDEN_S_Rest           := src/IDEN_S_Restbakje[org_rel];
+				attribute<bool>                    IDEN_O_Rest           := src/IDEN_O_Restbakje[org_rel];
+				attribute<bool>                    IDEN_TMmin_Rest       := src/IDEN_TMmin_Restbakje[org_rel];
+				attribute<bool>                    IDEN_Cplus_Rest       := src/IDEN_Cplus_Restbakje[org_rel];
+				attribute<bool>                    IDEN_Cmin_Rest        := src/IDEN_Cmin_Restbakje[org_rel];
+				
+				attribute<bool>                    UnID_Wp               := src/UnID_Wp[org_rel];
+				attribute<bool>                    UnID_Wm               := src/UnID_Wm[org_rel];
+				attribute<bool>                    UnID_NWp              := src/UnID_NWp[org_rel];
+				attribute<bool>                    UnID_NWm              := src/UnID_NWm[org_rel];
+				attribute<bool>                    UnID_Tp               := src/UnID_Tp[org_rel];
+				attribute<bool>                    UnID_Tm               := src/UnID_Tm[org_rel];
+				
+				attribute<bool>                    UnID_Onv              := src/UnID_W_o[org_rel] || src/UnID_W_o_NV[org_rel] || src/UnID_NW_o[org_rel] || src/UnID_NW_o_NV[org_rel] || src/UnID_Tp_NV[org_rel] || src/UnID_Tm_NV[org_rel];
+				
+				container Totalen_PerMutatieType_UnID := 
+					for_each_nedv(
+						MutatieTypen_UnID/name
+						, 'sum(UnID_'+MutatieTypen_UnID/name+'[int32])'
+						, void
+						, int32
+					);
+					
+				
+				attribute<uint32> count_dubbeltellingen := uint32(IDEN_N) 
+															+ uint32(IDEN_T)
+															+ uint32(IDEN_S)
+															+ uint32(IDEN_O)
+															+ uint32(IDEN_Cplus)
+															+ uint32(IDEN_Cmin)
+															+ uint32(IDEN_TMplus)
+															+ uint32(IDEN_TMmin)
+															+ uint32(IDEN_S_NW);
+				attribute<uint32> count_dubbeltellingen_rest := uint32(IDEN_S_Rest)
+															+ uint32(IDEN_O_Rest)
+															+ uint32(IDEN_Cplus_Rest)
+															+ uint32(IDEN_Cmin_Rest)
+															+ uint32(IDEN_TMmin_Rest);
+															
+			}
+			
+			unit<uint32> Saldering_1e_Instantie := SelectieMoment
+			{
+				// saldeer meerdere transacties binnen een verslagmaand
+				attribute<int32>                   count_N               := sum(InitialClassification/IDEN_N[int32],uq_vbo_nr_rel)[uq_vbo_nr_rel];
+				attribute<int32>                   count_T               := sum(InitialClassification/IDEN_T[int32],uq_vbo_nr_rel)[uq_vbo_nr_rel];
+				attribute<int32>                   count_S               := sum(InitialClassification/IDEN_S[int32],uq_vbo_nr_rel)[uq_vbo_nr_rel];
+				attribute<int32>                   count_O               := sum(InitialClassification/IDEN_O[int32],uq_vbo_nr_rel)[uq_vbo_nr_rel];
+				attribute<int32>                   count_Cplus           := sum(InitialClassification/IDEN_Cplus[int32],uq_vbo_nr_rel)[uq_vbo_nr_rel];
+				attribute<int32>                   count_Cmin            := sum(InitialClassification/IDEN_Cmin[int32],uq_vbo_nr_rel)[uq_vbo_nr_rel];
+				attribute<int32>                   count_TMplus          := sum(InitialClassification/IDEN_TMplus[int32],uq_vbo_nr_rel)[uq_vbo_nr_rel];
+				attribute<int32>                   count_TMmin           := sum(InitialClassification/IDEN_TMmin[int32],uq_vbo_nr_rel)[uq_vbo_nr_rel];
+				attribute<int32>                   count_S_NW            := sum(InitialClassification/IDEN_S_NW[int32],uq_vbo_nr_rel)[uq_vbo_nr_rel];
+				
+				attribute<int32>                   count_S_Rest          := sum(InitialClassification/IDEN_S_Rest[int32],uq_vbo_nr_rel)[uq_vbo_nr_rel];
+				attribute<int32>                   count_O_Rest          := sum(InitialClassification/IDEN_O_Rest[int32],uq_vbo_nr_rel)[uq_vbo_nr_rel];
+				attribute<int32>                   count_TMmin_Rest      := sum(InitialClassification/IDEN_TMmin_Rest[int32],uq_vbo_nr_rel)[uq_vbo_nr_rel];
+				attribute<int32>                   count_Cplus_Rest      := sum(InitialClassification/IDEN_Cplus_Rest[int32],uq_vbo_nr_rel)[uq_vbo_nr_rel];
+				attribute<int32>                   count_Cmin_Rest       := sum(InitialClassification/IDEN_Cmin_Rest[int32],uq_vbo_nr_rel)[uq_vbo_nr_rel];
+				
+				attribute<int32>                    count_UnID_Wp               := sum(InitialClassification/UnID_Wp[int32],uq_vbo_nr_rel)[uq_vbo_nr_rel];
+				attribute<int32>                    count_UnID_Wm               := sum(InitialClassification/UnID_Wm[int32],uq_vbo_nr_rel)[uq_vbo_nr_rel];
+				attribute<int32>                    count_UnID_NWp              := sum(InitialClassification/UnID_NWp[int32],uq_vbo_nr_rel)[uq_vbo_nr_rel];
+				attribute<int32>                    count_UnID_NWm              := sum(InitialClassification/UnID_NWm[int32],uq_vbo_nr_rel)[uq_vbo_nr_rel];
+				attribute<int32>                    count_UnID_Tp               := sum(InitialClassification/UnID_Tp[int32],uq_vbo_nr_rel)[uq_vbo_nr_rel];
+				attribute<int32>                    count_UnID_Tm               := sum(InitialClassification/UnID_Tm[int32],uq_vbo_nr_rel)[uq_vbo_nr_rel];
+				attribute<int32>                    count_UnID_Onv              := sum(InitialClassification/UnID_Onv[int32],uq_vbo_nr_rel)[uq_vbo_nr_rel];
+				
+				attribute<int32>                   count_plus                   := count_N + count_T + count_Cplus + count_TMplus;
+				attribute<int32>                   count_min                    := count_S + count_O + count_Cmin + count_TMmin;
+				attribute<int32>                   saldo                        := count_plus - count_min;
+				
+				attribute<int32>                   saldo_rest_w                 := count_Cplus_Rest - count_Cmin_Rest;
+				attribute<int32>                   saldo_unid_w                 := count_UnID_Wp - count_UnID_Wm;
+				attribute<int32>                   saldo_unid_Tw                := count_UnID_Tp - count_UnID_Tm;
+				
+				attribute<int32>                   count_unid_nw_plus           := count_UnID_NWp + count_UnID_Tm;
+				attribute<int32>                   count_unid_nw_min            := count_UnID_NWm + count_UnID_Tp;
+				attribute<int32>                   saldo_unid_nw                := count_unid_nw_plus - count_unid_nw_min;
+				
+				attribute<bool>                    IDEN_N                := switch(
+																					 case(InitialClassification/IDEN_N && saldo == 0i, FALSE)                                            //saldering 'mutatie in 1e instantie'
+																					,InitialClassification/IDEN_N
+																				);
+				attribute<bool>                    IDEN_T                := switch(
+																					 case(InitialClassification/IDEN_T && saldo == 0i, FALSE)                                            //saldering 'mutatie in 1e instantie'
+																					,InitialClassification/IDEN_T
+																				);
+				attribute<bool>                    IDEN_S                := switch(
+																					 case(InitialClassification/IDEN_S && saldo == 0i, FALSE)                                            //saldering 'mutatie in 1e instantie'
+																					,InitialClassification/IDEN_S
+																				);
+				attribute<bool>                    IDEN_O                := switch(
+																					 case(InitialClassification/IDEN_O && saldo == 0i, FALSE)                                            //saldering 'mutatie in 1e instantie'
+																					,InitialClassification/IDEN_O
+																				);
+				attribute<bool>                    IDEN_TMplus           := switch(
+																					 case(InitialClassification/IDEN_TMplus && saldo == 0i, FALSE)                                       //saldering 'mutatie in 1e instantie'
+																					,InitialClassification/IDEN_TMplus
+																				);
+				attribute<bool>                    IDEN_TMmin           := switch(
+																					 case(InitialClassification/IDEN_TMmin && saldo == 0i, FALSE)                                        //saldering 'mutatie in 1e instantie'
+																					,InitialClassification/IDEN_TMmin
+																				);
+				attribute<bool>                    IDEN_Cplus            := switch(
+																					 case(InitialClassification/IDEN_Cplus && saldo == 0i, FALSE)                                        //saldering 'mutatie in 1e instantie'
+																					,InitialClassification/IDEN_Cplus
+																				);
+				attribute<bool>                    IDEN_Cmin             := switch(
+																					 case(InitialClassification/IDEN_Cmin && saldo == 0i, FALSE)                                         //saldering 'mutatie in 1e instantie'
+																					,InitialClassification/IDEN_Cmin
+																				);
+																				
+				attribute<bool>                    IDEN_S_NW             := InitialClassification/IDEN_S_NW;
+				
+
+
+				/////////////// restbakjes
+				attribute<bool>                    IDEN_S_Rest                := InitialClassification/IDEN_S_Rest;
+				attribute<bool>                    IDEN_O_Rest                := InitialClassification/IDEN_O_Rest;
+				attribute<bool>                    IDEN_TMmin_Rest            := InitialClassification/IDEN_TMmin_Rest;
+				attribute<bool>                    IDEN_Cplus_Rest            := switch(
+																					 case(InitialClassification/IDEN_Cplus_Rest && saldo_rest_w == 0i, FALSE)                                            //saldering 'mutatie in 1e instantie'
+																					,InitialClassification/IDEN_Cplus_Rest
+																				);
+				attribute<bool>                    IDEN_Cmin_Rest                := switch(
+																					 case(InitialClassification/IDEN_Cmin_Rest && saldo_rest_w == 0i, FALSE)                                            //saldering 'mutatie in 1e instantie'
+																					,InitialClassification/IDEN_Cmin_Rest
+																				);
+																				
+				/////////////// unidentified
+				attribute<bool>                    UnID_Wp                := switch(
+																					 case(InitialClassification/UnID_Wp && saldo_unid_w == 0i, FALSE)                                            //saldering 'mutatie in 1e instantie'
+																					,InitialClassification/UnID_Wp
+																				);
+				attribute<bool>                    UnID_Wm                := switch(
+																					 case(InitialClassification/UnID_Wm && saldo_unid_w == 0i, FALSE)                                            //saldering 'mutatie in 1e instantie'
+																					,InitialClassification/UnID_Wm
+																				);
+				attribute<bool>                    UnID_NWp                := switch(
+																					 case(InitialClassification/UnID_NWp && saldo_unid_nw == 0i, FALSE)                                            //saldering 'mutatie in 1e instantie'
+																					,InitialClassification/UnID_NWp
+																				);
+				attribute<bool>                    UnID_NWm                := switch(
+																					 case(InitialClassification/UnID_NWm && saldo_unid_nw == 0i, FALSE)                                            //saldering 'mutatie in 1e instantie'
+																					,InitialClassification/UnID_NWm
+																				);
+				attribute<bool>                    UnID_Tp                := switch(
+																					 case(InitialClassification/UnID_Tp && saldo_unid_Tw == 0i, FALSE)                                            //saldering 'mutatie in 1e instantie'
+																					,InitialClassification/UnID_Tp
+																				);
+				attribute<bool>                    UnID_Tm                := switch(
+																					 case(InitialClassification/UnID_Tm && saldo_unid_Tw == 0i, FALSE)                                            //saldering 'mutatie in 1e instantie'
+																					,InitialClassification/UnID_Tm
+																				);
+				attribute<bool>                    UnID_Onv             := InitialClassification/UnID_Onv;
+				
+			}
+			
+			unit<uint32> Correctie_1e_Instantie := SelectieMoment
+			{
+				attribute<bool>                    IDEN_N                := Saldering_1e_Instantie/IDEN_N;
+				attribute<bool>                    IDEN_T                := switch(
+																					case(Saldering_1e_Instantie/count_N > 0i 
+																						&& Saldering_1e_Instantie/saldo > 0i, FALSE)                                       //correctie 'mutatie in 1e instantie' - a1
+																					,Saldering_1e_Instantie/IDEN_T
+																				);
+				attribute<bool>                    IDEN_S                := Saldering_1e_Instantie/IDEN_S;
+				attribute<bool>                    IDEN_O                := switch(
+																					case(Saldering_1e_Instantie/count_S > 0i 
+																						&& Saldering_1e_Instantie/saldo < 0i, FALSE)                                       //correctie 'mutatie in 1e instantie' - b1
+																					,Saldering_1e_Instantie/IDEN_O
+																				);
+				attribute<bool>                    IDEN_TMplus           := Saldering_1e_Instantie/IDEN_TMplus;
+				attribute<bool>                    IDEN_TMmin            := Saldering_1e_Instantie/IDEN_TMmin;
+				attribute<bool>                    IDEN_Cplus            := switch(
+																					case(Saldering_1e_Instantie/count_N > 0i 
+																						&& Saldering_1e_Instantie/saldo > 0i, FALSE)                                       //correctie 'mutatie in 1e instantie' - a1
+																					,case(Saldering_1e_Instantie/count_T > 0i 
+																						&& Saldering_1e_Instantie/saldo > 0i, FALSE)                                       //correctie 'mutatie in 1e instantie' - a2
+																					,Saldering_1e_Instantie/IDEN_Cplus
+																				);
+				attribute<bool>                    IDEN_Cmin             := switch(
+																					case(Saldering_1e_Instantie/count_S > 0i 
+																						&& Saldering_1e_Instantie/saldo < 0i, FALSE)                                       //correctie 'mutatie in 1e instantie' - b1
+																					,case(Saldering_1e_Instantie/count_O > 0i 
+																						&& Saldering_1e_Instantie/saldo < 0i, FALSE)                                       //correctie 'mutatie in 1e instantie' - b2
+																					,Saldering_1e_Instantie/IDEN_Cmin
+																				);
+				attribute<bool>                    IDEN_S_NW             := Saldering_1e_Instantie/IDEN_S_NW;
+			}
+			
+			unit<uint32> Correctie_2e_Instantie := SelectieMoment
+			{
+				attribute<bool>                    IDEN_N                := switch(
+																					case(WasObjectVoorraadBijStartBAG 
+																						&& Correctie_1e_Instantie/IDEN_N 
+																						&& Saldering_1e_Instantie/saldo > 0i, FALSE)                                       //correctie 'mutatie in 2e instantie' - a1
+																					,case(Saldering_1e_Instantie/count_N > 0i 
+																						&& Saldering_1e_Instantie/saldo > 0i 
+																						&& (Prev/IDEN_N_Prev/AnyTrue || Prev/IDEN_T_Prev/AnyTrue), FALSE)                 //correctie 'mutatie in 2e instantie' - a2  
+																					,Correctie_1e_Instantie/IDEN_N
+																				);
+				attribute<bool>                    IDEN_T                := switch(
+																					case(WasObjectVoorraadBijStartBAG 
+																						&& Correctie_1e_Instantie/IDEN_T 
+																						&& Saldering_1e_Instantie/saldo > 0i, FALSE)                                       //correctie 'mutatie in 2e instantie' - a1
+																					,case(Saldering_1e_Instantie/count_T > 0i 
+																						&& Saldering_1e_Instantie/saldo > 0i 
+																						&& (Prev/IDEN_N_Prev/AnyTrue || Prev/IDEN_T_Prev/AnyTrue), FALSE)                 //correctie 'mutatie in 2e instantie' - a2  
+																					,Correctie_1e_Instantie/IDEN_T
+																				);
+				attribute<bool>                    IDEN_S                := switch(
+																					case(Saldering_1e_Instantie/count_S > 0i 
+																						&& Saldering_1e_Instantie/saldo < 0i 
+																						&& (Prev/IDEN_S_Prev/AnyTrue || Prev/IDEN_O_Prev/AnyTrue), FALSE)                 //correctie 'mutatie in 2e instantie' - b  
+																					,Correctie_1e_Instantie/IDEN_S
+																				);
+				attribute<bool>                    IDEN_O                := switch(
+																					case(Saldering_1e_Instantie/count_O > 0i 
+																						&& Saldering_1e_Instantie/saldo < 0i 
+																						&& (Prev/IDEN_S_Prev/AnyTrue || Prev/IDEN_O_Prev/AnyTrue), FALSE)                 //correctie 'mutatie in 2e instantie' - b  
+																					,Correctie_1e_Instantie/IDEN_O
+																				);
+																				
+				attribute<bool>                    IDEN_TMplus           := switch(
+																					case(Saldering_1e_Instantie/count_TMplus > 0i 
+																						&& Saldering_1e_Instantie/saldo > 0i 
+																						&& Prev/IDEN_TMplus_Prev/AnyTrue, FALSE)                 //correctie 'mutatie in 2e instantie' - a2  
+																					,Correctie_1e_Instantie/IDEN_TMplus
+																				);
+				attribute<bool>                    IDEN_TMmin           := switch(
+																					case(Saldering_1e_Instantie/count_TMmin > 0i 
+																						&& Saldering_1e_Instantie/saldo < 0i 
+																						&& Prev/IDEN_TMmin_Prev/AnyTrue, FALSE)                 //correctie 'mutatie in 2e instantie' - a2  
+																					,Correctie_1e_Instantie/IDEN_TMmin
+																				);
+				// attribute<bool>                    IDEN_TMplus           := Correctie_1e_Instantie/IDEN_TMplus;
+				// attribute<bool>                    IDEN_TMmin            := Correctie_1e_Instantie/IDEN_TMmin;
+				attribute<bool>                    IDEN_Cplus            := switch(
+																					case(WasObjectVoorraadBijStartBAG 
+																						&& (Correctie_1e_Instantie/IDEN_N || Correctie_1e_Instantie/IDEN_T) 
+																						&& Saldering_1e_Instantie/saldo > 0i, TRUE)                                        //correctie 'mutatie in 2e instantie' - a1
+																					,case((Saldering_1e_Instantie/count_N > 0i || Saldering_1e_Instantie/count_T > 0i) 
+																						&& Saldering_1e_Instantie/saldo > 0i 
+																						&& (Prev/IDEN_N_Prev/AnyTrue || Prev/IDEN_T_Prev/AnyTrue), TRUE)                  //correctie 'mutatie in 2e instantie' - a2  
+																					,Correctie_1e_Instantie/IDEN_Cplus
+																				);
+				attribute<bool>                    IDEN_Cmin             := switch(
+																					case((Saldering_1e_Instantie/count_S > 0i || Saldering_1e_Instantie/count_O > 0i) 
+																						&& Saldering_1e_Instantie/saldo < 0i 
+																						&& (Prev/IDEN_S_Prev/AnyTrue || Prev/IDEN_O_Prev/AnyTrue), TRUE)                  //correctie 'mutatie in 2e instantie' - b  
+																					,Correctie_1e_Instantie/IDEN_Cmin
+																				);
+																				
+				attribute<bool>                    IDEN_S_NW             := switch(
+																					case(Saldering_1e_Instantie/count_S_NW > 0i 
+																						&& Prev/IDEN_S_NW_Prev/AnyTrue, FALSE)                 //correctie 'mutatie in 2e instantie' - b  
+																					,Correctie_1e_Instantie/IDEN_S_NW
+																				);
+			} 
+		
+			container Prev 
+			{
+				unit<uint32> PrevVerslagmaanden := select_with_attr_by_cond(Verslagmaanden, int32(Verslagmaanden/name) < datum);
+				
+				container IDEN_N_Prev :=
+					for_each_nedv(
+						PrevVerslagmaanden/label
+						, 'rjoin(vbo_bag_nr, Mutaties_Per_VerslagMaand/'+PrevVerslagmaanden/label+'/SelectieMoment/vbo_bag_nr, Mutaties_Per_VerslagMaand/'+PrevVerslagmaanden/label+'/SelectieMoment/Saldering_na_2e_Instantie/IDEN_N)'
+						, SelectieMoment
+						, bool
+					)
+				{
+					attribute<bool> AnyTrue (SelectieMoment) := = #PrevVerslagmaanden == 0 ? 'const(FALSE,SelectieMoment)' : 'or('+AsItemList(PrevVerslagmaanden/label)+')';
+				}
+				container IDEN_T_Prev :=
+					for_each_nedv(
+						PrevVerslagmaanden/label
+						, 'rjoin(vbo_bag_nr, Mutaties_Per_VerslagMaand/'+PrevVerslagmaanden/label+'/SelectieMoment/vbo_bag_nr, Mutaties_Per_VerslagMaand/'+PrevVerslagmaanden/label+'/SelectieMoment/Saldering_na_2e_Instantie/IDEN_T)'
+						, SelectieMoment
+						, bool
+					)
+				{
+					attribute<bool> AnyTrue (SelectieMoment) := = #PrevVerslagmaanden == 0 ? 'const(FALSE,SelectieMoment)' : 'or('+AsItemList(PrevVerslagmaanden/label)+')';
+				}
+				container IDEN_S_Prev :=
+					for_each_nedv(
+						PrevVerslagmaanden/label
+						, 'rjoin(vbo_bag_nr, Mutaties_Per_VerslagMaand/'+PrevVerslagmaanden/label+'/SelectieMoment/vbo_bag_nr, Mutaties_Per_VerslagMaand/'+PrevVerslagmaanden/label+'/SelectieMoment/Saldering_na_2e_Instantie/IDEN_S)'
+						, SelectieMoment
+						, bool
+					)
+				{
+					attribute<bool> AnyTrue (SelectieMoment) := = #PrevVerslagmaanden == 0 ? 'const(FALSE,SelectieMoment)' : 'or('+AsItemList(PrevVerslagmaanden/label)+')';
+				}
+				container IDEN_O_Prev :=
+					for_each_nedv(
+						PrevVerslagmaanden/label
+						, 'rjoin(vbo_bag_nr, Mutaties_Per_VerslagMaand/'+PrevVerslagmaanden/label+'/SelectieMoment/vbo_bag_nr, Mutaties_Per_VerslagMaand/'+PrevVerslagmaanden/label+'/SelectieMoment/Saldering_na_2e_Instantie/IDEN_O)'
+						, SelectieMoment
+						, bool
+					)
+				{
+					attribute<bool> AnyTrue (SelectieMoment) := = #PrevVerslagmaanden == 0 ? 'const(FALSE,SelectieMoment)' : 'or('+AsItemList(PrevVerslagmaanden/label)+')';
+				}
+				
+				container IDEN_S_NW_Prev :=
+					for_each_nedv(
+						PrevVerslagmaanden/label
+						, 'rjoin(vbo_bag_nr, Mutaties_Per_VerslagMaand/'+PrevVerslagmaanden/label+'/SelectieMoment/vbo_bag_nr, Mutaties_Per_VerslagMaand/'+PrevVerslagmaanden/label+'/SelectieMoment/Saldering_na_2e_Instantie/IDEN_S_NW)'
+						, SelectieMoment
+						, bool
+					)
+				{
+					attribute<bool> AnyTrue (SelectieMoment) := = #PrevVerslagmaanden == 0 ? 'const(FALSE,SelectieMoment)' : 'or('+AsItemList(PrevVerslagmaanden/label)+')';
+				}
+				
+				container IDEN_TMplus_Prev :=
+					for_each_nedv(
+						PrevVerslagmaanden/label
+						, 'rjoin(vbo_bag_nr, Mutaties_Per_VerslagMaand/'+PrevVerslagmaanden/label+'/SelectieMoment/vbo_bag_nr, Mutaties_Per_VerslagMaand/'+PrevVerslagmaanden/label+'/SelectieMoment/Saldering_na_2e_Instantie/IDEN_TMplus)'
+						, SelectieMoment
+						, bool
+					)
+				{
+					attribute<bool> AnyTrue (SelectieMoment) := = #PrevVerslagmaanden == 0 ? 'const(FALSE,SelectieMoment)' : 'or('+AsItemList(PrevVerslagmaanden/label)+')';
+				}
+				
+				container IDEN_TMmin_Prev :=
+					for_each_nedv(
+						PrevVerslagmaanden/label
+						, 'rjoin(vbo_bag_nr, Mutaties_Per_VerslagMaand/'+PrevVerslagmaanden/label+'/SelectieMoment/vbo_bag_nr, Mutaties_Per_VerslagMaand/'+PrevVerslagmaanden/label+'/SelectieMoment/Saldering_na_2e_Instantie/IDEN_TMmin)'
+						, SelectieMoment
+						, bool
+					)
+				{
+					attribute<bool> AnyTrue (SelectieMoment) := = #PrevVerslagmaanden == 0 ? 'const(FALSE,SelectieMoment)' : 'or('+AsItemList(PrevVerslagmaanden/label)+')';
+				}
+			}
+			
+																			
+																			
+			unit<uint32> Saldering_na_2e_Instantie := SelectieMoment
+			{
+				// saldeer meerdere transacties binnen een verslagmaand
+				attribute<int32>                   count_N               := sum(Correctie_2e_Instantie/IDEN_N[int32],uq_vbo_nr_rel)[uq_vbo_nr_rel];
+				attribute<int32>                   count_T               := sum(Correctie_2e_Instantie/IDEN_T[int32],uq_vbo_nr_rel)[uq_vbo_nr_rel];
+				attribute<int32>                   count_S               := sum(Correctie_2e_Instantie/IDEN_S[int32],uq_vbo_nr_rel)[uq_vbo_nr_rel];
+				attribute<int32>                   count_O               := sum(Correctie_2e_Instantie/IDEN_O[int32],uq_vbo_nr_rel)[uq_vbo_nr_rel];
+				attribute<int32>                   count_Cplus           := sum(Correctie_2e_Instantie/IDEN_Cplus[int32],uq_vbo_nr_rel)[uq_vbo_nr_rel];
+				attribute<int32>                   count_Cmin            := sum(Correctie_2e_Instantie/IDEN_Cmin[int32],uq_vbo_nr_rel)[uq_vbo_nr_rel];
+				attribute<int32>                   count_TMplus          := sum(Correctie_2e_Instantie/IDEN_TMplus[int32],uq_vbo_nr_rel)[uq_vbo_nr_rel];
+				attribute<int32>                   count_TMmin           := sum(Correctie_2e_Instantie/IDEN_TMmin[int32],uq_vbo_nr_rel)[uq_vbo_nr_rel];
+				
+				attribute<int32>                   count_S_NW            := sum(Correctie_2e_Instantie/IDEN_S_NW[int32],uq_vbo_nr_rel)[uq_vbo_nr_rel];
+				
+				attribute<int32>                   count_plus            := count_N + count_T + count_Cplus + count_TMplus;
+				attribute<int32>                   count_min             := count_S + count_O + count_Cmin + count_TMmin;
+				attribute<int32>                   saldo                 := count_plus - count_min;
+				
+				attribute<bool>                    IDEN_N                := switch(
+																					 case(Correctie_2e_Instantie/IDEN_N && saldo == 0i, FALSE)                                            //saldering 'mutatie in 1e instantie'
+																					,Correctie_2e_Instantie/IDEN_N
+																				);
+				attribute<bool>                    IDEN_T                := switch(
+																					 case(Correctie_2e_Instantie/IDEN_T && saldo == 0i, FALSE)                                            //saldering 'mutatie in 1e instantie'
+																					,Correctie_2e_Instantie/IDEN_T
+																				);
+				attribute<bool>                    IDEN_S                := switch(
+																					 case(Correctie_2e_Instantie/IDEN_S && saldo == 0i, FALSE)                                            //saldering 'mutatie in 1e instantie'
+																					,Correctie_2e_Instantie/IDEN_S
+																				);
+				attribute<bool>                    IDEN_O                := switch(
+																					 case(Correctie_2e_Instantie/IDEN_O && saldo == 0i, FALSE)                                            //saldering 'mutatie in 1e instantie'
+																					,Correctie_2e_Instantie/IDEN_O
+																				);
+				attribute<bool>                    IDEN_TMplus           := switch(
+																					 case(Correctie_2e_Instantie/IDEN_TMplus && saldo == 0i, FALSE)                                       //saldering 'mutatie in 1e instantie'
+																					,Correctie_2e_Instantie/IDEN_TMplus
+																				);
+				attribute<bool>                    IDEN_TMmin           := switch(
+																					 case(Correctie_2e_Instantie/IDEN_TMmin && saldo == 0i, FALSE)                                        //saldering 'mutatie in 1e instantie'
+																					,Correctie_2e_Instantie/IDEN_TMmin
+																				);
+				attribute<bool>                    IDEN_Cplus            := switch(
+																					 case(Correctie_2e_Instantie/IDEN_Cplus && saldo == 0i, FALSE)                                        //saldering 'mutatie in 1e instantie'
+																					,Correctie_2e_Instantie/IDEN_Cplus
+																				);
+				attribute<bool>                    IDEN_Cmin             := switch(
+																					 case(Correctie_2e_Instantie/IDEN_Cmin && saldo == 0i, FALSE)                                         //saldering 'mutatie in 1e instantie'
+																					,Correctie_2e_Instantie/IDEN_Cmin
+																				);
+				attribute<bool>                    IDEN_S_NW             := Correctie_2e_Instantie/IDEN_S_NW;
+																				
+			}
+																			
+																			
+			attribute<MutatieTypen>            MutatieTypen_rel            := switch(
+																				 case(Saldering_na_2e_Instantie/IDEN_N, MutatieTypen/V/N)
+																				,case(Saldering_na_2e_Instantie/IDEN_T, MutatieTypen/V/T)
+																				,case(Saldering_na_2e_Instantie/IDEN_S, MutatieTypen/V/S)
+																				,case(Saldering_na_2e_Instantie/IDEN_O, MutatieTypen/V/O)
+																				,case(Saldering_na_2e_Instantie/IDEN_TMplus, MutatieTypen/V/TMplus)
+																				,case(Saldering_na_2e_Instantie/IDEN_TMmin, MutatieTypen/V/TMmin)
+																				,case(Saldering_na_2e_Instantie/IDEN_Cplus, MutatieTypen/V/Cplus)
+																				,case(Saldering_na_2e_Instantie/IDEN_Cmin, MutatieTypen/V/Cmin)
+																				,case(Saldering_na_2e_Instantie/IDEN_S_NW, MutatieTypen/V/S_nw)
+																				,null_b
+																			);
+			
+			attribute<MutatieTypen_UnID>      MutatieTypen_UnID_rel  := switch(
+																				 case(Saldering_1e_Instantie/UnID_Wp, MutatieTypen_UnID/V/Wp)
+																				,case(Saldering_1e_Instantie/UnID_Wm, MutatieTypen_UnID/V/Wm)
+																				,case(Saldering_1e_Instantie/UnID_NWp, MutatieTypen_UnID/V/NWp)
+																				,case(Saldering_1e_Instantie/UnID_NWm, MutatieTypen_UnID/V/NWm)
+																				,case(Saldering_1e_Instantie/UnID_Tp, MutatieTypen_UnID/V/Tp)
+																				,case(Saldering_1e_Instantie/UnID_Tm, MutatieTypen_UnID/V/Tm)
+																				,null_b
+																			);
+																			
+			attribute<MutatieTypen_Uitgesloten> MutatieTypen_Uitgesloten_rel  := switch(
+																				 case(Saldering_1e_Instantie/IDEN_S_Rest, MutatieTypen_Uitgesloten/V/S_rest)
+																				,case(Saldering_1e_Instantie/IDEN_O_Rest, MutatieTypen_Uitgesloten/V/O_rest)
+																				,case(Saldering_1e_Instantie/IDEN_TMmin_Rest, MutatieTypen_Uitgesloten/V/TMmin_rest)
+																				,case(Saldering_1e_Instantie/IDEN_Cplus_Rest, MutatieTypen_Uitgesloten/V/Cplus_rest)
+																				,case(Saldering_1e_Instantie/IDEN_Cmin_Rest, MutatieTypen_Uitgesloten/V/Cmin_rest)
+																				,null_b
+																			);
+			
+			//adhoc
+			unit<uint32> sel := select_with_attr_by_cond(., MutatieTypen_rel == MutatieTypen/v/Cplus);
+			
+			unit<uint32> IsMutatie := select_with_attr_by_cond(., IsDefined(MutatieTypen_rel) || IsDefined(MutatieTypen_UnID_rel) || IsDefined(MutatieTypen_Uitgesloten_rel));
+		
+			container Totalen_PerMutatieType := 
+				for_each_nedv(
+					MutatieTypen/name
+					, 'sum(Saldering_na_2e_Instantie/IDEN_'+MutatieTypen/name+'[int32])'
+					, void
+					, int32
+				)
+			{
+				parameter<int32> Saldo := N + T + TMplus - S - O - TMmin+ Cplus - Cmin;
+			}
+			container Totalen_PerMutatieType_UnID := 
+				for_each_nedv(
+					MutatieTypen_UnID/name
+					, 'sum(Saldering_1e_Instantie/UnID_'+MutatieTypen_UnID/name+'[int32])'
+					, void
+					, int32
+				);
+			
+			container Totalen_PerMutatieType_Uitgesloten := 
+				for_each_nedv(
+					MutatieTypen_Uitgesloten/name
+					, 'sum(Saldering_1e_Instantie/IDEN_'+MutatieTypen_Uitgesloten/name+'[int32])'
+					, void
+					, int32
+				);
+		}
+	}
+	
+	container MutatieResults_PerVerslagMaand :=
+		for_each_nedv(
+			MutatieTypen/name
+			, replace('union_data(Verslagmaanden, '+AsList('Mutaties_Per_VerslagMaand/'+Verslagmaanden/label+'/SelectieMoment/Totalen_PerMutatieType/@MT@', ',')+')', '@MT@', MutatieTypen/name)
+			, Verslagmaanden
+			, int32
+		)
+	{
+		//unidentified
+		attribute<int32>  Wp    (Verslagmaanden) := ='union_data(Verslagmaanden, '+AsList('Mutaties_Per_VerslagMaand/'+Verslagmaanden/label+'/SelectieMoment/Totalen_PerMutatieType_UnID/Wp', ',')+')';
+		attribute<int32>  Wm    (Verslagmaanden) := ='union_data(Verslagmaanden, '+AsList('Mutaties_Per_VerslagMaand/'+Verslagmaanden/label+'/SelectieMoment/Totalen_PerMutatieType_UnID/Wm', ',')+')';
+		attribute<int32>  NWp   (Verslagmaanden) := ='union_data(Verslagmaanden, '+AsList('Mutaties_Per_VerslagMaand/'+Verslagmaanden/label+'/SelectieMoment/Totalen_PerMutatieType_UnID/NWp', ',')+')';
+		attribute<int32>  NWm   (Verslagmaanden) := ='union_data(Verslagmaanden, '+AsList('Mutaties_Per_VerslagMaand/'+Verslagmaanden/label+'/SelectieMoment/Totalen_PerMutatieType_UnID/NWm', ',')+')';
+		attribute<int32>  Tp    (Verslagmaanden) := ='union_data(Verslagmaanden, '+AsList('Mutaties_Per_VerslagMaand/'+Verslagmaanden/label+'/SelectieMoment/Totalen_PerMutatieType_UnID/Tp', ',')+')';
+		attribute<int32>  Tm    (Verslagmaanden) := ='union_data(Verslagmaanden, '+AsList('Mutaties_Per_VerslagMaand/'+Verslagmaanden/label+'/SelectieMoment/Totalen_PerMutatieType_UnID/Tm', ',')+')';
+		
+		//uitgesloten
+		attribute<int32>  S_rest     (Verslagmaanden) := ='union_data(Verslagmaanden, '+AsList('Mutaties_Per_VerslagMaand/'+Verslagmaanden/label+'/SelectieMoment/Totalen_PerMutatieType_Uitgesloten/S_rest', ',')+')';
+		attribute<int32>  O_rest     (Verslagmaanden) := ='union_data(Verslagmaanden, '+AsList('Mutaties_Per_VerslagMaand/'+Verslagmaanden/label+'/SelectieMoment/Totalen_PerMutatieType_Uitgesloten/O_rest', ',')+')';
+		attribute<int32>  TMmin_rest (Verslagmaanden) := ='union_data(Verslagmaanden, '+AsList('Mutaties_Per_VerslagMaand/'+Verslagmaanden/label+'/SelectieMoment/Totalen_PerMutatieType_Uitgesloten/TMmin_rest', ',')+')';
+		attribute<int32>  Cplus_rest (Verslagmaanden) := ='union_data(Verslagmaanden, '+AsList('Mutaties_Per_VerslagMaand/'+Verslagmaanden/label+'/SelectieMoment/Totalen_PerMutatieType_Uitgesloten/Cplus_rest', ',')+')';
+		attribute<int32>  Cmin_rest  (Verslagmaanden) := ='union_data(Verslagmaanden, '+AsList('Mutaties_Per_VerslagMaand/'+Verslagmaanden/label+'/SelectieMoment/Totalen_PerMutatieType_Uitgesloten/Cmin_rest', ',')+')';
+
+		attribute<int32>  Saldo      (Verslagmaanden) := ='union_data(Verslagmaanden, '+AsList('Mutaties_Per_VerslagMaand/'+Verslagmaanden/label+'/SelectieMoment/Totalen_PerMutatieType/Saldo', ',')+')';
+	}
+	
+	unit<uint32> Write_FinalMutationTable := ='union_unit('+AsItemList('Mutaties_Per_VerslagMaand/'+Verslagmaanden/label+'/SelectieMoment/IsMutatie')+')'
+	, StorageName = "='%LocalDataProjDir%/Temp/FinalMutationTable_'+/Parameters/BAG_Selection_Area+'_'+Parameters/BAG_file_date+'.mmd'"
+	{
+		attribute<rdc>                      geometry              := ='union_data(.,'+AsItemList('Mutaties_Per_VerslagMaand/'+Verslagmaanden/label+'/SelectieMoment/IsMutatie/geometry')+')';
+		attribute<rdc>                      pand_geometry (poly)  := ='union_data(.,'+AsItemList('Mutaties_Per_VerslagMaand/'+Verslagmaanden/label+'/SelectieMoment/IsMutatie/pand_geometry')+')';
+		attribute<uint64>                   vbo_bag_nr            := ='union_data(.,'+AsItemList('Mutaties_Per_VerslagMaand/'+Verslagmaanden/label+'/SelectieMoment/IsMutatie/vbo_bag_nr')+')';
+		attribute<jaar>                     pand_bouwjaar         := ='union_data(.,'+AsItemList('Mutaties_Per_VerslagMaand/'+Verslagmaanden/label+'/SelectieMoment/IsMutatie/pand_bouwjaar')+')';
+		attribute<uint64>                   pand_bag_nr           := ='union_data(.,'+AsItemList('Mutaties_Per_VerslagMaand/'+Verslagmaanden/label+'/SelectieMoment/IsMutatie/pand_bag_nr')+')';
+		attribute<int32>                    vbo_oppervlakte       := ='union_data(.,'+AsItemList('Mutaties_Per_VerslagMaand/'+Verslagmaanden/label+'/SelectieMoment/IsMutatie/vbo_oppervlakte')+')';
+		attribute<int32>                    MutatieMaand          := ='union_data(.,'+AsItemList('Mutaties_Per_VerslagMaand/'+Verslagmaanden/label+'/SelectieMoment/IsMutatie/MutatieMaand')+')';
+		attribute<pand_status>              pand_status_rel       := ='union_data(.,'+AsItemList('Mutaties_Per_VerslagMaand/'+Verslagmaanden/label+'/SelectieMoment/IsMutatie/pand_status_rel')+')';
+		attribute<int32>                    LastDatum_BouwvergunningVerleend       := ='union_data(.,'+AsItemList('Mutaties_Per_VerslagMaand/'+Verslagmaanden/label+'/SelectieMoment/IsMutatie/LastDatum_BouwvergunningVerleend')+')';
+		attribute<MutatieTypen>             MutatieTypen_rel_src  := ='union_data(.,'+AsItemList('Mutaties_Per_VerslagMaand/'+Verslagmaanden/label+'/SelectieMoment/IsMutatie/MutatieTypen_rel')+')';
+		attribute<MutatieTypen_UnID>        MutatieTypen_UnID_rel := ='union_data(.,'+AsItemList('Mutaties_Per_VerslagMaand/'+Verslagmaanden/label+'/SelectieMoment/IsMutatie/MutatieTypen_UnID_rel')+')';
+		attribute<MutatieTypen_Uitgesloten> MutatieTypen_Uitgesloten_rel := ='union_data(.,'+AsItemList('Mutaties_Per_VerslagMaand/'+Verslagmaanden/label+'/SelectieMoment/IsMutatie/MutatieTypen_Uitgesloten_rel')+')';
+	}
+	
+	unit<uint32> Read_FinalMutationTable
+	: StorageName = "='%LocalDataProjDir%/Temp/FinalMutationTable_'+/Parameters/BAG_Selection_Area+'_'+Parameters/BAG_file_date+'.mmd'"
+	, StorageReadOnly = "true"
+	{
+		// attribute<rdc>                      geometry;
+		// attribute<rdc>                      pand_geometry (poly);
+		// attribute<uint64>                   vbo_bag_nr;
+		// attribute<jaar>                     pand_bouwjaar;
+		// attribute<uint64>                   pand_bag_nr;
+		// attribute<int32>                    vbo_oppervlakte;
+		// attribute<pand_status>              pand_status_rel;
+		// attribute<int32>                    LastDatum_BouwvergunningVerleend;
+		// attribute<int32>                    MutatieMaand;
+		// attribute<MutatieTypen>             MutatieTypen_rel_src;
+		// attribute<MutatieTypen_UnID>        MutatieTypen_UnID_rel;
+		// attribute<MutatieTypen_Uitgesloten> MutatieTypen_Uitgesloten_rel;
+		attribute<MutatieTypen>             MutatieTypen_rel      := switch(
+																		 case(MutatieTypen_rel_src == MutatieTypen/v/Cplus, MutatieTypen/V/T)
+																		,case(MutatieTypen_rel_src == MutatieTypen/v/Cmin, MutatieTypen/V/O)
+																		,MutatieTypen_rel_src
+																	);
+		 
+		attribute<MutatieTypen_All>         MutatieTypen_All_rel := switch(
+																		   case(IsDefined(MutatieTypen_rel_src), rlookup(MutatieTypen_rel_src, MutatieTypen_All/MutatieTypen_rel))
+																		 , case(IsDefined(MutatieTypen_UnID_rel), rlookup(MutatieTypen_UnID_rel, MutatieTypen_All/MutatieTypen_UnID_rel))
+																		 , case(IsDefined(MutatieTypen_Uitgesloten_rel), rlookup(MutatieTypen_Uitgesloten_rel, MutatieTypen_All/MutatieTypen_Uitgesloten_rel))
+																		 , null_b
+																	);
+		
+		attribute<Read_PerObject_Export>    Read_PerObject_Export_rel := rlookup(vbo_bag_nr, Read_PerObject_Export/vbo_bag_nr);
+		attribute<bool>                     IsNotCategorised          := IsNull(Read_PerObject_Export_rel) ;
+	}
+	
+	unit<uint32> FinalMutationTable := = Parameters/Use_Ontkoppelde_FinalMutations ? 'Read_FinalMutationTable' : 'Write_FinalMutationTable';
+	
+	unit<uint32> BeginVoorraad      := select_with_org_rel(BAG_Tabel/ActiefOp_StartBAG)
+	{
+		attribute<rdc>                     geometry              := BAG_Tabel/geometry[org_rel];
+		attribute<rdc>                     pand_geometry (poly)  := BAG_Tabel/pand_geometry[org_rel];
+		attribute<uint64>                  vbo_bag_nr            := BAG_Tabel/vbo_bag_nr[org_rel];
+		attribute<uint64>                  pand_bag_nr           := BAG_Tabel/pand_bag_nr[org_rel];
+		attribute<vbo_gebruiksdoel_ext>    gebruiksdoel_rel      := BAG_Tabel/gebruiksdoel_rel[org_rel];
+	}
+}

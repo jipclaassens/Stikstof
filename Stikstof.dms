@@ -1,0 +1,36 @@
+container Redevelopment 
+{ 
+	container MaakOntkoppeldeData
+	{
+		parameter<string> MaakVolledigeBAGTabel                := 'Ready', ExplicitSuppliers = "/SourceData/BAG/MaakVolledigeBAG/MaakVolledigeBAGTabel";
+		parameter<string> Write_Relevant_Tiles_x_WegSpoor      := 'Ready', ExplicitSuppliers = "/SourceData/BRT/Write_Relevant_Tiles_x_WegSpoor/TiledNonWegSpoor";
+		parameter<string> Write_IsMogelijkWoningCorporatiePand := 'Ready', ExplicitSuppliers = "/SourceData/BAG/VolledigeBAG/panden/Src/Write_IsMogelijkWoningCorporatiePand";
+		parameter<string> Write_FinalMutationTable             := 'Ready', ExplicitSuppliers = "/Analyse/Redev_obv_hele_bag/PrepBAG/Write_FinalMutationTable";
+	}
+	
+	container Parameters : using = "units"
+	{
+		parameter<string>  BAG_Selection_Area              := 'NL'; //'NL', 'AMS'
+		parameter<bool>    Use_Ontkoppelde_FinalMutations  := TRUE; // TRUE FALSE
+		parameter<m>       big_inflate_m                   := 10[m]; //10m
+		parameter<string>  bouwjaar_truncation_expr        := 'bouwjaar <= 1005w || bouwjaar > @YYYY@[jaar] ? (0/0)[uint16] : bouwjaar < 1500w ? 1500w : bouwjaar';
+		parameter<m>       highrise_threshold              := 30[m];
+		// parameter<m2>      minimum_site_area               := 25[m2];
+		// parameter<float64> minimum_SN_area_share           := 0.01d;
+		parameter<int32>     VBO_opp_truncation              := 500i;
+		parameter<int32>     VBO_opp_truncation_lower        := 10i;
+		
+		parameter<string> BRT_file_date  := '20250318';
+		parameter<string> BAG_file_date  := '20251009'; //'20240708'; 20250115 20251009
+	}
+	
+	#include <Units.dms>
+	#include <Classifications.dms>
+	#include <Geography.dms>
+	
+	#include <SourceData.dms>
+	#include <Analyse.dms>
+	
+	#include <ExportSettings.dms>
+	#include <ConfigSettings.dms>
+}

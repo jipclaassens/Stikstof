@@ -1,0 +1,62 @@
+container Redev_obv_hele_bag :  using = "units;classifications/bag;geography"
+{
+	 
+	#include<PrepBAG.dms>
+	
+	container PrepDomains := 
+		for_each_ne(
+			AdditionalClassifications/MutatieTypen/name
+			, 'PrepDomains_T('+quote(AdditionalClassifications/MutatieTypen/name)+')'
+		)
+	{
+	}
+		
+	#include<AdditionalClassifications.dms>
+	
+	Template PrepDomains_T
+	{
+		parameter<string> name;
+		// /
+		unit<uint32> domain     := ='select_with_org_rel(PrepBAG/FinalMutationTable/MutatieTypen_rel == AdditionalClassifications/MutatieTypen/v/'+name+')'
+		, DialogType = "map"
+		, DialogData = "vbo_geometry"
+		{
+			attribute<rdc>         vbo_geometry                                := org_rel -> geometry;
+			attribute<int32>       MutatieMaand                                := org_rel -> MutatieMaand;
+			attribute<int32>       vbo_oppervlakte                             := org_rel -> vbo_oppervlakte;
+			attribute<string>      label                                       := string(vbo_bag_nr);
+			attribute<rdc>         pand_geometry  (poly)                       := org_rel -> pand_geometry;
+			attribute<jaar>        pand_bouwjaar                               := org_rel -> pand_bouwjaar;
+			attribute<pand_status> pand_status_rel                             := org_rel -> pand_status_rel;//tbv n2000 paper
+			attribute<int32>       LastDatum_BouwvergunningVerleend                := org_rel -> LastDatum_BouwvergunningVerleend; //tbv n2000 paper
+			attribute<uint64>      vbo_bag_nr                                  := org_rel -> vbo_bag_nr;
+			attribute<uint64>      pand_bag_nr                                 := org_rel -> pand_bag_nr;
+			
+			container impl
+			: Descr = "tbv identificatie van afwijkende pand geometrieeen. Buiten NL, of zeer groot, of dunne slivers."
+			{
+				attribute<rdc>       NW                         (..) := lower_bound(pand_geometry);
+				attribute<rdc>       SE                         (..) := upper_bound(pand_geometry);
+				attribute<float64>   X_ext                      (..) := sub_or_null(PointCol(SE),PointCol(NW));
+				attribute<float64>   Y_ext                      (..) := sub_or_null(PointRow(SE),PointRow(NW));
+ 
+				attribute<float64>   lower_x                    (..) := pointCol(NW);
+				attribute<float64>   upper_x                    (..) := pointCol(SE);
+				attribute<float64>   lower_y                    (..) := pointRow(NW);
+				attribute<float64>   upper_y                    (..) := pointRow(SE);
+				attribute<m2>        area                       (..) := area(pand_geometry, m2);
+				
+				attribute<bool>      pand_selection_condition   (..) := ='X_ext < 1000d && Y_ext < 1000d' //panden met een grotere x/y range dan 1km eruit
+																						'&& lower_x < 300000d && lower_x > 0d'
+																						'&& upper_x < 300000d && upper_x > 0d'
+																						'&& lower_y < 620000d && lower_y > 300000d'
+																						'&& upper_y < 620000d && upper_y > 300000d' //binnen NL
+																						'&& area < 50000[m2]';
+			}
+			
+			unit<uint32>           zonder_afwijkende_pand_geometrieen          := select_with_attr_by_cond(., impl/pand_selection_condition), DialogType = "map", DialogData = "vbo_geometry";
+		} 
+	}
+}
+
+

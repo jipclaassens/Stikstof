@@ -1,0 +1,16 @@
+container classifications : using = "units"
+{ 
+	#include<bag.dms>
+	#include<bbg.dms>
+	#include<brt.dms>
+	#include<tijd.dms>
+	
+	unit<uint32> NoData: NrOfrows = 1
+	{
+		attribute<string> name      : ['NA'];
+		attribute<string> Label     := name, DialogType = "LabelText";
+		attribute<uint32> value     := const(0,.);
+		attribute<string> next_name : ['NA'];
+		attribute<string> prev_name : ['NA'];
+	}
+}

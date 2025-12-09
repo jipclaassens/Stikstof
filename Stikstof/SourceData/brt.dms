@@ -1,0 +1,125 @@
+container BRT : using = "classifications/BRT"
+{ 
+	container Compleet
+	:	StorageName     = "='%Redev_DataDir%/Grondgebruik/BRT/top10nl_Compleet-'+Parameters/BRT_file_date+'.gpkg'"
+	,	StorageType     = "gdal.vect"
+	,	StorageReadOnly = "True"
+	, 	DialogData      = "rdc"
+	, 	SyncMode        = "AllTables"
+	, 	Descr           = "Download from PDOK"
+	{
+		// unit<uint32> top10nl_Waterdeel_vlak
+		// {
+			// attribute<string>                     label                := visualisatiecodes/label[visualisatiecode_rel];
+			// attribute<visualisatiecodes>          visualisatiecode_rel := rlookup(int32(visualisatiecode), visualisatiecodes/code);
+			// attribute<visualisatiecodes/label_uq> label_uq_rel         := rlookup(label, visualisatiecodes/label_uq/values);
+			// attribute<rdc>                        geometry_simpl (poly) := bg_simplify_multi_polygon(Geometry, 1d);
+		// }
+		
+		unit<uint32> top10nl_terrein_vlak
+		{
+			attribute<string>                     label                 := visualisatiecodes/label[visualisatiecode_rel];
+			attribute<visualisatiecodes>          visualisatiecode_rel  := rlookup(int32(visualisatiecode), visualisatiecodes/code);
+			attribute<visualisatiecodes/label_uq> label_uq_rel          := rlookup(label, visualisatiecodes/label_uq/values);
+			attribute<rdc>                        geometry_simpl (poly) := bg_simplify_multi_polygon(Geometry, 1d);
+		}
+	}
+	
+	// unit<uint32> IsWaterweg := select_with_org_rel(
+									// rlookup(visualisatiecodes/label[rlookup(int32(Compleet/top10nl_waterdeel_vlak/visualisatiecode), visualisatiecodes/code)], visualisatiecodes/label_uq/values) == visualisatiecodes/label_uq/V/water_vlak_waterloop
+									// && Compleet/top10nl_waterdeel_vlak/hoofdafwatering == 'ja'
+								// )
+	// {
+		// attribute<rdc> geometry (poly) := Compleet/top10nl_waterdeel_vlak/geometry[org_rel];
+		// attribute<rdc> geometry_simpl (poly) := bg_simplify_multi_polygon(Geometry, 1d);
+	// }
+	// unit<uint32> IsOpenWater := select_with_org_rel(
+									// rlookup(visualisatiecodes/label[rlookup(int32(Compleet/top10nl_waterdeel_vlak/visualisatiecode), visualisatiecodes/code)], visualisatiecodes/label_uq/values) == visualisatiecodes/label_uq/V/water_vlak_meer_plas
+									// || rlookup(visualisatiecodes/label[rlookup(int32(Compleet/top10nl_waterdeel_vlak/visualisatiecode), visualisatiecodes/code)], visualisatiecodes/label_uq/values) == visualisatiecodes/label_uq/V/water_vlak_droogvallend
+									// || rlookup(visualisatiecodes/label[rlookup(int32(Compleet/top10nl_waterdeel_vlak/visualisatiecode), visualisatiecodes/code)], visualisatiecodes/label_uq/values) == visualisatiecodes/label_uq/V/water_vlak_zee
+								// )
+	// {
+		// attribute<rdc> geometry (poly) := Compleet/top10nl_waterdeel_vlak/geometry[org_rel];
+		// attribute<rdc> geometry_simpl (poly) := bg_simplify_multi_polygon(Geometry, 1d);
+	// }
+	
+	// unit<uint32> IsHoofdweg := select_with_org_rel(Compleet/top10nl_wegdeel_vlak/awegnummer != '' || Compleet/top10nl_wegdeel_vlak/ewegnummer != '' || Compleet/top10nl_wegdeel_vlak/nwegnummer != '' || Compleet/top10nl_wegdeel_vlak/swegnummer != '')
+	// {
+		// attribute<rdc> geometry (poly) := Compleet/top10nl_wegdeel_vlak/geometry[org_rel];
+		// attribute<rdc> geometry_simpl (poly) := bg_simplify_multi_polygon(Geometry, 1d);
+	// }
+	
+	
+	unit<uint32>       Spoor := select_with_org_rel(
+									rlookup(visualisatiecodes/label[rlookup(int32(Compleet/top10nl_terrein_vlak/visualisatiecode), visualisatiecodes/code)], visualisatiecodes/label_uq/values) == visualisatiecodes/label_uq/V/spoor_vlak_spoorbaanlichaam
+									|| rlookup(visualisatiecodes/label[rlookup(int32(Compleet/top10nl_terrein_vlak/visualisatiecode), visualisatiecodes/code)], visualisatiecodes/label_uq/values) == visualisatiecodes/label_uq/V/spoor_vlak_brug
+								)
+	{
+		attribute<rdc> geometry (poly) := Compleet/top10nl_terrein_vlak/geometry[org_rel];
+	}
+	
+	unit<uint32>       Weg := select_with_org_rel(
+									rlookup(visualisatiecodes/label[rlookup(int32(Compleet/top10nl_wegdeel_vlak/visualisatiecode), visualisatiecodes/code)], visualisatiecodes/label_uq/values) == visualisatiecodes/label_uq/V/weg_vlak_autosnelweg
+									|| rlookup(visualisatiecodes/label[rlookup(int32(Compleet/top10nl_wegdeel_vlak/visualisatiecode), visualisatiecodes/code)], visualisatiecodes/label_uq/values) == visualisatiecodes/label_uq/V/weg_vlak_autosnelweg_boven_weg
+									|| rlookup(visualisatiecodes/label[rlookup(int32(Compleet/top10nl_wegdeel_vlak/visualisatiecode), visualisatiecodes/code)], visualisatiecodes/label_uq/values) == visualisatiecodes/label_uq/V/weg_vlak_hoofdweg
+									|| rlookup(visualisatiecodes/label[rlookup(int32(Compleet/top10nl_wegdeel_vlak/visualisatiecode), visualisatiecodes/code)], visualisatiecodes/label_uq/values) == visualisatiecodes/label_uq/V/weg_vlak_lokale_weg
+									|| rlookup(visualisatiecodes/label[rlookup(int32(Compleet/top10nl_wegdeel_vlak/visualisatiecode), visualisatiecodes/code)], visualisatiecodes/label_uq/values) == visualisatiecodes/label_uq/V/weg_vlak_regionale_weg
+									|| rlookup(visualisatiecodes/label[rlookup(int32(Compleet/top10nl_wegdeel_vlak/visualisatiecode), visualisatiecodes/code)], visualisatiecodes/label_uq/values) == visualisatiecodes/label_uq/V/weg_vlak_straat
+								)
+	{
+		attribute<rdc> geometry (poly) := Compleet/top10nl_wegdeel_vlak/geometry[org_rel];
+	}
+	
+	unit<uint32>       WegSpoor := union_unit(Spoor, Weg)
+	{
+		attribute<rdc> geometry (poly) := union_data(.,Spoor/geometry, Weg/geometry);
+	}
+	
+	unit<uint32>       Tiles_x_WegSpoor                            := bg_overlay_polygon(geography/TileDomain/geometry_poly, WegSpoor/geometry);
+	unit<uint32>       Relevant_Tiles_x_WegSpoor                   := select_with_org_rel(Has_Any(Tiles_x_WegSpoor/first_rel))
+	{
+		attribute<rdc> Tiles               (poly) := geography/TileDomain/geometry_poly[org_rel];
+		attribute<rdc_cm> TiledWegSpoor    (poly) := bp_union_polygon(Tiles_x_WegSpoor/geometry[rdc_cm],invert(org_rel)[Tiles_x_WegSpoor/first_rel]);
+		attribute<rdc> TiledNonWegSpoor    (poly) := bp_difference(Tiles[rdc_cm], TiledWegSpoor)[rdc];
+	}
+	
+	unit<uint32>       Write_Relevant_Tiles_x_WegSpoor := Relevant_Tiles_x_WegSpoor
+	, StorageName = "='%LocalDataProjDir%/Temp/BRT/TiledNonWegSpoor_'+Parameters/BRT_file_date+'.fss'"
+	{
+		attribute<rdc> TiledNonWegSpoor (poly) := Relevant_Tiles_x_WegSpoor/TiledNonWegSpoor;
+	}
+	unit<uint32>       Read_Relevant_Tiles_x_WegSpoor 
+	: StorageName = "='%LocalDataProjDir%/Temp/BRT/TiledNonWegSpoor_'+Parameters/BRT_file_date+'.fss'"
+	, StorageReadOnly = "true"
+	{
+		attribute<rdc> TiledNonWegSpoor  (poly);
+	}
+	
+	
+	//////////////////////////////
+	
+	// unit<uint32>       RegioUnit_Wijk                 := /SourceData/RegioIndelingen/impl/CBS/Y2012/Wijk;
+	// unit<uint32>       IsWegSpoor                     := union_unit(Spoor,IsHoofdweg)
+	// {
+		// attribute<rdc> geometry                (poly) := union_data(.,Spoor/geometry, IsHoofdweg/geometry);
+	// }
+	// unit<uint32>       IsWater                        := union_unit(IsWaterweg, IsOpenWater)
+	// {
+		// attribute<rdc> geometry                (poly) := union_data(., IsWaterweg/geometry, IsOpenWater/geometry);
+	// }
+	
+	// unit<uint32>       Wijken_x_WegSpoor              := bg_overlay_polygon(RegioUnit_Wijk/geometry, IsWegSpoor/geometry)
+	// {
+		// attribute<km2> area                                 := area(geometry, m2)[km2];
+		// attribute<km2> Calc_area_per_wijk  (RegioUnit_Wijk) := sum(area, first_rel);
+		// attribute<km2> Write_area_per_wijk (RegioUnit_Wijk) := Calc_area_per_wijk, StorageName = "='%LocalDataProjDir%/Temp/BRT/Wijken_x_WegSpoor_'+Parameters/BRT_file_date+'_Area.fss'";
+		// attribute<km2> Area_per_wijk       (RegioUnit_Wijk) : StorageName = "='%LocalDataProjDir%/Temp/BRT/Wijken_x_WegSpoor_'+Parameters/BRT_file_date+'_Area.fss'", StorageReadOnly = "true";
+	// }
+	// unit<uint32>       Wijken_x_Water                 := bg_overlay_polygon(RegioUnit_Wijk/geometry, IsWater/geometry)
+	// {
+		// attribute<km2> area                                 := area(geometry, m2)[km2];
+		// attribute<km2> Calc_area_per_wijk  (RegioUnit_Wijk) := sum(area, first_rel);
+		// attribute<km2> Write_area_per_wijk (RegioUnit_Wijk) := Calc_area_per_wijk, StorageName = "='%LocalDataProjDir%/Temp/BRT/Wijken_x_Water_'+Parameters/BRT_file_date+'_Area.fss'";
+		// attribute<km2> Area_per_wijk       (RegioUnit_Wijk) : StorageName = "='%LocalDataProjDir%/Temp/BRT/Wijken_x_Water_'+Parameters/BRT_file_date+'_Area.fss'", StorageReadOnly = "true";
+	// }
+}
