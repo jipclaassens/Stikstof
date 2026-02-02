@@ -21,7 +21,7 @@ container Stikstof
 		parameter<int32>     VBO_opp_truncation_lower        := 10i;
 		
 		parameter<string> BRT_file_date  := '20250318';
-		parameter<string> BAG_file_date  := '20251009'; //'20240708'; 20250115 20251009
+		parameter<string> BAG_file_date  := '20260108'; //'20240708'; 20250115 20251009
 	}
 	
 	#include <Units.dms>

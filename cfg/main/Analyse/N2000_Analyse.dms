@@ -1,4 +1,4 @@
-container N2000_Analyse :  using = "units;classifications/bag;geography;sourcedata"
+container N2000_Analyse :  using = "units;classifications/bag;geography;sourcedata;sourcedata/regioindelingen"
 {
 	attribute<bool> IsNatura2000_2008           (rdc_100m) := Policies/Natura2000_2008;
 	attribute<bool> IsNatura2000_2024           (rdc_100m) := Policies/N2000_2024/n2000_processed/per_100m;
@@ -52,8 +52,10 @@ container N2000_Analyse :  using = "units;classifications/bag;geography;sourceda
 	}
 
 	unit<uint32> Nieuwbouw       := Analyse/Redev_obv_hele_bag/PrepDomains/N/domain
+	// , StorageName = "%LocalDataProjDir%/N2000_nieuwbouw_objecten.mmd"
 	, Descr = "Export deze unit voor analyses voor Huub. Op object niveau."
 	{
+		attribute<rdc>             geometry              := vbo_geometry;
 		attribute<uint64>          pand_bag_nr           := Analyse/Redev_obv_hele_bag/PrepDomains/N/domain/pand_bag_nr;
 		attribute<uint64>          vbo_bag_nr            := Analyse/Redev_obv_hele_bag/PrepDomains/N/domain/vbo_bag_nr;
 		attribute<uint32>          x                     := uint32(Get_X(vbo_geometry));
@@ -65,6 +67,18 @@ container N2000_Analyse :  using = "units;classifications/bag;geography;sourceda
 		attribute<int32>           last_pand_bouwvergunningberleend_datum := Analyse/Redev_obv_hele_bag/PrepDomains/N/domain/LastDatum_BouwvergunningVerleend;
 		
 		attribute<uint32>          dist2N2000_m          := uint32(dist_info(RelevantHabitats/geometry, vbo_geometry));
+		attribute<Tijd/Jaren>      MutatieJaar_rel       := rlookup(uint32(MutatieMaand / 100i), Tijd/Jaren/value);
+		
+		unit<uint32> tests := Tijd/Jaren
+		{
+			attribute<uint32> Dist_0m          := sum_uint32(dist2N2000_m == 0, MutatieJaar_rel);
+			attribute<uint32> Dist_1_250m      := sum_uint32(dist2N2000_m > 0 && dist2N2000_m <= 250, MutatieJaar_rel);
+			attribute<uint32> Dist_250_500m    := sum_uint32(dist2N2000_m > 250 && dist2N2000_m <= 500, MutatieJaar_rel);
+			attribute<uint32> Dist_500_1000m   := sum_uint32(dist2N2000_m > 500 && dist2N2000_m <= 1000, MutatieJaar_rel);
+			attribute<uint32> Dist_1000_2500m  := sum_uint32(dist2N2000_m > 1000 && dist2N2000_m <= 2500, MutatieJaar_rel);
+			attribute<uint32> Dist_2500_5000m  := sum_uint32(dist2N2000_m > 2500 && dist2N2000_m <= 5000, MutatieJaar_rel);
+			attribute<uint32> Dist_gt5000m     := sum_uint32(dist2N2000_m > 5000, MutatieJaar_rel);
+		}
 		attribute<uint32>          Cluster_rel           := Cluster_obv_VergunningDatum/subset/connected_parts/part_rel;
 		
 		attribute<uint32>          GM_CODE               := SourceData/RegioIndelingen/Impl/CBS/Y2024/Gemeente/gem_nr[point_in_polygon(vbo_geometry, /SourceData/RegioIndelingen/Impl/CBS/Y2024/Gemeente/geometry)];
@@ -88,7 +102,34 @@ container N2000_Analyse :  using = "units;classifications/bag;geography;sourceda
 			}
 		}
 	}
-
+	
+	// unit<uint32> Read_Nieuwbouw
+	// : StorageName = "%LocalDataProjDir%/N2000_nieuwbouw_objecten.mmd"
+	// , StorageReadOnly = "true"
+	// {
+		// unit<uint32> tests := Tijd/Jaren
+		// {
+			// attribute<uint32> Dist_0m          := sum_uint32(dist2N2000_m == 0, MutatieJaar_rel);
+			// attribute<uint32> Dist_1_250m      := sum_uint32(dist2N2000_m > 0 && dist2N2000_m <= 250, MutatieJaar_rel);
+			// attribute<uint32> Dist_250_500m    := sum_uint32(dist2N2000_m > 250 && dist2N2000_m <= 500, MutatieJaar_rel);
+			// attribute<uint32> Dist_500_1000m   := sum_uint32(dist2N2000_m > 500 && dist2N2000_m <= 1000, MutatieJaar_rel);
+			// attribute<uint32> Dist_1000_2500m  := sum_uint32(dist2N2000_m > 1000 && dist2N2000_m <= 2500, MutatieJaar_rel);
+			// attribute<uint32> Dist_2500_5000m  := sum_uint32(dist2N2000_m > 2500 && dist2N2000_m <= 5000, MutatieJaar_rel);
+			// attribute<uint32> Dist_gt5000m     := sum_uint32(dist2N2000_m > 5000, MutatieJaar_rel);
+		// }
+		
+		// unit<uint32> per_prov := Provincie
+		// {
+			// attribute<.> prov_rel (..) := point_in_polygon(../geometry, geometry);
+			// attribute<uint32> Dist_1_250m := sum_uint32(dist2N2000_m > 0 && dist2N2000_m <= 250 && MutatieJaar_rel == Tijd/Jaren/v/y2018, prov_rel);
+		
+		// }
+		
+		// unit<uint32> sub := select_with_attr_by_cond(., MutatieJaar_rel == Tijd/Jaren/v/y2018 && dist2N2000_m > 0 && dist2N2000_m <= 250)
+		// {
+		
+		// }
+	// }
 	
 	unit<uint32> Object_BouwvergunningVerleend := select_with_org_rel(IsDefined(uq_vbo/Pand_BouwvergunningVerleend_rel))
 	, Descr = "Export deze unit voor analyses voor Huub. Op object niveau."

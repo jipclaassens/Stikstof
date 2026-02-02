@@ -115,10 +115,10 @@ container AdditionalClassifications : using = "classifications/tijd"
 		attribute<string> maand := Maanden/name[second_rel];
 	}
 	
-	unit<uint32> Verslagmaanden_additional : nrofrows = 10 //7
+	unit<uint32> Verslagmaanden_additional : nrofrows = 12 //7
 	{
-		attribute<string> jaar  : ['2025','2025','2025','2025','2025','2025','2025','2025','2025','2025'];
-		attribute<string> maand : ['01','02','03','04','05','06','07','08','09','10'];
+		attribute<string> jaar  : ['2025','2025','2025','2025','2025','2025','2025','2025','2025','2025','2025','2025'];
+		attribute<string> maand : ['01','02','03','04','05','06','07','08','09','10','11','12'];
 	}
 	
 	unit<uint32> Verslagmaanden := union_unit(Verslagmaanden0, Verslagmaanden_additional)
