@@ -13,6 +13,7 @@ container PrepBAG : using = "AdditionalClassifications"
 		attribute<int32>                begindatum                    := BAG_Tabel_path/begindatum;
 		attribute<jaar>                 begin_jaar                    := (begindatum / 10000i)[jaar];
 		attribute<int32>                einddatum                     := BAG_Tabel_path/einddatum;
+		attribute<string>               documentnummer                := BAG_Tabel_path/meta/documentnummer;
 		attribute<vbo_gebruiksdoel_ext> prev_gebruiksdoel_rel         := gebruiksdoel_rel[pv_begin_eind_rel];
 		attribute<vbo_gebruiksdoel_ext> gebruiksdoel_rel              := BAG_Tabel_path/gebruiksdoel_rel;
 		attribute<vbo_gebruiksdoel_ext> pand_modus_gebruiksdoel_rel   := uq_pand_nr/modus_gebruiksdoel_rel[uq_pand_nr_rel];
@@ -173,6 +174,7 @@ container PrepBAG : using = "AdditionalClassifications"
 		unit<uint32> uq_vbo := unique(vbo_bag_nr)
 		{
 			attribute<uint64>           pand_bag_nr                   := modus(../pand_bag_nr, uq_vbo_rel);
+			attribute<string>           vbo_documentnummer            := first(../documentnummer, uq_vbo_rel);
 		}
 		attribute<uq_vbo>               uq_vbo_rel                    := rlookup(vbo_bag_nr, uq_vbo/values);
 		attribute<int32>                vbo_vormingsfase_begindatum   := min(vbo_status_rel == vbo_status/v/verblijfsobject_gevormd ? begindatum : null_i, uq_vbo_rel)[uq_vbo_rel] > max(vbo_status_rel == vbo_status/v/verblijfsobject_gevormd ? einddatum : null_i, uq_vbo_rel)[uq_vbo_rel] ? null_i : min(vbo_status_rel == vbo_status/v/verblijfsobject_gevormd ? begindatum : null_i, uq_vbo_rel)[uq_vbo_rel];

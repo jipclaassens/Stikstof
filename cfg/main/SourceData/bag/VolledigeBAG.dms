@@ -27,6 +27,7 @@ container VolledigeBAG : using = "classifications/BAG"
 		attribute<int32>       pand_einddatum                 := panden/pand/einddatum[second_rel];
 		attribute<int32>       vbo_begindatum                 := vbos/vbo/begindatum[first_rel];
 		attribute<int32>       vbo_einddatum                  := vbos/vbo/einddatum[first_rel];
+		attribute<string>      vbo_documentnummer             := vbos/vbo/DOCUMENTNUMMER[first_rel];
 		
 		attribute<pand_status> pand_status_rel                := panden/pand/status_rel[second_rel];
 		attribute<vbo_status>  vbo_status_rel                 := vbos/vbo/status_rel[first_rel];
@@ -60,6 +61,7 @@ container VolledigeBAG : using = "classifications/BAG"
 			attribute<vbo_gebruiksdoel_ext> gebruiksdoel_rel      := org_rel -> gebruiksdoel_rel;
 			attribute<int32>       begindatum                     := max_elem(pand_begindatum, vbo_begindatum);
 			attribute<int32>       einddatum                      := min_elem(pand_einddatum, vbo_einddatum);
+			attribute<string>      vbo_documentnummer             := org_rel -> vbo_documentnummer;
 			attribute<jaar>        pand_bouwjaar                  := org_rel -> pand_bouwjaar;
 			// attribute<WP4>         pand_type                      := org_rel -> pand_type;
 			
@@ -281,6 +283,7 @@ container VolledigeBAG : using = "classifications/BAG"
 			attribute<panden/pand>                pand_rel                  := rlookup(pand_bag_nr, panden/pand/pand_bag_nr);
 			attribute<int32>                      begindatum                := import/meta/BEGINDATUM == 0i ? MaxDatum : import/meta/BEGINDATUM;
 			attribute<int32>                      einddatum                 := import/meta/EINDDATUM == 0i ? MaxDatum : import/meta/EINDDATUM;
+			attribute<string>                     documentnummer            := import/meta/documentnummer;
 			attribute<uint16>                     functie_code              := impl/gebruiksdoelen/functie_code;
 			attribute<uint32>                     pand_count_ZorgFuncties   := impl/pand_count_ZorgFuncties[(impl/uq_pand_rel)];
 			attribute<uint32>                     pand_count_ZorgFuncties_StartBAG   := impl/pand_count_ZorgFuncties_StartBAG[(impl/uq_pand_rel)];

@@ -21,6 +21,7 @@ container N2000_Analyse :  using = "units;classifications/bag;geography;sourceda
 		attribute<vbo_gebruiksdoel_ext> gebruiksdoel_rel                := last(BAG_Tabel/gebruiksdoel_rel, Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/uq_vbo_rel);
 		attribute<vbo_status>           vbo_status_rel                  := last(BAG_Tabel/vbo_status_rel, Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/uq_vbo_rel);
 		attribute<jaar>                 pand_bouwjaar                   := last(BAG_Tabel/pand_bouwjaar, Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/uq_vbo_rel);
+		attribute<string>               vbo_documentnummer              := first(BAG_Tabel/vbo_documentnummer, Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/uq_vbo_rel);
 		
 		attribute<rdc_100m>             vbo_grid_rel                    := geometry[rdc_100m];
 		attribute<bool>                 LigtInAnyHistorischNatuurBeleid := AnyHistorischNatuurBeleid[vbo_grid_rel];
@@ -150,6 +151,7 @@ container N2000_Analyse :  using = "units;classifications/bag;geography;sourceda
 		
 		attribute<uint32>      dist2N2000_m                            := uint32(dist_info(RelevantHabitats/geometry, geometry));
 		attribute<uint32>      cluster_rel                             := Cluster_obv_VergunningDatum/subset/connected_parts/part_rel;
+		attribute<Uq_Documentnummer>      vbo_documentnummer_rel                  := rlookup(uq_vbo/vbo_documentnummer[org_rel], Uq_Documentnummer/values);
 		
 		attribute<uint32>      GM_CODE                                 := SourceData/RegioIndelingen/Impl/CBS/Y2024/Gemeente/gem_nr[point_in_polygon(geometry, /SourceData/RegioIndelingen/Impl/CBS/Y2024/Gemeente/geometry)];
 		attribute<string>      PRV_CODE                                := SourceData/RegioIndelingen/Impl/CBS/Y2024/Provincie/PRV_CODE[point_in_polygon(geometry, /SourceData/RegioIndelingen/Impl/CBS/Y2024/Provincie/geometry)];
@@ -173,6 +175,8 @@ container N2000_Analyse :  using = "units;classifications/bag;geography;sourceda
 				unit<uint32>   connected_parts := connected_parts(F1, F2);
 			}
 		}
+		
+		unit<uint32> Uq_Documentnummer := unique(uq_vbo/vbo_documentnummer[org_rel]);
 	}
 	
 	unit<uint32> IsochronenMap_Gemeente := SourceData/RegioIndelingen/Impl/CBS/Y2024/Gemeente
