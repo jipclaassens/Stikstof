@@ -28,6 +28,7 @@ container VolledigeBAG : using = "classifications/BAG"
 		attribute<int32>       vbo_begindatum                 := vbos/vbo/begindatum[first_rel];
 		attribute<int32>       vbo_einddatum                  := vbos/vbo/einddatum[first_rel];
 		attribute<string>      vbo_documentnummer             := vbos/vbo/DOCUMENTNUMMER[first_rel];
+		attribute<string>      pand_documentnummer            := panden/pand/DOCUMENTNUMMER[second_rel];
 		
 		attribute<pand_status> pand_status_rel                := panden/pand/status_rel[second_rel];
 		attribute<vbo_status>  vbo_status_rel                 := vbos/vbo/status_rel[first_rel];
@@ -62,6 +63,7 @@ container VolledigeBAG : using = "classifications/BAG"
 			attribute<int32>       begindatum                     := max_elem(pand_begindatum, vbo_begindatum);
 			attribute<int32>       einddatum                      := min_elem(pand_einddatum, vbo_einddatum);
 			attribute<string>      vbo_documentnummer             := org_rel -> vbo_documentnummer;
+			attribute<string>      pand_documentnummer            := org_rel -> pand_documentnummer;
 			attribute<jaar>        pand_bouwjaar                  := org_rel -> pand_bouwjaar;
 			// attribute<WP4>         pand_type                      := org_rel -> pand_type;
 			
@@ -149,6 +151,7 @@ container VolledigeBAG : using = "classifications/BAG"
 			attribute<m2>                           footprint                    := area(geometry, m2);
 			attribute<int32>                        begindatum                   := impl/begindatum0 < 19600101i ? impl/TIJDSTIPREGISTRATIE : impl/begindatum0;
 			attribute<int32>                        einddatum                    := impl/einddatum0 < 19600101i ? impl/EINDREGISTRATIE : impl/einddatum0;
+			attribute<string>                       documentnummer               := impl/documentnummer;
 			attribute<jaar>                         bouwjaar                     := import/bouwjaar;
 			attribute<jaar>                         bouwjaar_trunc               := =replace(parameters/bouwjaar_truncation_expr, '@YYYY@', '2025');
 			
@@ -168,6 +171,7 @@ container VolledigeBAG : using = "classifications/BAG"
 				attribute<int32>                        EINDREGISTRATIE              := int32(replace(substr(import/meta/EINDREGISTRATIE,0,10),'-',''));
 				attribute<int32>                        begindatum0                  := import/meta/BEGINDATUM == 0i ? MaxDatum : import/meta/BEGINDATUM;
 				attribute<int32>                        einddatum0                   := import/meta/EINDDATUM == 0i ? MaxDatum : import/meta/EINDDATUM;
+				attribute<string>                       documentnummer               := import/meta/documentnummer;
 				attribute<rdc>                          NW                           := lower_bound(geometry);
 				attribute<rdc>                          SE                           := upper_bound(geometry);
 				attribute<float64>                      X_ext                        := sub_or_null(PointCol(SE),PointCol(NW));

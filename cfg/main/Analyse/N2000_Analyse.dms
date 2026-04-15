@@ -22,11 +22,50 @@ container N2000_Analyse :  using = "units;classifications/bag;geography;sourceda
 		attribute<vbo_status>           vbo_status_rel                  := last(BAG_Tabel/vbo_status_rel, Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/uq_vbo_rel);
 		attribute<jaar>                 pand_bouwjaar                   := last(BAG_Tabel/pand_bouwjaar, Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/uq_vbo_rel);
 		attribute<string>               vbo_documentnummer              := first(BAG_Tabel/vbo_documentnummer, Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/uq_vbo_rel);
+		attribute<string>               pand_documentnummer             := first(BAG_Tabel/pand_documentnummer, Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/uq_vbo_rel);
 		
 		attribute<rdc_100m>             vbo_grid_rel                    := geometry[rdc_100m];
 		attribute<bool>                 LigtInAnyHistorischNatuurBeleid := AnyHistorischNatuurBeleid[vbo_grid_rel];
 		attribute<Pand_BouwvergunningVerleend> Pand_BouwvergunningVerleend_rel := rlookup(pand_bag_nr, Pand_BouwvergunningVerleend/pand_bag_nr);
+		
+		unit<uint32> Uq_Documentnummer := unique(uq_vbo/vbo_documentnummer);
 	}
+	
+	unit<uint32> uq_pand := Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/uq_pand_nr
+	, Descr = "Nodig voor bouwvergunning analyse"
+	{
+		attribute<rdc>         geometry                      (poly) := last(Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/pand_geometry, Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/uq_pand_nr_rel);
+		attribute<int32>       First_Datum_BouwvergunningVerleend   := first(Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/Datum_BouwvergunningVerleend, Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/uq_pand_nr_rel);
+		attribute<int32>       Last_Datum_BouwvergunningVerleend    := last(Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/Datum_BouwvergunningVerleend, Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/uq_pand_nr_rel);
+		attribute<pand_status> Last_pand_status_rel                 := last(Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/pand_status_rel, Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/uq_pand_nr_rel);
+		attribute<jaar>        Last_pand_bouwjaar                   := last(Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/pand_bouwjaar, Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/uq_pand_nr_rel);
+		attribute<vbo_gebruiksdoel_ext> Last_pand_gebruiksdoel_rel  := last(Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/pand_modus_gebruiksdoel_rel, Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/uq_pand_nr_rel);
+		attribute<uint32>      Last_pand_count_woonobj              := last(Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/pand_count_WoonFuncties, Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/uq_pand_nr_rel);
+		attribute<uint32>      Last_pand_count_woonobj_voorraad     := last(Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/pand_count_WoonFuncties_voorraad, Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/uq_pand_nr_rel);
+		attribute<uint32>      Max_pand_count_woonobj               := max(Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/pand_count_WoonFuncties, Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/uq_pand_nr_rel);
+		attribute<string>      pand_documentnummer                  := first(Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/pand_documentnummer, Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/uq_pand_nr_rel);
+		
+		attribute<bool>        IsNieuwbouw      := IsDefined(rlookup(values, Nieuwbouw/pand_bag_nr));
+		attribute<bool>        IsOoitBVverleend := IsDefined(Last_Datum_BouwvergunningVerleend);
+		attribute<bool>        IsWoon           := Last_pand_gebruiksdoel_rel == vbo_gebruiksdoel_ext/v/woon;
+		
+		attribute<bool>        IsNB_and_Woon    := IsWoon && IsNieuwbouw;
+		attribute<bool>        IsNB_and_BV      := IsWoon && IsNieuwbouw && IsOoitBVverleend;
+		attribute<bool>        IsNB_and_niet_BV := IsWoon && IsNieuwbouw && NOT(IsOoitBVverleend);
+		
+		unit<uint32> NB_and_niet_BV := select_with_attr_by_cond(., IsNB_and_niet_BV)
+		{
+			attribute<uint32>      dist2N2000_m := uint32(dist_info(RelevantHabitats/geometry, centroid_or_mid(geometry)));
+			
+			parameter<uint32> cnt_0_250     := sum_uint32(dist2N2000_m < 250);
+			parameter<uint32> cnt_250_500   := sum_uint32(dist2N2000_m >= 250  && dist2N2000_m < 500);
+			parameter<uint32> cnt_500_1000  := sum_uint32(dist2N2000_m >= 500  && dist2N2000_m < 1000);
+			parameter<uint32> cnt_1000_2500 := sum_uint32(dist2N2000_m >= 1000 && dist2N2000_m < 2500);
+			parameter<uint32> cnt_2500_5000 := sum_uint32(dist2N2000_m >= 2500 && dist2N2000_m < 5000);
+			parameter<uint32> cnt_5000_     := sum_uint32(dist2N2000_m >= 5000);
+		}
+	}
+	
 	
 	unit<uint32> ObjectenInNatuur := select_with_org_rel(uq_vbo/LigtInAnyHistorischNatuurBeleid)
 	, Descr = "Export deze unit voor analyses voor Huub. Op object niveau."
@@ -70,23 +109,25 @@ container N2000_Analyse :  using = "units;classifications/bag;geography;sourceda
 		attribute<uint32>          dist2N2000_m          := uint32(dist_info(RelevantHabitats/geometry, vbo_geometry));
 		attribute<Tijd/Jaren>      MutatieJaar_rel       := rlookup(uint32(MutatieMaand / 100i), Tijd/Jaren/value);
 		
-		unit<uint32> tests := Tijd/Jaren
-		{
-			attribute<uint32> Dist_0m          := sum_uint32(dist2N2000_m == 0, MutatieJaar_rel);
-			attribute<uint32> Dist_1_250m      := sum_uint32(dist2N2000_m > 0 && dist2N2000_m <= 250, MutatieJaar_rel);
-			attribute<uint32> Dist_250_500m    := sum_uint32(dist2N2000_m > 250 && dist2N2000_m <= 500, MutatieJaar_rel);
-			attribute<uint32> Dist_500_1000m   := sum_uint32(dist2N2000_m > 500 && dist2N2000_m <= 1000, MutatieJaar_rel);
-			attribute<uint32> Dist_1000_2500m  := sum_uint32(dist2N2000_m > 1000 && dist2N2000_m <= 2500, MutatieJaar_rel);
-			attribute<uint32> Dist_2500_5000m  := sum_uint32(dist2N2000_m > 2500 && dist2N2000_m <= 5000, MutatieJaar_rel);
-			attribute<uint32> Dist_gt5000m     := sum_uint32(dist2N2000_m > 5000, MutatieJaar_rel);
-		}
-		attribute<uint32>          Cluster_rel           := Cluster_obv_VergunningDatum/subset/connected_parts/part_rel;
-		attribute<Uq_Documentnummer> vbo_documentnummer_rel := rlookup(uq_vbo/vbo_documentnummer[org_rel], Uq_Documentnummer/values);
+		// unit<uint32> tests := Tijd/Jaren
+		// {
+			// attribute<uint32> Dist_0m          := sum_uint32(dist2N2000_m == 0, MutatieJaar_rel);
+			// attribute<uint32> Dist_1_250m      := sum_uint32(dist2N2000_m > 0 && dist2N2000_m <= 250, MutatieJaar_rel);
+			// attribute<uint32> Dist_250_500m    := sum_uint32(dist2N2000_m > 250 && dist2N2000_m <= 500, MutatieJaar_rel);
+			// attribute<uint32> Dist_500_1000m   := sum_uint32(dist2N2000_m > 500 && dist2N2000_m <= 1000, MutatieJaar_rel);
+			// attribute<uint32> Dist_1000_2500m  := sum_uint32(dist2N2000_m > 1000 && dist2N2000_m <= 2500, MutatieJaar_rel);
+			// attribute<uint32> Dist_2500_5000m  := sum_uint32(dist2N2000_m > 2500 && dist2N2000_m <= 5000, MutatieJaar_rel);
+			// attribute<uint32> Dist_gt5000m     := sum_uint32(dist2N2000_m > 5000, MutatieJaar_rel);
+		// }
 		
+		attribute<uint32>            Cluster_rel           := Cluster_obv_VergunningDatum/subset/connected_parts/part_rel;
+		attribute<uq_vbo/Uq_Documentnummer> vbo_documentnummer_rel := rlookup(uq_vbo/vbo_documentnummer[rlookup(vbo_bag_nr, uq_vbo/values)], uq_vbo/Uq_Documentnummer/values);
+
 		attribute<uint32>          GM_CODE               := SourceData/RegioIndelingen/Impl/CBS/Y2024/Gemeente/gem_nr[point_in_polygon(vbo_geometry, /SourceData/RegioIndelingen/Impl/CBS/Y2024/Gemeente/geometry)];
 		attribute<string>          PRV_CODE              := SourceData/RegioIndelingen/Impl/CBS/Y2024/Provincie/PRV_CODE[point_in_polygon(vbo_geometry, /SourceData/RegioIndelingen/Impl/CBS/Y2024/Provincie/geometry)];
 		attribute<string>          PRV_NAAM              := SourceData/RegioIndelingen/Impl/CBS/Y2024/Provincie/name[point_in_polygon(vbo_geometry, /SourceData/RegioIndelingen/Impl/CBS/Y2024/Provincie/geometry)];
 		
+		// unit<uint32> Uq_Documentnummer := unique(uq_vbo/vbo_documentnummer);
 		
 		unit<uint32> Cluster_obv_VergunningDatum := join_near_values(vbo_geometry, vbo_geometry,  100d)
 		{
@@ -152,7 +193,7 @@ container N2000_Analyse :  using = "units;classifications/bag;geography;sourceda
 		
 		attribute<uint32>      dist2N2000_m                            := uint32(dist_info(RelevantHabitats/geometry, geometry));
 		attribute<uint32>      cluster_rel                             := Cluster_obv_VergunningDatum/subset/connected_parts/part_rel;
-		attribute<Uq_Documentnummer> vbo_documentnummer_rel                  := rlookup(uq_vbo/vbo_documentnummer[org_rel], Uq_Documentnummer/values);
+		attribute<uq_vbo/Uq_Documentnummer> vbo_documentnummer_rel            := rlookup(uq_vbo/vbo_documentnummer[org_rel], uq_vbo/Uq_Documentnummer/values);
 		
 		attribute<uint32>      GM_CODE                                 := SourceData/RegioIndelingen/Impl/CBS/Y2024/Gemeente/gem_nr[point_in_polygon(geometry, /SourceData/RegioIndelingen/Impl/CBS/Y2024/Gemeente/geometry)];
 		attribute<string>      PRV_CODE                                := SourceData/RegioIndelingen/Impl/CBS/Y2024/Provincie/PRV_CODE[point_in_polygon(geometry, /SourceData/RegioIndelingen/Impl/CBS/Y2024/Provincie/geometry)];
@@ -177,8 +218,8 @@ container N2000_Analyse :  using = "units;classifications/bag;geography;sourceda
 			}
 		}
 		
-		unit<uint32> Uq_Documentnummer := unique(uq_vbo/vbo_documentnummer[org_rel]);
 	}
+	
 	
 	unit<uint32> IsochronenMap_Gemeente := SourceData/RegioIndelingen/Impl/CBS/Y2024/Gemeente
 	{
@@ -209,52 +250,18 @@ container N2000_Analyse :  using = "units;classifications/bag;geography;sourceda
 		}
 	}
 	
-	unit<uint32> Uq_Pand_Nr := Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/uq_pand_nr
-	, Descr = "Nodig voor bouwvergunning analyse"
+	unit<uint32> Pand_BouwvergunningVerleend := select_with_org_rel(IsDefined(uq_pand/Last_Datum_BouwvergunningVerleend) && uq_pand/Last_pand_gebruiksdoel_rel == vbo_gebruiksdoel_ext/v/woon)
 	{
-		attribute<rdc>         geometry                      (poly) := last(Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/pand_geometry, Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/uq_pand_nr_rel);
-		attribute<int32>       First_Datum_BouwvergunningVerleend   := first(Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/Datum_BouwvergunningVerleend, Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/uq_pand_nr_rel);
-		attribute<int32>       Last_Datum_BouwvergunningVerleend    := last(Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/Datum_BouwvergunningVerleend, Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/uq_pand_nr_rel);
-		attribute<pand_status> Last_pand_status_rel                 := last(Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/pand_status_rel, Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/uq_pand_nr_rel);
-		attribute<jaar>        Last_pand_bouwjaar                   := last(Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/pand_bouwjaar, Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/uq_pand_nr_rel);
-		attribute<vbo_gebruiksdoel_ext> Last_pand_gebruiksdoel_rel  := last(Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/pand_modus_gebruiksdoel_rel, Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/uq_pand_nr_rel);
-		attribute<uint32>      Last_pand_count_woonobj              := last(Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/pand_count_WoonFuncties, Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/uq_pand_nr_rel);
-		attribute<uint32>      Last_pand_count_woonobj_voorraad     := last(Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/pand_count_WoonFuncties_voorraad, Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/uq_pand_nr_rel);
-		attribute<uint32>      Max_pand_count_woonobj               := max(Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/pand_count_WoonFuncties, Analyse/Redev_obv_hele_bag/PrepBAG/BAG_Tabel/uq_pand_nr_rel);
-		
-		attribute<bool>        IsNieuwbouw      := IsDefined(rlookup(values, Nieuwbouw/pand_bag_nr));
-		attribute<bool>        IsOoitBVverleend := IsDefined(Last_Datum_BouwvergunningVerleend);
-		attribute<bool>        IsWoon           := Last_pand_gebruiksdoel_rel == vbo_gebruiksdoel_ext/v/woon;
-		
-		attribute<bool>        IsNB_and_Woon    := IsWoon && IsNieuwbouw;
-		attribute<bool>        IsNB_and_BV      := IsWoon && IsNieuwbouw && IsOoitBVverleend;
-		attribute<bool>        IsNB_and_niet_BV := IsWoon && IsNieuwbouw && NOT(IsOoitBVverleend);
-		
-		unit<uint32> NB_and_niet_BV := select_with_attr_by_cond(., IsNB_and_niet_BV)
-		{
-			attribute<uint32>      dist2N2000_m := uint32(dist_info(RelevantHabitats/geometry, centroid_or_mid(geometry)));
-			
-			parameter<uint32> cnt_0_250     := sum_uint32(dist2N2000_m < 250);
-			parameter<uint32> cnt_250_500   := sum_uint32(dist2N2000_m >= 250  && dist2N2000_m < 500);
-			parameter<uint32> cnt_500_1000  := sum_uint32(dist2N2000_m >= 500  && dist2N2000_m < 1000);
-			parameter<uint32> cnt_1000_2500 := sum_uint32(dist2N2000_m >= 1000 && dist2N2000_m < 2500);
-			parameter<uint32> cnt_2500_5000 := sum_uint32(dist2N2000_m >= 2500 && dist2N2000_m < 5000);
-			parameter<uint32> cnt_5000_     := sum_uint32(dist2N2000_m >= 5000);
-		}
-	}
-	
-	unit<uint32> Pand_BouwvergunningVerleend := select_with_org_rel(IsDefined(Uq_Pand_Nr/Last_Datum_BouwvergunningVerleend) && Uq_Pand_Nr/Last_pand_gebruiksdoel_rel == vbo_gebruiksdoel_ext/v/woon)
-	{
-		attribute<uint64>      pand_bag_nr                             := uq_pand_nr/values[org_rel];
+		attribute<uint64>      pand_bag_nr                             := uq_pand/values[org_rel];
 		// attribute<uint32>      x                                       := uint32(Get_X(centroid));
 		// attribute<uint32>      y                                       := uint32(Get_Y(centroid));
-		attribute<int32>       first_pand_bouwvergunningberleend_datum := Uq_Pand_Nr/First_Datum_BouwvergunningVerleend[org_rel];
-		attribute<int32>       last_pand_bouwvergunningberleend_datum  := Uq_Pand_Nr/Last_Datum_BouwvergunningVerleend[org_rel];
-		attribute<string>      last_pand_status                        := pand_status/name[Uq_Pand_Nr/Last_pand_status_rel[org_rel]];
-		attribute<string>      last_gebruiksdoel                       := vbo_gebruiksdoel_ext/name[Uq_Pand_Nr/Last_pand_gebruiksdoel_rel[org_rel]];
-		attribute<jaar>        pand_bouwjaar                           := Uq_Pand_Nr/Last_pand_bouwjaar[org_rel];
-		attribute<uint32>      last_aantal_woon_obj                    := Uq_Pand_Nr/Last_pand_count_woonobj[org_rel];
-		attribute<uint32>      last_aantal_woon_obj_voorraad           := Uq_Pand_Nr/Last_pand_count_woonobj_voorraad[org_rel];
+		attribute<int32>       first_pand_bouwvergunningberleend_datum := uq_pand/First_Datum_BouwvergunningVerleend[org_rel];
+		attribute<int32>       last_pand_bouwvergunningberleend_datum  := uq_pand/Last_Datum_BouwvergunningVerleend[org_rel];
+		attribute<string>      last_pand_status                        := pand_status/name[uq_pand/Last_pand_status_rel[org_rel]];
+		attribute<string>      last_gebruiksdoel                       := vbo_gebruiksdoel_ext/name[uq_pand/Last_pand_gebruiksdoel_rel[org_rel]];
+		attribute<jaar>        pand_bouwjaar                           := uq_pand/Last_pand_bouwjaar[org_rel];
+		attribute<uint32>      last_aantal_woon_obj                    := uq_pand/Last_pand_count_woonobj[org_rel];
+		attribute<uint32>      last_aantal_woon_obj_voorraad           := uq_pand/Last_pand_count_woonobj_voorraad[org_rel];
 		
 		// attribute<uint32>      dist2N2000_m                            := uint32(dist_info(RelevantHabitats/geometry, centroid));
 		// attribute<uint32>      cluster_rel                             := Cluster_obv_VergunningDatum/subset/connected_parts/part_rel;
@@ -263,7 +270,7 @@ container N2000_Analyse :  using = "units;classifications/bag;geography;sourceda
 		// attribute<string>      PRV_CODE                                := SourceData/RegioIndelingen/Impl/CBS/Y2024/Provincie/PRV_CODE[point_in_polygon(centroid, /SourceData/RegioIndelingen/Impl/CBS/Y2024/Provincie/geometry)];
 		// attribute<string>      PRV_NAAM                                := SourceData/RegioIndelingen/Impl/CBS/Y2024/Provincie/name[point_in_polygon(centroid, /SourceData/RegioIndelingen/Impl/CBS/Y2024/Provincie/geometry)];
 
-		// attribute<rdc>         geometry                         (poly) := Uq_Pand_Nr/geometry[org_rel];
+		// attribute<rdc>         geometry                         (poly) := uq_pand/geometry[org_rel];
 		// attribute<rdc>         centroid                                := centroid_or_mid(geometry);
 		
 	}
