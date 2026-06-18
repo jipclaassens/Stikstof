@@ -40,6 +40,7 @@ container PrepBAG : using = "AdditionalClassifications"
 		attribute<int32>                Datum_BouwvergunningVerleend     := pand_status_rel == pand_status/v/bouwvergunning_verleend ? begindatum : null_i;
 		attribute<int32>                LastDatum_BouwvergunningVerleend := last(Datum_BouwvergunningVerleend, uq_pand_nr_rel)[uq_pand_nr_rel];
 		attribute<int32>                Datum_Voorraad                   := pand_status/IsVoorraad[pand_status_rel] ? begindatum : null_i;
+			attribute<int32>                Datum_BouwGestart                := pand_status_rel == pand_status/v/bouw_gestart ? begindatum : null_i; //tbv vergunning->bouwstart gap (#6)
 
 		
 		attribute<uint32>               pand_count_WoonFuncties           := sum_uint32(VBO_IsWonen, uq_pand_nr_rel)[uq_pand_nr_rel];
@@ -176,7 +177,7 @@ container PrepBAG : using = "AdditionalClassifications"
 		unit<uint32> uq_vbo := unique(vbo_bag_nr)
 		{
 			attribute<uint64>           pand_bag_nr                   := modus(../pand_bag_nr, uq_vbo_rel);
-			attribute<string>           vbo_documentnummer            := first(../documentnummer, uq_vbo_rel);
+			attribute<string>           vbo_documentnummer            := first(../vbo_documentnummer, uq_vbo_rel);
 		}
 		attribute<uq_vbo>               uq_vbo_rel                    := rlookup(vbo_bag_nr, uq_vbo/values);
 		attribute<int32>                vbo_vormingsfase_begindatum   := min(vbo_status_rel == vbo_status/v/verblijfsobject_gevormd ? begindatum : null_i, uq_vbo_rel)[uq_vbo_rel] > max(vbo_status_rel == vbo_status/v/verblijfsobject_gevormd ? einddatum : null_i, uq_vbo_rel)[uq_vbo_rel] ? null_i : min(vbo_status_rel == vbo_status/v/verblijfsobject_gevormd ? begindatum : null_i, uq_vbo_rel)[uq_vbo_rel];
