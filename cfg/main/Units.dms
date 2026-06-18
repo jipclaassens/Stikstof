@@ -2,6 +2,7 @@ container units
 {
 	unit<int32>     datum;
 	unit<uint16>     jaar;
+	unit<uint16>     yr := jaar;
 	unit<int16>     maand;
 	unit<float64>  	cm                    := 0.01f * m;
 	unit<float64>  	m                     := BaseUnit('Meter', float64);

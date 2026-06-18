@@ -38,7 +38,8 @@ container PrepBAG : using = "AdditionalClassifications"
 		
 		//laatste bouwvergunning_verleend datum, per pand.
 		attribute<int32>                Datum_BouwvergunningVerleend     := pand_status_rel == pand_status/v/bouwvergunning_verleend ? begindatum : null_i;
-		attribute<int32>                LastDatum_BouwvergunningVerleend     := last(Datum_BouwvergunningVerleend, uq_pand_nr_rel)[uq_pand_nr_rel];
+		attribute<int32>                LastDatum_BouwvergunningVerleend := last(Datum_BouwvergunningVerleend, uq_pand_nr_rel)[uq_pand_nr_rel];
+		attribute<int32>                Datum_Voorraad                   := pand_status/IsVoorraad[pand_status_rel] ? begindatum : null_i;
 
 		
 		attribute<uint32>               pand_count_WoonFuncties           := sum_uint32(VBO_IsWonen, uq_pand_nr_rel)[uq_pand_nr_rel];
@@ -229,7 +230,7 @@ container PrepBAG : using = "AdditionalClassifications"
 																			&& VBO_WasWonen && VBO_IsWonen;
 		attribute<bool>                  IDEN_N_3                     := ((prev_vbo_status_rel == vbo_status/v/verblijfsobject_gevormd  && VBO_IsVoorraad) || (IsNull(prev_vbo_status_rel) && VBO_IsVoorraad))
 																			&& prev_pand_status_rel == pand_status_w_Undefined/v/undefined
-																			&& (pand_bouwjaar >= (begin_jaar - 1w)  || pand_bouwjaar <= (begin_jaar + 1w))
+																			&& (pand_bouwjaar >= (begin_jaar - 1w)  && pand_bouwjaar <= (begin_jaar + 1w))
 																			&& IsLogische_Pand_overgang
 																			&& VBO_WasWonen && VBO_IsWonen;
 		attribute<bool>                  IDEN_N_4                     := not(VBO_WasVoorraad) && VBO_IsVoorraad
