@@ -206,6 +206,7 @@ container N2000_Analyse :  using = "units;classifications/bag;geography;sourceda
 
 		// ruwe datums (YYYYMMDD); bouwstart en oplevering kunnen leeg zijn
 		attribute<int32>       bv_eerste_datum             := uq_pand/First_Datum_BouwvergunningVerleend[org_rel];
+		attribute<int32>       bv_laatste_datum            := uq_pand/Last_Datum_BouwvergunningVerleend[org_rel];
 		attribute<int32>       bouwstart_eerste_datum      := uq_pand/First_Datum_BouwGestart[org_rel];
 		attribute<int32>       oplevering_eerste_datum     := uq_pand/First_Datum_Voorraad[org_rel];
 		attribute<int32>       vergunningjaar              := bv_eerste_datum / 10000i;
