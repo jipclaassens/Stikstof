@@ -115,10 +115,11 @@ container AdditionalClassifications : using = "classifications/tijd"
 		attribute<string> maand := Maanden/name[second_rel];
 	}
 	
-	unit<uint32> Verslagmaanden_additional : nrofrows = 12 //7
+	unit<uint32> Verslagmaanden_additional : nrofrows = 7
 	{
-		attribute<string> jaar  : ['2025','2025','2025','2025','2025','2025','2025','2025','2025','2025','2025','2025'];
-		attribute<string> maand : ['01','02','03','04','05','06','07','08','09','10','11','12'];
+		//maanden van het lopende extractjaar; Verslagmaanden0 dekt t/m FinalYearInRange-1 (2025) nu FinalYearInRange het BAG-extract volgt
+		attribute<string> jaar  : ['2026','2026','2026','2026','2026','2026','2026'];
+		attribute<string> maand : ['01' ,'02' ,'03' ,'04' ,'05' ,'06' ,'07'];
 	}
 	
 	unit<uint32> Verslagmaanden := union_unit(Verslagmaanden0, Verslagmaanden_additional)

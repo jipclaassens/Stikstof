@@ -136,7 +136,7 @@ container PrepBAG : using = "AdditionalClassifications"
 			attribute<uint64> vbo_bag_nr  := ='union_data(.,'+AsItemList('Per1Jan/'+classifications/Tijd/Jaren/name+'/select/Sub_IsTr_na_3_en_Plausibel_2_extra/vbo_bag_nr')+')';
 		}
 		
-		attribute<bool>                 WasObjectVoorraadBijStartBAG      := sum_uint8(VBO_IsVoorraad && begindatum <= 20111201i ? 1b : 0b, uq_vbo_rel)[uq_vbo_rel] > 0b; //nodig voor bepaling 'mutatie in 2e instantie' 
+		attribute<bool>                 WasObjectVoorraadBijStartBAG      := sum_uint8(VBO_IsVoorraad && begindatum <= 20111201i && einddatum > 20111201i ? 1b : 0b, uq_vbo_rel)[uq_vbo_rel] > 0b; //nodig voor bepaling 'mutatie in 2e instantie'; CBS: voorraad OP startdatum statistiek 1-12-2011 (record geldig op die datum, niet 'ooit ervoor begonnen') — port Redevelopment-commit 0489602
 		
 		attribute<bool>                 IsWaarschijnlijkCorrectieVanStacaravans_NietWonen := gebruiksdoel_rel == vbo_gebruiksdoel_ext/V/logies 
 																								&& VBO_WasVoorraad && not(VBO_IsVoorraad)
@@ -754,35 +754,35 @@ container PrepBAG : using = "AdditionalClassifications"
 				attribute<int32>                   saldo_unid_nw                := count_unid_nw_plus - count_unid_nw_min;
 				
 				attribute<bool>                    IDEN_N                := switch(
-																					 case(InitialClassification/IDEN_N && saldo == 0i, FALSE)                                            //saldering 'mutatie in 1e instantie'
+																					 case(InitialClassification/IDEN_N && saldo <= 0i, FALSE)                                            //saldering 'mutatie in 1e instantie'; directioneel (port Redevelopment-commit 0489602)
 																					,InitialClassification/IDEN_N
 																				);
 				attribute<bool>                    IDEN_T                := switch(
-																					 case(InitialClassification/IDEN_T && saldo == 0i, FALSE)                                            //saldering 'mutatie in 1e instantie'
+																					 case(InitialClassification/IDEN_T && saldo <= 0i, FALSE)                                            //saldering 'mutatie in 1e instantie'
 																					,InitialClassification/IDEN_T
 																				);
 				attribute<bool>                    IDEN_S                := switch(
-																					 case(InitialClassification/IDEN_S && saldo == 0i, FALSE)                                            //saldering 'mutatie in 1e instantie'
+																					 case(InitialClassification/IDEN_S && saldo >= 0i, FALSE)                                            //saldering 'mutatie in 1e instantie'
 																					,InitialClassification/IDEN_S
 																				);
 				attribute<bool>                    IDEN_O                := switch(
-																					 case(InitialClassification/IDEN_O && saldo == 0i, FALSE)                                            //saldering 'mutatie in 1e instantie'
+																					 case(InitialClassification/IDEN_O && saldo >= 0i, FALSE)                                            //saldering 'mutatie in 1e instantie'
 																					,InitialClassification/IDEN_O
 																				);
 				attribute<bool>                    IDEN_TMplus           := switch(
-																					 case(InitialClassification/IDEN_TMplus && saldo == 0i, FALSE)                                       //saldering 'mutatie in 1e instantie'
+																					 case(InitialClassification/IDEN_TMplus && saldo <= 0i, FALSE)                                       //saldering 'mutatie in 1e instantie'
 																					,InitialClassification/IDEN_TMplus
 																				);
 				attribute<bool>                    IDEN_TMmin           := switch(
-																					 case(InitialClassification/IDEN_TMmin && saldo == 0i, FALSE)                                        //saldering 'mutatie in 1e instantie'
+																					 case(InitialClassification/IDEN_TMmin && saldo >= 0i, FALSE)                                        //saldering 'mutatie in 1e instantie'
 																					,InitialClassification/IDEN_TMmin
 																				);
 				attribute<bool>                    IDEN_Cplus            := switch(
-																					 case(InitialClassification/IDEN_Cplus && saldo == 0i, FALSE)                                        //saldering 'mutatie in 1e instantie'
+																					 case(InitialClassification/IDEN_Cplus && saldo <= 0i, FALSE)                                        //saldering 'mutatie in 1e instantie'
 																					,InitialClassification/IDEN_Cplus
 																				);
 				attribute<bool>                    IDEN_Cmin             := switch(
-																					 case(InitialClassification/IDEN_Cmin && saldo == 0i, FALSE)                                         //saldering 'mutatie in 1e instantie'
+																					 case(InitialClassification/IDEN_Cmin && saldo >= 0i, FALSE)                                         //saldering 'mutatie in 1e instantie'
 																					,InitialClassification/IDEN_Cmin
 																				);
 																				

@@ -1,6 +1,6 @@
 container Tijd: isHidden = "True", using = "units"
 { 
-	parameter<uint32> FinalYearInRange := 2025;
+	parameter<uint32> FinalYearInRange := left(/Parameters/BAG_file_date, 4)[uint32]; //volgt het BAG-extract; was hardcoded 2025 (port uit Redevelopment)
 	unit<uint32> Maanden := range(uint32, 1, 13)
 	{
 		attribute<string> name := id(.) < 10 ? '0'+string(id(.)) : string(id(.));
