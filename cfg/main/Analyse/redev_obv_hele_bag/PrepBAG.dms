@@ -31,7 +31,7 @@ container PrepBAG : using = "AdditionalClassifications"
 		attribute<uint32>               pand_count_ZorgFuncties_StartBAG := org_rel -> pand_count_ZorgFuncties_StartBAG;
 
 		attribute<bool>                 IsMogelijkWoningCorporatiePand   := BAG_Tabel_path/IsMogelijkWoningCorporatiePand;
-		attribute<bool>                 IsMutated                        := IsDefined(rlookup(vbo_bag_nr, FinalMutationTable/vbo_bag_nr));
+		attribute<bool>                 IsMutated                        := IsDefined(rlookup(vbo_bag_nr, FinalMutationTable/ZonderCorrecties/vbo_bag_nr)), Descr = "#22: C±-rijen tellen niet als mutatie; VBO's met uitsluitend administratieve correcties (bv. late registratie bestaande bouw) horen bij de onveranderde voorraad";
 		attribute<bool>                 IsOnveranderd_Woon_Voorraad      := not(IsMutated) && VBO_IsWonen && VBO_IsVoorraad && EINDDATUM == /SourceData/BAG/VolledigeBAG/MaxDatum;
 		attribute<bool>                 IsOnveranderd_NietWoon_Voorraad  := not(IsMutated) && not(VBO_IsWonen) && not(IsOverigeGebruiksfunctie) && VBO_IsVoorraad && EINDDATUM == /SourceData/BAG/VolledigeBAG/MaxDatum;
 		attribute<bool>                 LigtOpStandplaats_Start_20162017 := IsDefined(point_in_polygon(geometry, /SourceData/BAG/VolledigeBAG/Standplaatsen/src/SelectieMoment/geometry)), Descr = "Er is een sloop piek in 2016/2017, dit betrof foutieve toevoeging van stacaravans als pand. Deze zijn toen allemaal 'gesloopt'. Deze kunnen we vervolgens identiferen doordat ze als nieuwe standplaats zijn toegevoegd aan de BAG.";
@@ -185,7 +185,29 @@ container PrepBAG : using = "AdditionalClassifications"
 		attribute<bool>                 Pand_InBouwfase               := pand_status_rel == pand_status/v/bouwvergunning_verleend || pand_status_rel == pand_status/v/bouw_gestart;
 		attribute<bool>                 VBO_in_VormF_EN_Pand_in_BouwF := Pand_InBouwfase && begindatum <= vbo_vormingsfase_einddatum && einddatum >= vbo_vormingsfase_begindatum;
 		attribute<bool>                 Heeft_VBO_in_VormF_EN_Pand_in_BouwF_InChain := any(VBO_in_VormF_EN_Pand_in_BouwF, uq_vbo_rel)[uq_vbo_rel];
-		
+
+		// ### CBS levensloop 86098-conforme hulpafleidingen (zie Redevelopment-repo: analysis/data/levensloop-afleiding-technische-beschrijving.pdf, issues jipclaassens/Redevelopment#21-#24)
+		// dag-index benadering (jaar*365 + maand*30 + dag) tbv 100-dagenregel; kalenderfout max ~5 dagen op een 100-dagen-venster
+		attribute<int32>                dagindex                          := (begindatum / 10000i) * 365i + (begindatum / 100i - (begindatum / 10000i) * 100i) * 30i + (begindatum - (begindatum / 100i) * 100i);
+
+		// #21: pand 'heeft, of krijgt (binnen 100 dagen na dit record)' een sloopstatus; CBS 86098 par. 4.7.2
+		attribute<int32>                Pand_EersteSloopstatusDatum       := min((pand_status_rel == pand_status/v/pand_gesloopt || pand_status_rel == pand_status/v/sloopvergunning_verleend) ? begindatum : null_i, uq_pand_nr_rel)[uq_pand_nr_rel];
+		attribute<int32>                Pand_EersteSloopstatusDagindex    := (Pand_EersteSloopstatusDatum / 10000i) * 365i + (Pand_EersteSloopstatusDatum / 100i - (Pand_EersteSloopstatusDatum / 10000i) * 100i) * 30i + (Pand_EersteSloopstatusDatum - (Pand_EersteSloopstatusDatum / 100i) * 100i);
+		attribute<bool>                 Pand_HeeftOfKrijgtSloopstatus100d := (pand_status_rel == pand_status/v/pand_gesloopt || pand_status_rel == pand_status/v/sloopvergunning_verleend)
+																				|| MakeDefined(Pand_EersteSloopstatusDagindex >= dagindex && (Pand_EersteSloopstatusDagindex - dagindex) <= 100i, FALSE);
+
+		// #23: eenmaligheid N/T; CBS 86098 p.12: nieuwbouw alleen op het moment dat de VBO voor de EERSTE keer een voorraadstatus krijgt
+		attribute<int32>                vbo_EersteVoorraadBegindatum      := min(VBO_IsVoorraad ? begindatum : null_i, uq_vbo_rel)[uq_vbo_rel];
+		attribute<bool>                 IsEersteKeerInVoorraad            := VBO_IsVoorraad && begindatum <= vbo_EersteVoorraadBegindatum;
+
+		// #22: pand nieuw in BAG in dezelfde maand als dit record; obv echte pandhistorie (incl. voorkomens zonder gekoppelde vbo, die niet in de join zitten)
+		unit<uint32> uq_pand_hist := unique(/SourceData/BAG/VolledigeBAG/panden/pand/pand_bag_nr)
+		{
+			attribute<int32> eerste_begindatum := min(/SourceData/BAG/VolledigeBAG/panden/pand/begindatum, rlookup(/SourceData/BAG/VolledigeBAG/panden/pand/pand_bag_nr, values));
+		}
+		attribute<int32>                Pand_EersteBAGDatum               := rjoin(pand_bag_nr, uq_pand_hist/values, uq_pand_hist/eerste_begindatum);
+		attribute<bool>                 Pand_NieuwInBAG_ZelfdeMaand       := MakeDefined((Pand_EersteBAGDatum / 100i) == (begindatum / 100i), FALSE);
+
 		attribute<bool>                 VBO_WasVoorraad               := vbo_status/isVoorraad[prev_vbo_status_rel];
 		attribute<bool>                 VBO_IsVoorraad                := vbo_status/isVoorraad[vbo_status_rel];
 		attribute<bool>                 VBO_WasWonen                  := prev_functie_rel == FunctieK/v/wonen;
@@ -231,22 +253,33 @@ container PrepBAG : using = "AdditionalClassifications"
 																			&& VBO_WasWonen && VBO_IsWonen;
 		attribute<bool>                  IDEN_N_3                     := ((prev_vbo_status_rel == vbo_status/v/verblijfsobject_gevormd  && VBO_IsVoorraad) || (IsNull(prev_vbo_status_rel) && VBO_IsVoorraad))
 																			&& prev_pand_status_rel == pand_status_w_Undefined/v/undefined
-																			&& (pand_bouwjaar >= (begin_jaar - 1w)  && pand_bouwjaar <= (begin_jaar + 1w))
-																			&& IsLogische_Pand_overgang
+																			&& Pand_NieuwInBAG_ZelfdeMaand
+																			&& Pand_IsVoorraad
+																			&& pand_bouwjaar >= (begin_jaar - 1w) //CBS 86098 p.10 (DirectInVoorraad_Nieuwbouw): alleen ondergrens (>= jaar-1), geen bovengrens; #22/#24. Logische-overgang-eis vervallen (Undefined->in_gebruik blokkeerde dit geval).
 																			&& VBO_WasWonen && VBO_IsWonen;
 		attribute<bool>                  IDEN_N_4                     := not(VBO_WasVoorraad) && VBO_IsVoorraad
 																			&& VBO_WasWonen && VBO_IsWonen
 																			&& Heeft_VBO_in_VormF_EN_Pand_in_BouwF_InChain;
-		attribute<bool>                  IDEN_N                       := IDEN_N_1 || IDEN_N_2 || IDEN_N_3 || IDEN_N_4;
+		attribute<bool>                  IDEN_N                       := (IDEN_N_1 || IDEN_N_2 || IDEN_N_3 || IDEN_N_4)
+																			&& IsEersteKeerInVoorraad; //#23, CBS 86098 p.12: nieuwbouw eenmalig, alleen bij eerste voorraad-intrede van de VBO (vangt ook herkoppeling van bestaande VBO aan nieuw pand)
 		
 		//Identificatie in voorraad Toevoeging (T+)
 		attribute<bool>                  IDEN_T_1                     := ((prev_vbo_status_rel == vbo_status/v/verblijfsobject_gevormd  && VBO_IsVoorraad) || (IsNull(prev_vbo_status_rel) && VBO_IsVoorraad))
 																			&& (prev_pand_status_rel == pand_status_w_Undefined/v/pand_in_gebruik || prev_pand_status_rel == pand_status_w_Undefined/v/pand_in_gebruik_niet_ingemeten || prev_pand_status_rel == pand_status_w_Undefined/v/verbouwing_pand)
 																			&& (pand_status_rel == pand_status/v/pand_in_gebruik || pand_status_rel == pand_status/v/pand_in_gebruik_niet_ingemeten || pand_status_rel == pand_status/v/verbouwing_pand)
 																			&& VBO_WasWonen && VBO_IsWonen;
+		attribute<bool>                  IDEN_T_1b                    := IsNull(prev_vbo_status_rel) && VBO_IsVoorraad
+																			&& prev_pand_status_rel == pand_status_w_Undefined/v/undefined
+																			&& not(Pand_NieuwInBAG_ZelfdeMaand)
+																			&& Pand_IsVoorraad
+																			&& VBO_WasWonen && VBO_IsWonen
+																			&& not(IsWaarschijnlijkCorrectieVanZorgNaarZorgwoonunits) //zelfde exclusies als IDEN_Cplus: bulk-registraties zorg/studenten zijn admin, geen echte toevoeging
+																			&& not(IsWaarschijnlijkCorrectieVanStudentenComplex_2)
+																			, Descr = "CBS 86098 Toevoeging_DirectInVoorraad (p.11): VBO zonder vormingsfase direct in voorraad in een bestaand pand; #22.";
 		attribute<bool>                  IDEN_T_2                     := not(IDEN_N_4) //objecten die op basis van keten analyse als Nieuwbouw worden geclassificeerd, zijn dan geen toeveoging meer.
 																			&& VBO_WasWonen && VBO_IsWonen;
-		attribute<bool>                  IDEN_T                       := IDEN_T_1 && IDEN_T_2; 
+		attribute<bool>                  IDEN_T                       := (IDEN_T_1 || IDEN_T_1b) && IDEN_T_2
+																			&& IsEersteKeerInVoorraad; //#22/#23: eenmaligheid, zie IDEN_N
 		
 		attribute<bool>                  IDEN_TMplus_status           := VBO_WasVoorraad && VBO_IsVoorraad
 																			&& not(VBO_WasWonen) && VBO_IsWonen
@@ -264,18 +297,17 @@ container PrepBAG : using = "AdditionalClassifications"
 																			
 		//Identificatie uit voorraad sloop (S-)
 		attribute<bool>                  IDEN_S                       := VBO_WasVoorraad && vbo_status_rel == vbo_status/v/verblijfsobject_ingetrokken
-																			&& (pand_status_rel == pand_status/v/pand_gesloopt || pand_status_rel == pand_status/v/sloopvergunning_verleend)
-																			&& IsLogische_Pand_overgang
+																			&& Pand_HeeftOfKrijgtSloopstatus100d //#21, CBS 86098 par. 4.7.2: pand heeft sloopstatus bij intrekking, of krijgt die binnen 100 dagen erna (laat geregistreerde pandsloop). Logische-overgang-eis vervallen conform 86098.
 																			&& VBO_WasWonen && VBO_IsWonen
 																			&& not(IsWaarschijnlijkCorrectieVanStacaravans_Wonen); //afname: vbo+pand uit voorraad gehaald, periode 201601-201702, binnen BBG verblijfsrec
-																			
+
 		attribute<bool>                  IDEN_S_NW                     := VBO_WasVoorraad && vbo_status_rel == vbo_status/v/verblijfsobject_ingetrokken
-																			&& (pand_status_rel == pand_status/v/pand_gesloopt || pand_status_rel == pand_status/v/sloopvergunning_verleend)
-																			&& IsLogische_Pand_overgang
+																			&& Pand_HeeftOfKrijgtSloopstatus100d //#21
 																			&& not(VBO_WasWonen) && not(VBO_IsWonen)
 																			&& not(IsWaarschijnlijkCorrectieVanStacaravans_NietWonen); //afname: logies-vbo+pand uit voorraad gehaald, periode 201601-201702
 		//Identificatie uit voorraad onttrekking (O-)
 		attribute<bool>                  IDEN_O                        := VBO_WasVoorraad && vbo_status_rel == vbo_status/v/verblijfsobject_ingetrokken
+																			&& not(Pand_HeeftOfKrijgtSloopstatus100d) //#21: sloop(vergunning) binnen 100 dagen gaat voor op onttrekking
 																			&& (prev_pand_status_rel == pand_status_w_Undefined/v/pand_in_gebruik || prev_pand_status_rel == pand_status_w_Undefined/v/pand_in_gebruik_niet_ingemeten || prev_pand_status_rel == pand_status_w_Undefined/v/verbouwing_pand)
 																			&& (pand_status_rel == pand_status/v/pand_in_gebruik || pand_status_rel == pand_status/v/pand_in_gebruik_niet_ingemeten || pand_status_rel == pand_status/v/verbouwing_pand)
 																			&& VBO_WasWonen && VBO_IsWonen
@@ -308,19 +340,19 @@ container PrepBAG : using = "AdditionalClassifications"
 																			&& (IsWaarschijnlijkCorrectieVanZorgNaarZorgwoonunits  //toename: pand meer nieuwe woon-vbos sinds 2012 dan zorgfuncties+50; zorgfuncties > 0; periode 201201-201801
 																				|| IsWaarschijnlijkCorrectieVanStudentenComplex_2); //toename: woon-vbo aan voorraad toegevoegd; pand minimaal 25 nieuwe woon-vbos sinds 2012; periode 201112-201301
 																			
-		attribute<bool>                  IDEN_S_Restbakje            := not(IDEN_S) //kopie van IDEN_S, maar dan inverse IsWaarschijnlijk XXX 
-																			&& VBO_WasVoorraad && vbo_status_rel == vbo_status/v/verblijfsobject_ingetrokken && (pand_status_rel == pand_status/v/pand_gesloopt || pand_status_rel == pand_status/v/sloopvergunning_verleend) && IsLogische_Pand_overgang && VBO_WasWonen && VBO_IsWonen
+		attribute<bool>                  IDEN_S_Restbakje            := not(IDEN_S) //kopie van IDEN_S, maar dan inverse IsWaarschijnlijk XXX
+																			&& VBO_WasVoorraad && vbo_status_rel == vbo_status/v/verblijfsobject_ingetrokken && Pand_HeeftOfKrijgtSloopstatus100d && VBO_WasWonen && VBO_IsWonen //#21: spiegelt nieuwe IDEN_S-conditie
 																			&& IsWaarschijnlijkCorrectieVanStacaravans_Wonen; //afname: vbo+pand uit voorraad gehaald, periode 201601-201702, binnen BBG verblijfsrec
-		
-		attribute<bool>                  IDEN_O_Restbakje            := not(IDEN_O) //kopie van IDEN_O, maar dan inverse IsWaarschijnlijk XXX 
-																			&& VBO_WasVoorraad && vbo_status_rel == vbo_status/v/verblijfsobject_ingetrokken && (prev_pand_status_rel == pand_status_w_Undefined/v/pand_in_gebruik || prev_pand_status_rel == pand_status_w_Undefined/v/pand_in_gebruik_niet_ingemeten || prev_pand_status_rel == pand_status_w_Undefined/v/verbouwing_pand) && (pand_status_rel == pand_status/v/pand_in_gebruik || pand_status_rel == pand_status/v/pand_in_gebruik_niet_ingemeten || pand_status_rel == pand_status/v/verbouwing_pand) && VBO_WasWonen && VBO_IsWonen
+
+		attribute<bool>                  IDEN_O_Restbakje            := not(IDEN_O) //kopie van IDEN_O, maar dan inverse IsWaarschijnlijk XXX
+																			&& VBO_WasVoorraad && vbo_status_rel == vbo_status/v/verblijfsobject_ingetrokken && not(Pand_HeeftOfKrijgtSloopstatus100d) && (prev_pand_status_rel == pand_status_w_Undefined/v/pand_in_gebruik || prev_pand_status_rel == pand_status_w_Undefined/v/pand_in_gebruik_niet_ingemeten || prev_pand_status_rel == pand_status_w_Undefined/v/verbouwing_pand) && (pand_status_rel == pand_status/v/pand_in_gebruik || pand_status_rel == pand_status/v/pand_in_gebruik_niet_ingemeten || pand_status_rel == pand_status/v/verbouwing_pand) && VBO_WasWonen && VBO_IsWonen //#21: spiegelt nieuwe IDEN_O-conditie
 																			&& IsWaarschijnlijkCorrectieVanStudentenComplex_1; //afname: woon-vbo uit voorraad gehaald; pand blijft; periode 201601-201708, binnen IsMogelijkWoningCorporatiePand
-																			
-		attribute<bool>                  IDEN_TMmin_Restbakje        := not(IDEN_TMmin) //kopie van IDEN_TMmin, maar dan inverse IsWaarschijnlijk XXX 
+
+		attribute<bool>                  IDEN_TMmin_Restbakje        := not(IDEN_TMmin) //kopie van IDEN_TMmin, maar dan inverse IsWaarschijnlijk XXX
 																			&& VBO_WasVoorraad && VBO_IsVoorraad && VBO_WasWonen && not(VBO_IsWonen) && not(VBO_WasWonen && IsOverigeGebruiksfunctie)
 																			&& IsWaarschijnlijkCorrectieVanVakantiehuisWonenNaarLogies; //afname: overgang wonen -> logies; periode 201201-201406
-																			
-		attribute<bool>                  IDEN_Cmin_Restbakje         := not(IDEN_TMmin) //kopie van IDEN_Cmin, maar dan inverse IsWaarschijnlijk XXX 
+
+		attribute<bool>                  IDEN_Cmin_Restbakje         := not(IDEN_Cmin) //kopie van IDEN_Cmin, maar dan inverse IsWaarschijnlijk XXX; was not(IDEN_TMmin) - kopieerfout, gelijkgetrokken met Redevelopment-versie
 																			&& VBO_WasVoorraad && not(VBO_IsVoorraad) && not(IDEN_S) && not(IDEN_O) && VBO_WasWonen && VBO_IsWonen
 																			&& (IsWaarschijnlijkCorrectieVanStacaravans_Wonen           //afname: vbo+pand uit voorraad gehaald, periode 201601-201702, binnen BBG verblijfsrec
 																					|| IsWaarschijnlijkCorrectieVanStudentenComplex_1); //afname: woon-vbo uit voorraad gehaald; pand blijft; periode 201601-201708, binnen IsMogelijkWoningCorporatiePand
@@ -1004,38 +1036,46 @@ container PrepBAG : using = "AdditionalClassifications"
 				
 				attribute<bool>                    IDEN_N                := switch(
 																					 case(Correctie_2e_Instantie/IDEN_N && saldo == 0i, FALSE)                                            //saldering 'mutatie in 1e instantie'
-																					,Correctie_2e_Instantie/IDEN_N
+																					,Correctie_2e_Instantie/IDEN_N && IsCarrier_woon
 																				);
 				attribute<bool>                    IDEN_T                := switch(
 																					 case(Correctie_2e_Instantie/IDEN_T && saldo == 0i, FALSE)                                            //saldering 'mutatie in 1e instantie'
-																					,Correctie_2e_Instantie/IDEN_T
+																					,Correctie_2e_Instantie/IDEN_T && IsCarrier_woon
 																				);
 				attribute<bool>                    IDEN_S                := switch(
 																					 case(Correctie_2e_Instantie/IDEN_S && saldo == 0i, FALSE)                                            //saldering 'mutatie in 1e instantie'
-																					,Correctie_2e_Instantie/IDEN_S
+																					,Correctie_2e_Instantie/IDEN_S && IsCarrier_woon
 																				);
 				attribute<bool>                    IDEN_O                := switch(
 																					 case(Correctie_2e_Instantie/IDEN_O && saldo == 0i, FALSE)                                            //saldering 'mutatie in 1e instantie'
-																					,Correctie_2e_Instantie/IDEN_O
+																					,Correctie_2e_Instantie/IDEN_O && IsCarrier_woon
 																				);
 				attribute<bool>                    IDEN_TMplus           := switch(
 																					 case(Correctie_2e_Instantie/IDEN_TMplus && saldo == 0i, FALSE)                                       //saldering 'mutatie in 1e instantie'
-																					,Correctie_2e_Instantie/IDEN_TMplus
+																					,Correctie_2e_Instantie/IDEN_TMplus && IsCarrier_woon
 																				);
 				attribute<bool>                    IDEN_TMmin           := switch(
 																					 case(Correctie_2e_Instantie/IDEN_TMmin && saldo == 0i, FALSE)                                        //saldering 'mutatie in 1e instantie'
-																					,Correctie_2e_Instantie/IDEN_TMmin
+																					,Correctie_2e_Instantie/IDEN_TMmin && IsCarrier_woon
 																				);
 				attribute<bool>                    IDEN_Cplus            := switch(
 																					 case(Correctie_2e_Instantie/IDEN_Cplus && saldo == 0i, FALSE)                                        //saldering 'mutatie in 1e instantie'
-																					,Correctie_2e_Instantie/IDEN_Cplus
+																					,Correctie_2e_Instantie/IDEN_Cplus && IsCarrier_woon
 																				);
 				attribute<bool>                    IDEN_Cmin             := switch(
 																					 case(Correctie_2e_Instantie/IDEN_Cmin && saldo == 0i, FALSE)                                         //saldering 'mutatie in 1e instantie'
-																					,Correctie_2e_Instantie/IDEN_Cmin
+																					,Correctie_2e_Instantie/IDEN_Cmin && IsCarrier_woon
 																				);
-				attribute<bool>                    IDEN_S_NW             := Correctie_2e_Instantie/IDEN_S_NW;
-																				
+				attribute<bool>                    IDEN_S_NW             := Correctie_2e_Instantie/IDEN_S_NW && IsCarrier_snw;
+
+				// dedup (CBS: max 1 mutatie per (vbo, verslagmaand)). Hou per vbo de eerste rij (kleinste id) met een candidaat-typering;
+				// directional clearing + prioriteit lieten per vbo al hoogstens 1 type over, dus dit ontdubbelt alleen meerdere rijen van datzelfde type (bv. multi-pand-VBO's met parallelle ketens).
+				attribute<bool>                    AnyWoonCand     := (Correctie_2e_Instantie/IDEN_N || Correctie_2e_Instantie/IDEN_T || Correctie_2e_Instantie/IDEN_S || Correctie_2e_Instantie/IDEN_O || Correctie_2e_Instantie/IDEN_TMplus || Correctie_2e_Instantie/IDEN_TMmin || Correctie_2e_Instantie/IDEN_Cplus || Correctie_2e_Instantie/IDEN_Cmin) && saldo != 0i;
+				attribute<uint32>                  CarrierRow_woon := min(AnyWoonCand                      ? id(.) : #., uq_vbo_nr_rel)[uq_vbo_nr_rel];
+				attribute<uint32>                  CarrierRow_snw  := min(Correctie_2e_Instantie/IDEN_S_NW ? id(.) : #., uq_vbo_nr_rel)[uq_vbo_nr_rel];
+				attribute<bool>                    IsCarrier_woon  := id(.) == CarrierRow_woon;
+				attribute<bool>                    IsCarrier_snw   := id(.) == CarrierRow_snw;
+
 			}
 																			
 																			
@@ -1145,8 +1185,14 @@ container PrepBAG : using = "AdditionalClassifications"
 		attribute<MutatieTypen>             MutatieTypen_rel_src  := ='union_data(.,'+AsItemList('Mutaties_Per_VerslagMaand/'+Verslagmaanden/label+'/SelectieMoment/IsMutatie/MutatieTypen_rel')+')';
 		attribute<MutatieTypen_UnID>        MutatieTypen_UnID_rel := ='union_data(.,'+AsItemList('Mutaties_Per_VerslagMaand/'+Verslagmaanden/label+'/SelectieMoment/IsMutatie/MutatieTypen_UnID_rel')+')';
 		attribute<MutatieTypen_Uitgesloten> MutatieTypen_Uitgesloten_rel := ='union_data(.,'+AsItemList('Mutaties_Per_VerslagMaand/'+Verslagmaanden/label+'/SelectieMoment/IsMutatie/MutatieTypen_Uitgesloten_rel')+')';
+
+		unit<uint32> ZonderCorrecties := select_with_org_rel(not(MakeDefined(MutatieTypen_rel_src == MutatieTypen/v/Cplus || MutatieTypen_rel_src == MutatieTypen/v/Cmin, FALSE)))
+		, Descr = "#22: alle mutatierijen behalve C± (administratieve correcties); basis voor IsMutated/Onveranderd-bepaling"
+		{
+			attribute<uint64> vbo_bag_nr := org_rel -> vbo_bag_nr;
+		}
 	}
-	
+
 	unit<uint32> Read_FinalMutationTable
 	: StorageName = "='%LocalDataProjDir%/Temp/FinalMutationTable_'+/Parameters/BAG_Selection_Area+'_'+Parameters/BAG_file_date+'.mmd'"
 	, StorageReadOnly = "true"
@@ -1163,11 +1209,13 @@ container PrepBAG : using = "AdditionalClassifications"
 		// attribute<MutatieTypen>             MutatieTypen_rel_src;
 		// attribute<MutatieTypen_UnID>        MutatieTypen_UnID_rel;
 		// attribute<MutatieTypen_Uitgesloten> MutatieTypen_Uitgesloten_rel;
-		attribute<MutatieTypen>             MutatieTypen_rel      := switch(
-																		 case(MutatieTypen_rel_src == MutatieTypen/v/Cplus, MutatieTypen/V/T)
-																		,case(MutatieTypen_rel_src == MutatieTypen/v/Cmin, MutatieTypen/V/O)
-																		,MutatieTypen_rel_src
-																	);
+		attribute<MutatieTypen>             MutatieTypen_rel      := MutatieTypen_rel_src; //#22: C+/C- niet meer blind naar T/O gemapt; echte DirectInVoorraad-toevoegingen/-nieuwbouw worden nu aan de bron getypeerd (IDEN_T_1b, IDEN_N_3), de rest is administratief
+
+		unit<uint32> ZonderCorrecties := select_with_org_rel(not(MakeDefined(MutatieTypen_rel_src == MutatieTypen/v/Cplus || MutatieTypen_rel_src == MutatieTypen/v/Cmin, FALSE)))
+		, Descr = "#22: alle mutatierijen behalve C± (administratieve correcties); basis voor IsMutated/Onveranderd-bepaling"
+		{
+			attribute<uint64> vbo_bag_nr := org_rel -> vbo_bag_nr;
+		}
 		 
 		attribute<MutatieTypen_All>         MutatieTypen_All_rel := switch(
 																		   case(IsDefined(MutatieTypen_rel_src), rlookup(MutatieTypen_rel_src, MutatieTypen_All/MutatieTypen_rel))
