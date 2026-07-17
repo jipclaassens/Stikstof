@@ -1,7 +1,7 @@
 container Policies
 {
 	container N2000_2024
-	: StorageName = "%SourceDataDir%/Overig/Beleid/n2000_stikstofgevoelig_2025.gpkg"
+	: StorageName = "%Alt_DataDir%/Overig/Beleid/n2000_stikstofgevoelig_2025.gpkg"
 	, StorageReadOnly = "TRUE"
 	, StorageType = "gdal.vect"
 	, SyncMode = "AllTables"

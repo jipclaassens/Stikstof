@@ -3,7 +3,10 @@ container ConfigSettings
 	container Overridable
 	{
 		parameter<String> BAG_DataDir        := 'D:/SourceData/BAG';  //LAPTOP
-		parameter<String> Redev_DataDir      := '%SourceDataDir%/RuimteScanner/SD/RSopen'; //OVSRV08
-		parameter<String> Alt_DataDir        := '%SourceDataDir%';
+		// parameter<String> Redev_DataDir      := '%SourceDataDir%/RuimteScanner/SD/RSopen'; //OVSRV08
+		parameter<String> Redev_DataDir      := '%SourceDataDir%/RSopen'; //OVSRV06
+		// parameter<String> Alt_DataDir        := '%SourceDataDir%';
+		parameter<String> OneDrive_Dir       := 'D:/Objectvision/Object Vision - SourceData';
+		parameter<String> Alt_DataDir        := '%OneDrive_Dir%';
 	}
 }
