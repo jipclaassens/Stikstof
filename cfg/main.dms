@@ -13,7 +13,8 @@ container Stikstof
 		parameter<string>  BAG_Selection_Area              := 'NL'; //'NL', 'AMS'
 		parameter<bool>    Use_Ontkoppelde_FinalMutations  := TRUE; // TRUE FALSE
 		parameter<m>       big_inflate_m                   := 10[m]; //10m
-		parameter<string>  bouwjaar_truncation_expr        := 'bouwjaar <= 1005w || bouwjaar > @YYYY@[jaar] ? (0/0)[uint16] : bouwjaar < 1500w ? 1500w : bouwjaar';
+		parameter<String>  Bouwjaar_truncation_Expr        := 'Bouwjaar <= 1005w || Bouwjaar > @YYYY@[jaar] ? null_w : Bouwjaar < 1500w ? 1500w : Bouwjaar';
+		parameter<String>  Max_Bouwjaar                    := left(BAG_file_date, 4);
 		parameter<m>       highrise_threshold              := 30[m];
 		// parameter<m2>      minimum_site_area               := 25[m2];
 		// parameter<float64> minimum_SN_area_share           := 0.01d;
