@@ -153,7 +153,7 @@ container VolledigeBAG : using = "classifications/BAG"
 			attribute<int32>                        einddatum                    := impl/einddatum0 < 19600101i ? impl/EINDREGISTRATIE : impl/einddatum0;
 			attribute<string>                       documentnummer               := impl/documentnummer;
 			attribute<jaar>                         bouwjaar                     := import/bouwjaar;
-			attribute<jaar>                         bouwjaar_trunc               := =replace(parameters/bouwjaar_truncation_expr, '@YYYY@', string(parameters/BAG_year+1[yr]));
+			attribute<jaar>                         bouwjaar_trunc               := =replace(parameters/bouwjaar_truncation_expr, '@YYYY@', string(uint32(Parameters/Max_bouwjaar)+2));
 			
 			attribute<bool>                         IsMogelijkWoningCorporatiePand       := Read_IsMogelijkWoningCorporatiePand;
 			attribute<bool>                         Write_IsMogelijkWoningCorporatiePand := IsDefined(rlookup(id(.), Identify_StudentenPanden/second_rel)), StorageName = "=Result_FSS_dir + '/IsMogelijkWoningCorporatiePand.mmd'";
