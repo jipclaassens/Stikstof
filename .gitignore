@@ -1,2 +1,9 @@
 /git.txt
 /.vs
+
+# R-pipeline: afgeleide bestanden en output
+/R/_derived/
+/R/_output/
+.Rhistory
+.RData
+.Rproj.user/
