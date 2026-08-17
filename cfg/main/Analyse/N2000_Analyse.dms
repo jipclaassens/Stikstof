@@ -121,7 +121,7 @@ container N2000_Analyse :  using = "units;classifications/bag;geography;sourceda
 	// 	container Get_JulianDayNumber_Eind  := Get_JulianDayNumber_T(first_pand_voorraad_datum, .);
 	// }
 
-	parameter<string> Export_Date := '20260717';
+	parameter<string> Export_Date := '20260730';
 	// parameter<string> Export := 'OK', ExplicitSuppliers = "Object_Nieuwbouw_Export;Object_BouwvergunningVerleend_Export;Pand_VergunningDuur_Export;IsochronenMap_Gemeente_Export";
 	parameter<string> Export := 'OK', ExplicitSuppliers = "Object_Nieuwbouw_Export;Object_BouwvergunningVerleend_Export;Pand_VergunningDuur_Export";
 
