@@ -214,17 +214,17 @@ project-id-pooling hierboven:
   dezelfde `uq_vbo` als het vergunningenbestand, zodat die VBO's een echte
   waarde krijgen. `01_build_vbo.R` vult ze aan waar het vergunningenbestand
   niets zegt; `03_checks.R` CHECK 9 controleert dat beide bronnen het eens zijn
-  waar ze overlappen. **Dit vergt een nieuwe GeoDMS-export**: op extracts t/m
+  waar ze overlappen. Dit vergt wel een nieuwe GeoDMS-export: op extracts t/m
   `20260730` ontbreken de kolommen en valt de pipeline terug op de oude
   afleiding (`Object_Nieuwbouw` is de CBS-woningreeks, 99,9% van de gekoppelde
   VBO's heeft `woon`, dus die krijgen `woon` met de vlag
   `gebruiksdoel_afgeleid`).
-- `IsCensored` uit `Pand_VergunningDuur` is een **pand**-vlag en `IsNieuwbouw`
-  een **VBO**-vlag; voor 1.907 panden (0,31%) spreken ze elkaar tegen. Zie
-  `docs/BAG-dataschoning-inzichten.md` §9 en CHECK 8. Gebruik `IsCensored` niet
-  los als survival-indicator.
-- De renovatiedrempel `reno_delta = -6` is inert: elke waarde tussen −1 en −20
-  geeft dezelfde DiD-coëfficiënt (spreiding 0,007 tegen een standaardfout van
-  0,088). Zie docs §8 voor de tabel.
+- `IsCensored` uit `Pand_VergunningDuur` is een vlag op pandniveau en
+  `IsNieuwbouw` een vlag op VBO-niveau; voor 1.907 panden (0,31%) spreken ze
+  elkaar tegen. Zie `docs/BAG-dataschoning-inzichten.md` §9 en CHECK 8. Gebruik
+  `IsCensored` niet los als survival-indicator.
+- De renovatiedrempel `reno_delta = -6` is een eigen werkafspraak en bovendien
+  inert: de robuustheidscheck −4, −6 en −9 geeft op 250 m −0,2398, −0,2394 en
+  −0,2399, bij een standaardfout van 0,088. Zie docs §8 voor de onderbouwing.
 - De EIB-depositiecurve (`PARAMS$eib_a`, `eib_b`) is overgenomen uit de
   Stata-versie en hier niet opnieuw geschat.
