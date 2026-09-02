@@ -404,6 +404,81 @@ cat(sprintf("gerealiseerd binnen 4 jaar, DiD (pp): %+.4f (%.4f)\n", coef(m4)[["D
 print(tab4)
 
 ## ---------------------------------------------------------------------
+## 7b. DUUR: vensters, doorlooptijd, en een hazardmodel met censurering
+## ---------------------------------------------------------------------
+## Drie manieren om naar dezelfde vraag te kijken (duurt het langer, of
+## komt het er niet, dicht bij natuur na 2019):
+##  (i)   vaste vensters van 3, 4 en 5 jaar: kans op oplevering binnen n
+##        jaar, per cohort volledig waargenomen
+##  (ii)  doorlooptijd onder de opgeleverde objecten (mediaan in dagen)
+##  (iii) Cox proportional hazards op tijd tot oplevering, met objecten
+##        die nog niet zijn opgeleverd als gecensureerd op de extractdatum.
+##        Baseline hazard gestratificeerd op provincie x afstandsklasse,
+##        cohortdummies, en behandeld x post als de DiD-term.
+##        Uitval wordt hier als censurering behandeld (cause-specific hazard).
+kop("7b. Duur")
+suppressPackageStartupMessages(library(survival))
+
+R$duur <- list()
+
+## (i) vensters
+vensters <- rbindlist(lapply(c(3L, 4L, 5L), function(j) {
+  v <- paste0("gerealiseerd_binnen_", j, "jr")
+  cj <- s[!is.na(vergunning_jaar) & vergunning_jaar >= 2012 & vergunning_jaar <= (2025L - j) & !is.na(get(v))]
+  cj[, `:=`(y = as.integer(get(v)), D = kl2500, post = as.integer(vergunning_jaar >= 2019),
+            prov_jaar = paste(provinciecode, vergunning_jaar), prov_k = paste(provinciecode, afstandsklasse))]
+  m <- feols(y ~ D:post | prov_jaar + prov_k, data = cj, cluster = ~prov_k)
+  data.table(venster_jr = j, cohorten = sprintf("2012-%d", 2025L - j), b = coef(m)[["D:post"]], se = se(m)[["D:post"]], n = m$nobs,
+             basis_nabij_pre = round(mean(cj[D == 1 & post == 0, y]), 3), basis_ver_pre = round(mean(cj[D == 0 & post == 0, y]), 3))
+}))
+R$duur$vensters <- vensters
+print(vensters)
+
+## (ii) doorlooptijd onder opgeleverde objecten, cohorten 2012-2021
+dd <- s[!is.na(vergunning_jaar) & vergunning_jaar >= 2012 & vergunning_jaar <= 2021 &
+          !is.na(duur_tot_oplevering) & duur_tot_oplevering > 0 & duur_tot_oplevering <= 4 * 365.25]
+dd[, `:=`(nabij = fifelse(kl2500 == 1, "nabij", "ver"),
+          duur_bouwstart = as.integer(bouwstart_eerste_datum - vergunning_datum))]
+R$duur$mediaan <- dcast(dd[, .(med = as.double(median(duur_tot_oplevering)), N = .N), by = .(jaar = vergunning_jaar, nabij)],
+                        jaar ~ nabij, value.var = c("med", "N"))
+R$duur$mediaan_bouwstart <- dcast(dd[!is.na(duur_bouwstart) & duur_bouwstart >= 0,
+                                     .(med = as.double(median(duur_bouwstart))), by = .(jaar = vergunning_jaar, nabij)],
+                                  jaar ~ nabij, value.var = "med")
+dd[, `:=`(D = kl2500, post = as.integer(vergunning_jaar >= 2019), lnd = log(duur_tot_oplevering),
+          prov_jaar = paste(provinciecode, vergunning_jaar), prov_k = paste(provinciecode, afstandsklasse))]
+mld <- feols(lnd ~ D:post | prov_jaar + prov_k, data = dd, cluster = ~prov_k)
+R$duur$logduur_did <- list(b = coef(mld)[["D:post"]], se = se(mld)[["D:post"]], n = mld$nobs)
+cat(sprintf("log(doorlooptijd) DiD onder opgeleverd binnen 4 jr: %+.4f (%.4f)\n", coef(mld)[["D:post"]], se(mld)[["D:post"]]))
+print(R$duur$mediaan)
+
+## (iii) Cox met censurering, cohorten 2012-2025
+cb <- s[!is.na(vergunning_jaar) & vergunning_jaar >= 2012 & vergunning_jaar <= 2025 & !is.na(opvolgtijd_dagen) & opvolgtijd_dagen > 0]
+cb[, event := as.integer(!is.na(duur_tot_oplevering) & duur_tot_oplevering > 0 & duur_tot_oplevering <= opvolgtijd_dagen)]
+cb[, tijd  := fifelse(event == 1L, as.numeric(duur_tot_oplevering), as.numeric(opvolgtijd_dagen))]
+cb <- cb[tijd > 0]
+cb[, `:=`(D = kl2500, post = as.integer(vergunning_jaar >= 2019), prov_k = paste(provinciecode, afstandsklasse),
+          jaarf = factor(vergunning_jaar))]
+cat(sprintf("Cox: %s objecten, %s opleveringen, %s gecensureerd\n", nfmt(nrow(cb)), nfmt(sum(cb$event)), nfmt(sum(cb$event == 0))))
+cox_did <- coxph(Surv(tijd, event) ~ jaarf + D:post + strata(prov_k), data = cb, cluster = prov_k, ties = "efron")
+b <- coef(cox_did)[["D:post"]]; se_b <- sqrt(vcov(cox_did)["D:post", "D:post"])
+R$duur$cox_did <- list(b = b, se = se_b, hr = exp(b), lo = exp(b - 1.96 * se_b), hi = exp(b + 1.96 * se_b),
+                       n_obj = nrow(cb), n_events = sum(cb$event))
+cat(sprintf("Cox DiD: HR %.3f [%.3f - %.3f]\n", exp(b), exp(b - 1.96 * se_b), exp(b + 1.96 * se_b)))
+## event study per cohort, referentie 2018
+jaren <- setdiff(sort(unique(cb$vergunning_jaar)), 2018L)
+## set() i.p.v. := in een for-lus: de LHS-expressie in := gaf hier kolommen
+## met een andere naam dan verwacht, waardoor de coefficienten NA werden.
+for (y in jaren) set(cb, j = paste0("Dy", y), value = cb$D * as.integer(cb$vergunning_jaar == y))
+f_es <- as.formula(paste("Surv(tijd, event) ~ jaarf +", paste(paste0("Dy", jaren), collapse = " + "), "+ strata(prov_k)"))
+cox_es <- coxph(f_es, data = cb, cluster = prov_k, ties = "efron")
+ce <- coef(cox_es); cv <- sqrt(diag(vcov(cox_es)))
+nm <- paste0("Dy", jaren); stopifnot(all(nm %in% names(ce)))
+R$duur$cox_es <- rbind(
+  data.table(jaar = jaren, b = ce[nm], se = cv[nm]),
+  data.table(jaar = 2018L, b = 0, se = 0))[order(jaar)][, `:=`(hr = exp(b), lo = exp(b - 1.96 * se), hi = exp(b + 1.96 * se))]
+print(R$duur$cox_es[, .(jaar, hr = round(hr, 3), lo = round(lo, 3), hi = round(hi, 3))])
+
+## ---------------------------------------------------------------------
 ## 8. VERTALING NAAR WONINGEN
 ## ---------------------------------------------------------------------
 kop("8. Woningen")
