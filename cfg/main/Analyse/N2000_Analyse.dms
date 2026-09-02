@@ -228,8 +228,20 @@ container N2000_Analyse :  using = "units;classifications/bag;geography;sourceda
 		attribute<int32>       last_pand_status_datum      := uq_pand/Last_pand_status_datum[org_rel];
 
 		// censoring + kwaliteit. duur in Stata: oplevering_eerste_datum - bv_eerste_datum (en bouwstart - bv voor #6)
-		attribute<bool>        IsCensored                  := IsNull(oplevering_eerste_datum), Descr = "vergund maar (nog) niet opgeleverd -> rechts-gecensureerd";
-		attribute<bool>        IsNieuwbouw                 := IsDefined(rlookup(pand_bag_nr, Object_Nieuwbouw_Export/pand_bag_nr));
+		//
+		// #25: IsCensored en IsNieuwbouw worden op VERSCHILLENDE NIVEAUS bepaald en kunnen
+		// elkaar dus tegenspreken:
+		//   IsCensored  = het PAND heeft nooit een pand_status met IsVoorraad gehad
+		//                 (oplevering_eerste_datum := First_Datum_Voorraad, zie PrepBAG r.42)
+		//   IsNieuwbouw = minstens EEN VBO van dit pand staat in de CBS-mutatiereeks
+		// Voor 1.907 panden (0,31%) geldt beide. Dat is geen fout in deze berekening maar
+		// dezelfde pand-vs-VBO-inconsistentie in de BAG als in docs sec. 4: de objecten zijn
+		// wel opgeleverd (72% van hun VBO's staat in de voorraad), de PANDstatus staat op
+		// Niet_gerealiseerd/gesloopt/ten_onrechte_opgevoerd. Bepaal realisatie daarom op
+		// last_vbo_status, en gebruik IsCensored niet los als survival-indicator.
+		attribute<bool>        IsCensored                  := IsNull(oplevering_eerste_datum), Descr = "PANDniveau: nooit een voorraadstatus gehad -> rechts-gecensureerd. Zie cens_nwb_conflict (#25)";
+		attribute<bool>        IsNieuwbouw                 := IsDefined(rlookup(pand_bag_nr, Object_Nieuwbouw_Export/pand_bag_nr)), Descr = "VBOniveau: minstens een VBO van dit pand staat in de CBS-nieuwbouwreeks";
+		attribute<bool>        cens_nwb_conflict           := IsCensored && IsNieuwbouw, Descr = "#25: pand zonder voorraadstatus maar met CBS-nieuwbouwmutatie op VBO-niveau. Niet censureren op dit pand.";
 		attribute<bool>        bouwjaar_mismatch           := int32(pand_bouwjaar) > (vergunningjaar + 5i) || int32(pand_bouwjaar) < (vergunningjaar - 5i);
 
 		// fasedurations in dagen (via JDN); leeg als datum ontbreekt. tbv foutopsporing (bv. vergunning 1950 + bouwjaar 2017)

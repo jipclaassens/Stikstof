@@ -209,6 +209,58 @@ plausibiliteitsvenster dat er al was. De grijze band −1..−5 is apart getagd
 (`vlag_delta_grijs`). Wie de drempel wil verdedigen in het paper: verdedig hem
 niet, laat de tabel hierboven zien.
 
+## 9. IsCensored en IsNieuwbouw spreken elkaar tegen (issue #25)
+
+Ja, en dat hoort zo — het zijn metingen op **verschillende niveaus**:
+
+| vlag | niveau | definitie |
+|---|---|---|
+| `IsCensored` | **pand** | `IsNull(First_Datum_Voorraad)`: het pand heeft nooit een `pand_status` met `IsVoorraad` gehad (`PrepBAG.dms:42`) |
+| `IsNieuwbouw` | **VBO** | minstens één VBO van dit pand staat in de CBS-mutatiereeks (mutatietype `N`) |
+
+Op `Pand_VergunningDuur_20260730` (620.816 panden):
+
+| | IsNieuwbouw = nee | IsNieuwbouw = ja |
+|---|---|---|
+| **IsCensored = nee** | 41.504 | 481.644 |
+| **IsCensored = ja** | 95.761 | **1.907** |
+
+Dus 1.907 panden (0,31%) zijn allebei. Hun laatste pandstatus:
+`Niet_gerealiseerd_pand` 735, `Pand_gesloopt` 734,
+`Pand_ten_onrechte_opgevoerd` 263, `Bouwvergunning_verleend` 96,
+`Bouw_gestart` 79.
+
+De VBO-kant weerspreekt dat: van de 5.270 VBO's op deze panden staat **71,8% in
+de CBS-voorraaddefinitie** en heeft 78,3% een nieuwbouwmutatie. Uitgesplitst
+naar pandstatus (VBO in voorraad ja/nee): `Niet_gerealiseerd_pand` 1.418/392,
+`Pand_gesloopt` 1.323/97, `Pand_ten_onrechte_opgevoerd` 968/14. Met andere
+woorden: **de objecten zijn opgeleverd, alleen de pandstatus zegt van niet.**
+
+Dit is dus geen rekenfout in `Pand_VergunningDuur` maar exact dezelfde
+pand-vs-VBO-inconsistentie als in §4 en in `03_checks.R` CHECK 4 (de 2.691 VBO's
+met pandstatus `Niet_gerealiseerd_pand` die zelf in gebruik zijn). Bij
+`Pand_gesloopt` is er niet eens een tegenspraak: gebouwd en later gesloopt is
+een normale levensloop, alleen ontbreekt de tussenliggende voorraadstatus in de
+bewaarde historie.
+
+**Gevolgen en wat eraan gedaan is:**
+
+- Voor de R-pipeline: geen. Realisatie wordt al op `vbo_status` bepaald (§4),
+  niet op `IsCensored`. De 1.907 panden zitten via hun VBO's gewoon in
+  `uitkomst == "gerealiseerd_nieuwbouw"`.
+- Voor duur-/survival-analyse op **pandniveau** wél: `IsCensored` zou deze 1.907
+  panden als "nog niet opgeleverd" meenemen terwijl ze aantoonbaar zijn
+  opgeleverd, mét een opleverdatum die alleen op VBO-niveau bestaat. Gebruik
+  `IsCensored` daarom niet los.
+- `N2000_Analyse.dms` exporteert nu `cens_nwb_conflict := IsCensored && IsNieuwbouw`
+  en beide vlaggen hebben een `Descr` die het niveau benoemt.
+- `03_checks.R` CHECK 8 telt het per extract, zodat het zichtbaar blijft.
+
+Ter contrast het spiegelbeeld — opgeleverd maar níet in de nieuwbouwreeks —
+is met 41.504 panden (6,7%) veel groter, en zit vrijwel helemaal vóór 2012
+(vergunningjaar 2009–2011: 24.210). Dat is de bekende BAG-opbouwperiode, geen
+inconsistentie.
+
 ## Bronnen (extern geverifieerd)
 
 - IPLO — buitenplanse omgevingsplanactiviteit; vergunningplicht Natura 2000-activiteit.

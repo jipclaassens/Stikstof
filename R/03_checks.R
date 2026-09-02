@@ -145,6 +145,35 @@ for (v in vars) {
 }
 
 ## ---------------------------------------------------------------------
+## CHECK 8 -- IsCensored vs. IsNieuwbouw  (issue #25)
+## ---------------------------------------------------------------------
+## De twee vlaggen uit Pand_VergunningDuur worden op verschillende niveaus
+## bepaald: IsCensored op de PANDstatushistorie (nooit een status met
+## IsVoorraad gehad), IsNieuwbouw op de VBO-mutatiereeks van CBS. Ze kunnen
+## elkaar dus tegenspreken. Dat is geen rekenfout maar dezelfde pand-vs-VBO-
+## inconsistentie als CHECK 4. Hier wordt hij geteld in plaats van genegeerd.
+
+kop("CHECK 8 -- IsCensored & IsNieuwbouw (#25)")
+p <- unique(d[bron_pandduur == TRUE,
+              .(pand_bag_nr, is_censored, is_nieuwbouw_pand, last_pand_status)])
+cat(sprintf("panden met pandtijdlijn: %s\n", nfmt(nrow(p))))
+print(dcast(p[, .N, by = .(IsCensored = is_censored, IsNieuwbouw = is_nieuwbouw_pand)],
+            IsCensored ~ IsNieuwbouw, value.var = "N", fill = 0))
+
+conflict <- p[is_censored == TRUE & is_nieuwbouw_pand == TRUE]
+cat(sprintf("\ntegenspraak: %s panden (%.2f%%)\n",
+            nfmt(nrow(conflict)), 100 * nrow(conflict) / nrow(p)))
+cat("\nlaatste pandstatus van die panden:\n")
+print(conflict[, .N, by = last_pand_status][order(-N)])
+
+cv <- d[pand_bag_nr %in% conflict$pand_bag_nr]
+cat(sprintf("\nhun VBO's: %s, waarvan %.1f%% in de CBS-voorraaddefinitie\n",
+            nfmt(nrow(cv)), 100 * mean(cv$vbo_in_voorraad)))
+cat("  -> de OBJECTEN zijn opgeleverd; alleen de PANDstatus zegt van niet.\n")
+cat("     Realisatie wordt daarom op vbo_status bepaald en is_censored\n")
+cat("     mag niet los als survival-indicator worden gebruikt.\n")
+
+## ---------------------------------------------------------------------
 ## CHECK 9 -- VBO-velden uit Object_Nieuwbouw  (issue #27)
 ## ---------------------------------------------------------------------
 ## Sinds #27 leveren beide objectbestanden last_vbo_status en
