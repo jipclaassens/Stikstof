@@ -479,6 +479,105 @@ R$duur$cox_es <- rbind(
 print(R$duur$cox_es[, .(jaar, hr = round(hr, 3), lo = round(lo, 3), hi = round(hi, 3))])
 
 ## ---------------------------------------------------------------------
+## 7c. BOUWSTART als tussenstap: vergunning -> bouwstart -> oplevering
+## ---------------------------------------------------------------------
+## bouwstart_eerste_datum is een pandkenmerk (net als de opleverdatum) en
+## bij 78% van de opgeleverde objecten bekend. Twee fasen, elk met een
+## mediaan, een DiD op de logaritme en een Cox met censurering.
+kop("7c. Bouwstart")
+bs <- s[!is.na(vergunning_jaar) & vergunning_jaar >= 2012 & vergunning_jaar <= 2021]
+bs[, `:=`(d1 = as.integer(bouwstart_eerste_datum - vergunning_datum),
+          d2 = as.integer(oplevering_eerste_datum - bouwstart_eerste_datum),
+          nabij = fifelse(kl2500 == 1, "nabij", "ver"), D = kl2500, post = as.integer(vergunning_jaar >= 2019),
+          prov_jaar = paste(provinciecode, vergunning_jaar), prov_k = paste(provinciecode, afstandsklasse))]
+f1 <- bs[!is.na(d1) & d1 >= 0 & d1 <= 4 * 365.25]
+f2 <- bs[!is.na(d2) & d2 > 0 & !is.na(d1) & d1 >= 0 & d2 <= 4 * 365.25]
+m1 <- feols(log1p(d1) ~ D:post | prov_jaar + prov_k, data = f1, cluster = ~prov_k)
+m2 <- feols(log(d2) ~ D:post | prov_jaar + prov_k, data = f2, cluster = ~prov_k)
+## Cox op tijd tot bouwstart, gecensureerd op de extractdatum
+cbs <- s[!is.na(vergunning_jaar) & vergunning_jaar >= 2012 & vergunning_jaar <= 2025 & !is.na(opvolgtijd_dagen) & opvolgtijd_dagen > 0]
+cbs[, d1 := as.integer(bouwstart_eerste_datum - vergunning_datum)]
+cbs[, event := as.integer(!is.na(d1) & d1 > 0 & d1 <= opvolgtijd_dagen)]
+cbs[, tijd := fifelse(event == 1L, as.numeric(d1), as.numeric(opvolgtijd_dagen))]
+cbs <- cbs[tijd > 0]
+cbs[, `:=`(D = kl2500, post = as.integer(vergunning_jaar >= 2019), prov_k = paste(provinciecode, afstandsklasse), jaarf = factor(vergunning_jaar))]
+cox_bs <- coxph(Surv(tijd, event) ~ jaarf + D:post + strata(prov_k), data = cbs, cluster = prov_k, ties = "efron")
+bb <- coef(cox_bs)[["D:post"]]; sb <- sqrt(vcov(cox_bs)["D:post", "D:post"])
+R$duur$bouwstart <- list(
+  aandeel_bekend = round(100 * mean(!is.na(bs$bouwstart_eerste_datum)), 1),
+  mediaan = dcast(bs[!is.na(d1) & d1 >= 0, .(m1 = as.double(median(d1))), by = .(jaar = vergunning_jaar, nabij)], jaar ~ nabij, value.var = "m1"),
+  mediaan_fase2 = dcast(bs[!is.na(d2) & d2 > 0, .(m2 = as.double(median(d2))), by = .(jaar = vergunning_jaar, nabij)], jaar ~ nabij, value.var = "m2"),
+  did_fase1 = list(b = coef(m1)[["D:post"]], se = se(m1)[["D:post"]], n = m1$nobs),
+  did_fase2 = list(b = coef(m2)[["D:post"]], se = se(m2)[["D:post"]], n = m2$nobs),
+  cox = list(b = bb, se = sb, hr = exp(bb), lo = exp(bb - 1.96 * sb), hi = exp(bb + 1.96 * sb), n_obj = nrow(cbs), n_events = sum(cbs$event)))
+cat(sprintf("fase 1 (vergunning->bouwstart) DiD log: %+.4f (%.4f); fase 2 (bouwstart->oplevering): %+.4f (%.4f)\n",
+            coef(m1)[["D:post"]], se(m1)[["D:post"]], coef(m2)[["D:post"]], se(m2)[["D:post"]]))
+cat(sprintf("Cox tijd tot bouwstart: HR %.3f [%.3f - %.3f]\n", exp(bb), exp(bb - 1.96 * sb), exp(bb + 1.96 * sb)))
+
+## ---------------------------------------------------------------------
+## 7d. COMPETING RISKS: oplevering tegenover definitieve uitval
+## ---------------------------------------------------------------------
+## Twee concurrerende eindes: het object wordt opgeleverd, of het strandt
+## definitief. De uitvaldatum is de datum waarop het pand de status
+## "niet gerealiseerd" of "gesloopt" kreeg (last_pand_status_datum);
+## gestrande objecten in een pand dat wel doorging hebben geen eigen
+## datum en blijven gecensureerd. Drie maten:
+##  - cause-specific Cox voor uitval (spiegel van het model in 7b)
+##  - Aalen-Johansen cumulatieve incidentie na 4 jaar, per groep x periode
+##  - Fine-Gray subdistribution hazard (survival::finegray), op een
+##    steekproef van 150.000 objecten omdat de gewogen dataset anders te
+##    groot wordt
+kop("7d. Competing risks")
+cr <- s[!is.na(vergunning_jaar) & vergunning_jaar >= 2012 & vergunning_jaar <= 2025 & !is.na(opvolgtijd_dagen) & opvolgtijd_dagen > 0]
+cr[, t_opl := fifelse(!is.na(duur_tot_oplevering) & duur_tot_oplevering > 0 & duur_tot_oplevering <= opvolgtijd_dagen, as.numeric(duur_tot_oplevering), NA_real_)]
+cr[, t_uit := fifelse(uitkomst == "uitval" & last_pand_status %chin% c("Niet_gerealiseerd_pand", PAND_GESLOOPT) & !is.na(last_pand_status_datum),
+                      as.numeric(last_pand_status_datum - vergunning_datum), NA_real_)]
+cr[!is.na(t_uit) & (t_uit <= 0 | t_uit > opvolgtijd_dagen), t_uit := NA_real_]
+cr[, ev := fifelse(!is.na(t_opl), 1L, fifelse(!is.na(t_uit), 2L, 0L))]
+cr[, tijd := fifelse(ev == 1L, t_opl, fifelse(ev == 2L, t_uit, as.numeric(opvolgtijd_dagen)))]
+cr <- cr[tijd > 0]
+cr[, `:=`(D = kl2500, post = as.integer(vergunning_jaar >= 2019), prov_k = paste(provinciecode, afstandsklasse), jaarf = factor(vergunning_jaar),
+          evf = factor(ev, levels = 0:2, labels = c("censor", "oplevering", "uitval")))]
+cat(sprintf("objecten %s: opgeleverd %s, gestrand met datum %s, gecensureerd %s\n", nfmt(nrow(cr)), nfmt(sum(cr$ev == 1)), nfmt(sum(cr$ev == 2)), nfmt(sum(cr$ev == 0))))
+
+## cause-specific Cox voor uitval
+cox_uit <- coxph(Surv(tijd, ev == 2L) ~ jaarf + D:post + strata(prov_k), data = cr, cluster = prov_k, ties = "efron")
+bu <- coef(cox_uit)[["D:post"]]; su <- sqrt(vcov(cox_uit)["D:post", "D:post"])
+cat(sprintf("cause-specific Cox uitval: HR %.3f [%.3f - %.3f]\n", exp(bu), exp(bu - 1.96 * su), exp(bu + 1.96 * su)))
+
+## Aalen-Johansen: cumulatieve incidentie per groep x periode (cohorten met >= 4 jr opvolging)
+aj <- cr[vergunning_jaar <= 2021]
+aj[, grp := paste(fifelse(D == 1, "nabij", "ver"), fifelse(post == 1, "post", "pre"), sep = "_")]
+sf <- survfit(Surv(tijd, evf) ~ grp, data = aj)
+tijden <- c(0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4) * 365.25
+sm <- summary(sf, times = tijden, extend = TRUE)
+cif <- data.table(grp = sub("^grp=", "", as.character(sm$strata)), tijd_jr = round(sm$time / 365.25, 2),
+                  oplevering = sm$pstate[, which(sf$states == "oplevering")], uitval = sm$pstate[, which(sf$states == "uitval")])
+cif4 <- cif[tijd_jr == 4]
+cat("cumulatieve incidentie na 4 jaar:\n"); print(cif4)
+
+## Fine-Gray op een steekproef
+set.seed(20260730)
+fgs <- cr[sample(.N, min(.N, 150000))]
+fg_fit <- function(etype) {
+  fgd <- finegray(Surv(tijd, evf) ~ D + post + jaarf + prov_k, data = fgs, etype = etype)
+  m <- coxph(Surv(fgstart, fgstop, fgstatus) ~ jaarf + D:post + strata(prov_k), data = fgd, weight = fgwt, cluster = prov_k, ties = "efron")
+  b <- coef(m)[["D:post"]]; se <- sqrt(vcov(m)["D:post", "D:post"])
+  list(b = b, se = se, shr = exp(b), lo = exp(b - 1.96 * se), hi = exp(b + 1.96 * se), n = nrow(fgs))
+}
+fg_opl <- tryCatch(fg_fit("oplevering"), error = function(e) { message("Fine-Gray oplevering: ", conditionMessage(e)); NULL })
+fg_uit <- tryCatch(fg_fit("uitval"),     error = function(e) { message("Fine-Gray uitval: ", conditionMessage(e)); NULL })
+if (!is.null(fg_opl)) cat(sprintf("Fine-Gray oplevering: sHR %.3f [%.3f - %.3f]\n", fg_opl$shr, fg_opl$lo, fg_opl$hi))
+if (!is.null(fg_uit)) cat(sprintf("Fine-Gray uitval    : sHR %.3f [%.3f - %.3f]\n", fg_uit$shr, fg_uit$lo, fg_uit$hi))
+
+R$duur$competing <- list(
+  n = list(objecten = nrow(cr), opgeleverd = sum(cr$ev == 1), gestrand = sum(cr$ev == 2), gecensureerd = sum(cr$ev == 0),
+           gestrand_zonder_datum = sum(cr$uitkomst == "uitval" & cr$ev != 2)),
+  cox_uitval = list(b = bu, se = su, hr = exp(bu), lo = exp(bu - 1.96 * su), hi = exp(bu + 1.96 * su)),
+  cif = cif, cif4 = cif4,
+  finegray_oplevering = fg_opl, finegray_uitval = fg_uit)
+
+## ---------------------------------------------------------------------
 ## 8. VERTALING NAAR WONINGEN
 ## ---------------------------------------------------------------------
 kop("8. Woningen")

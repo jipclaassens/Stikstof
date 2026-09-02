@@ -1,6 +1,6 @@
 <title>Stikstof en woningbouw</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400&display=swap">
 <style>
 :root{
   --ground:#F6F7F4; --surface:#FCFCFA; --surface-2:#EEF1EC;
@@ -11,6 +11,7 @@
   --display:"Fraunces","Iowan Old Style",Georgia,serif;
   --body:"Source Serif 4","Iowan Old Style",Georgia,serif;
   --ui:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
@@ -66,14 +67,14 @@ strong{font-weight:600}
 .aside{background:var(--surface-2);border-radius:6px;padding:16px 20px;margin:24px 0;font-size:15.5px;max-width:68ch}
 .aside .t{font-family:var(--ui);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
 .aside p{margin:0 0 10px}.aside p:last-child{margin:0}
-code{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-size:.88em;background:var(--surface-2);padding:1px 5px;border-radius:3px}
+code{font-family:var(--mono);font-size:.88em;background:var(--surface-2);padding:1px 5px;border-radius:3px}
 figure{margin:32px 0 40px;max-width:920px}
 figure.wide{max-width:none}
 .fig-h{font-family:var(--ui);font-weight:600;font-size:15px;margin:0 0 2px;color:var(--ink)}
 .fig-s{font-family:var(--ui);font-size:13px;color:var(--ink-2);margin:0 0 12px}
 .panels{display:grid;gap:18px;grid-template-columns:1fr}
-@media (min-width:760px){.panels.two{grid-template-columns:1fr 1fr}.panels.four{grid-template-columns:1fr 1fr}}
-@media (max-width:1000px){.panels.two.rob{grid-template-columns:1fr}}
+@media (min-width:760px){.panels.two{grid-template-columns:1fr 1fr}.panels.four{grid-template-columns:1fr 1fr}.panels.three{grid-template-columns:1fr 1fr 1fr}}
+@media (max-width:1000px){.panels.two.rob{grid-template-columns:1fr}.panels.three{grid-template-columns:1fr}}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px 12px 6px}
 .panel .pt{font-family:var(--ui);font-size:12.5px;color:var(--ink-2);margin:0 0 6px;display:flex;justify-content:space-between;gap:10px}
 .panel .pt b{color:var(--ink);font-weight:600}
@@ -85,11 +86,16 @@ canvas{width:100%!important;height:100%!important}
 .legend i{width:16px;height:0;border-top:2px solid;display:inline-block}
 .legend i.band{height:10px;border:0;border-radius:2px}
 .legend i.ev{border-top-style:solid;border-color:var(--event)}
+.legend i.dash{border-top-style:dashed}
 figcaption{font-family:var(--ui);font-size:13px;color:var(--ink-2);margin-top:10px;line-height:1.45;max-width:78ch}
-details.tabel{margin-top:8px;font-family:var(--ui);font-size:13px}
-details.tabel summary{cursor:pointer;color:var(--ink-2);list-style:none;display:inline-flex;gap:6px;align-items:center}
-details.tabel summary::before{content:"";width:7px;height:7px;border-right:1.5px solid var(--muted);border-bottom:1.5px solid var(--muted);transform:rotate(-45deg);transition:transform .15s}
-details.tabel[open] summary::before{transform:rotate(45deg)}
+details.tabel,details.code{margin-top:8px;font-family:var(--ui);font-size:13px}
+details.tabel summary,details.code summary{cursor:pointer;color:var(--ink-2);list-style:none;display:inline-flex;gap:6px;align-items:center}
+details.tabel summary::before,details.code summary::before{content:"";width:7px;height:7px;border-right:1.5px solid var(--muted);border-bottom:1.5px solid var(--muted);transform:rotate(-45deg);transition:transform .15s}
+details.tabel[open] summary::before,details.code[open] summary::before{transform:rotate(45deg)}
+details.code{margin-top:6px}
+details.code .lab{font-family:var(--ui);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:10px 0 4px}
+details.code pre{margin:0;padding:10px 12px;background:var(--surface-2);border-radius:4px;overflow-x:auto;font-family:var(--mono);font-size:12.5px;line-height:1.5;color:var(--ink);white-space:pre}
+details.code .note{font-size:12.5px;color:var(--ink-2);margin:6px 0 0}
 .tw{overflow-x:auto;margin-top:8px}
 table{border-collapse:collapse;font-family:var(--ui);font-size:13.5px;line-height:1.35;min-width:100%}
 th,td{padding:7px 10px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
@@ -119,10 +125,11 @@ dfn{font-style:normal;font-weight:600}
     <li><a href="#s7"><span class="n">7</span><span>Robuustheid</span></a></li>
     <li><a href="#s8"><span class="n">8</span><span>Waarom niet depositie</span></a></li>
     <li><a href="#s9"><span class="n">9</span><span>Gestrand, vertraagd, in de pijplijn</span></a></li>
-    <li><a href="#s10"><span class="n">10</span><span>De uitspraak van 2024</span></a></li>
-    <li><a href="#s11"><span class="n">11</span><span>Wat het betekent</span></a></li>
-    <li><a href="#s12"><span class="n">12</span><span>Voor de kritische lezer</span></a></li>
-    <li><a href="#s13"><span class="n">13</span><span>Verantwoording</span></a></li>
+    <li><a href="#s10"><span class="n">10</span><span>Het plannenspoor</span></a></li>
+    <li><a href="#s11"><span class="n">11</span><span>De uitspraak van 2024</span></a></li>
+    <li><a href="#s12"><span class="n">12</span><span>Wat het betekent</span></a></li>
+    <li><a href="#s13"><span class="n">13</span><span>Voor de kritische lezer</span></a></li>
+    <li><a href="#s14"><span class="n">14</span><span>Verantwoording</span></a></li>
   </ol>
 </nav>
 
@@ -130,13 +137,13 @@ dfn{font-style:normal;font-weight:600}
 <header class="kop">
   <div class="eyebrow">Werkrapport &middot; extract 20260730 &middot; BAG 10 juli 2026</div>
   <h1>Zit de woningbouw op slot door stikstof?</h1>
-  <p class="lede">Zeven jaar na de PAS-uitspraak volgen we 1,36 miljoen verblijfsobjecten van vergunning tot oplevering, en meten we wat er dichtbij stikstofgevoelige natuur anders ging dan verderop. Het antwoord is: iets, maar veel minder dan de krantenkoppen zeggen. Over de uitspraak van december 2024 valt nog niets te zeggen.</p>
-  <div class="meta"><span>Voor Huub, Jan, Thijmen en Jip</span><span>R-pipeline <code>jipclaassens/Stikstof</code></span><span>Kwartaalreeksen 2012Q1 tot 2026Q2</span></div>
+  <p class="lede">Zeven jaar na de PAS-uitspraak volgen we 1,36 miljoen verblijfsobjecten van vergunning tot oplevering en 11.669 woningbouwplannen van initiatief tot realisatie, en meten we wat er dichtbij stikstofgevoelige natuur anders ging dan verderop. Het antwoord is: iets, maar veel minder dan de krantenkoppen zeggen. Over de uitspraak van december 2024 valt nog niets te zeggen.</p>
+  <div class="meta"><span>Voor Huub, Jan, Thijmen en Jip</span><span>R-pipeline <code>jipclaassens/Stikstof</code></span><span>Kwartaalreeksen 2012Q1 tot 2026Q2; plannen 2004 tot 2023</span></div>
   <div class="tiles">
     <div class="tile"><div class="l">Verblijfsobjecten in het bestand</div><div class="v">1.356.420</div><div class="s">waarvan 919.337 gerealiseerde nieuwbouw, 54.590 gestrand, 256.669 in de pijplijn</div></div>
     <div class="tile"><div class="l">Nieuwbouw binnen 2,5 km na de PAS-uitspraak</div><div class="v">&minus;11%</div><div class="s">verhouding 0,887 ten opzichte van de controlegroep; 95%-interval van &minus;24% tot +3%. De enige specificatie met een schone pre-periode</div></div>
     <div class="tile"><div class="l">Vertaald naar woningen, 2019Q2 tot 2024Q3</div><div class="v">11.600</div><div class="s">minder opgeleverd binnen 2,5 km; 2,9% van het landelijk totaal. Bandbreedte 0 tot 28.000</div></div>
-    <div class="tile"><div class="l">Vergund maar niet binnen 4 jaar gerealiseerd</div><div class="v">&plusmn;0,0 pp</div><div class="s">geen verschil tussen nabij en ver, cohorten 2012 tot 2021; ook geen vertraging</div></div>
+    <div class="tile"><div class="l">Vergund maar gestrand of vertraagd</div><div class="v">&plusmn;0</div><div class="s">geen verschil tussen nabij en ver in realisatie binnen 4 jaar, doorlooptijd, bouwstart of hazard; ook niet in het plannenspoor</div></div>
   </div>
 </header>
 
@@ -146,7 +153,7 @@ dfn{font-style:normal;font-weight:600}
 <p>Dit rapport doet het andere. We kijken naar wat er de afgelopen zeven jaar feitelijk is vergund en opgeleverd, en vergelijken de ontwikkeling dicht bij stikstofgevoelige habitats met die verderop. Het ministerie van BZK wil dit weten; wij ook, want ons conceptartikel voor RERQ concludeert "niet of nauwelijks invloed", en die conclusie moet tegen een stootje kunnen.</p>
 <p>Waar hieronder "het conceptartikel" staat, bedoelen we <em>Stikstofbeleid en woningbouwplannen</em> (Ploegmakers, Rouwendal, Van der Wielen en Claassens), de versie met het commentaar van JvB T van juli 2026. Dat artikel bouwt voort op de publicatie van 2025, <em>Stikstofbeleid en woningbouw</em>, die vooral het plannenspoor behandelde. Het rapport is gebouwd op een nieuwe R-pipeline die de Stata-analyses achter het conceptartikel vervangt. Onderweg zijn drie dingen veranderd die de cijfers raken, en die leggen we per stap uit. Waar de conclusie van het conceptartikel overeind blijft zeggen we dat; waar ze scherper of anders wordt ook.</p>
 <div class="aside"><div class="t">Wat dit rapport wel en niet is</div>
-<p>Het gaat over het aanbodspoor: verleende bouwvergunningen en gerealiseerde nieuwbouw uit de BAG, aangevuld met een nieuwe analyse van gestrande, vertraagde en nog lopende projecten op objectniveau. Het plannenspoor (provinciale plancapaciteit, doorlooptijd van initiatief tot vaststelling) is niet geport en blijft buiten beschouwing.</p></div>
+<p>Het gaat over twee sporen. Het aanbodspoor: verleende bouwvergunningen en gerealiseerde nieuwbouw uit de BAG, aangevuld met een analyse van gestrande, vertraagde en nog lopende projecten op objectniveau. En het plannenspoor: de provinciale planmonitoring van Noord-Holland en Limburg, waarin plannen van initiatief tot realisatie te volgen zijn. Bij elke schatting die het verhaal draagt staat een uitvouwblok met het R-commando en het Stata-equivalent, zodat te zien is hoe het getal tot stand komt.</p></div>
 </section>
 
 <section id="s2" class="col">
@@ -211,7 +218,7 @@ dfn{font-style:normal;font-weight:600}
 <section id="s5" class="col">
 <h2><span class="n">5</span>Nieuwbouw na 2019</h2>
 <div class="aside"><div class="t">Leeswijzer bij de figuren</div>
-<p><dfn>IRR</dfn> staat voor <em>incidence rate ratio</em>: de verhouding tussen het aantal dat we in de behandelde groep waarnemen en het aantal dat we daar zouden verwachten als de behandelde groep de controlegroep had gevolgd, beide ten opzichte van 2018. Een IRR van 0,90 betekent tien procent minder dan verwacht; 1,10 betekent tien procent meer; 1 is geen verschil. Het is de exponent van de Poisson-coëfficiënt, en daarmee de maat waarin het conceptartikel ook rapporteert.</p>
+<p><dfn>IRR</dfn> staat voor <em>incidence rate ratio</em>: de verhouding tussen het aantal dat we in de behandelde groep waarnemen en het aantal dat we daar zouden verwachten als de behandelde groep de controlegroep had gevolgd, beide ten opzichte van 2018. Een IRR van 0,90 betekent tien procent minder dan verwacht; 1,10 betekent tien procent meer; 1 is geen verschil. Het is de exponent van de Poisson-coëfficiënt, en daarmee de maat waarin het conceptartikel ook rapporteert. In de duurmodellen heet dezelfde verhouding <dfn>HR</dfn>, hazard ratio: de verhouding van de kans per tijdseenheid dat iets gebeurt.</p>
 <p><dfn>BI</dfn> is het 95%-betrouwbaarheidsinterval: het bereik waarbinnen de echte waarde met 95% zekerheid ligt, gegeven de ruis in de data. Als het interval de 1 bevat, kunnen we niet uitsluiten dat er niets aan de hand is. In de figuren is dat de gekleurde band rond de lijn.</p>
 <p><dfn>Pre-trend</dfn> is de toets of behandeld en controle vóór 2018 al parallel liepen. We toetsen alle kwartalen van 2012 tot 2017 gezamenlijk (een joint Wald-toets); een lage p-waarde betekent dat de groepen al uit elkaar liepen voordat er iets gebeurde, en dan is het effect na 2019 niet zonder meer aan de uitspraak toe te schrijven.</p></div>
 <p>De event study schat per kwartaal het verschil tussen behandeld en controle, ten opzichte van 2018. Een IRR van 0,9 betekent dat er in dat kwartaal 10% minder werd opgeleverd in de behandelde groep dan je op grond van de controle en 2018 zou verwachten.</p>
@@ -222,6 +229,21 @@ dfn{font-style:normal;font-weight:600}
   <div class="legend"><span><i style="border-color:var(--treated)"></i>IRR</span><span><i class="band" style="background:var(--treated-wash)"></i>95%-BI</span><span><i class="ev"></i>PAS-uitspraak, intern salderen</span></div>
   <figcaption>Poisson, vaste effecten provincie × kwartaal, provincie × afstandsklasse en afstandsklasse × seizoen; cluster provincie × afstandsklasse. Referentie 2018Q1 tot Q4. De verticale as is voor alle vier panelen gelijk, zodat de breedte van de intervallen vergelijkbaar is: de smalle banden hebben veel bredere intervallen.</figcaption>
   <details class="tabel"><summary>Tabel</summary><div class="tw"><table id="t-es-nwb"></table></div></details>
+  <details class="code"><summary>Hoe dit is geschat</summary>
+<div class="lab">R (fixest)</div>
+<pre># p: een rij per provincie x afstandsklasse x kwartaal, y = aantal objecten,
+# t = kwartaalindex (1 = 2012Q1), D = 1 als afstandsklasse binnen de drempel
+p[, k_szn := paste(k, (t - 1) %% 4)]           # afstandsklasse x seizoen
+es &lt;- fepois(y ~ i(t, D, ref = c(25, 26, 27, 28))   # referentie = 2018Q1..Q4
+             | prov_t + prov_k + k_szn,
+             data = p, cluster = ~prov_k)
+exp(coef(es))                                   # IRR per kwartaal</pre>
+<div class="lab">Stata (ppmlhdfe)</div>
+<pre>* jtr = D * kwartaalindex; de vier kwartalen van 2018 (25-28) vormen samen de referentie
+gen jtr = D * t
+ppmlhdfe y ib25.jtr o26.jtr o27.jtr o28.jtr, absorb(prov_t prov_k k_szn) vce(cluster prov_k) irr</pre>
+<div class="note">De enkelvoudige DiD in de tabel hieronder vervangt <code>i(t, D, ref = ...)</code> door één term <code>tr = D * (t &gt;= 30)</code>; in Stata <code>ppmlhdfe y tr, absorb(...) vce(cluster prov_k)</code>.</div>
+  </details>
 </figure>
 <p>Het beeld per drempel:</p>
 <div class="tbl"><div class="fig-h">Samenvatting per drempel, nieuwbouw</div><div class="tw"><table id="t-sum-nwb"></table></div></div>
@@ -264,6 +286,17 @@ dfn{font-style:normal;font-weight:600}
   </div>
   <figcaption>De basis is de specificatie uit hoofdstuk 5. "Placebo" schat een nep-gebeurtenis in 2016Q1 op de pre-periode 2012 tot 2018: die hoort nul te zijn. "Projectid-NA gepoold" reproduceert de collapse-fout uit de Stata-versie.</figcaption>
   <details class="tabel"><summary>Tabel (nieuwbouw en vergunningen)</summary><div class="tw"><table id="t-rob"></table></div></details>
+  <details class="code"><summary>Hoe dit is geschat</summary>
+<div class="lab">R (fixest)</div>
+<pre>p[, tr := D * as.integer(t &gt;= 30)]              # 30 = 2019Q2
+m &lt;- fepois(y ~ tr | prov_t + prov_k + k_szn, data = p, cluster = ~prov_k)
+# varianten: zelfde regel op een ander paneel (jaar i.p.v. kwartaal, cluster-id,
+# ander venster), met cluster = ~k of ~provinciecode, of met t &gt;= 17 (2016Q1)
+# op het paneel t &lt;= 28 voor de placebo.</pre>
+<div class="lab">Stata (ppmlhdfe)</div>
+<pre>gen tr = D * (t &gt;= 30)
+ppmlhdfe y tr, absorb(prov_t prov_k k_szn) vce(cluster prov_k)</pre>
+  </details>
 </figure>
 <p>Wat dit zegt, in drie zinnen. Ten eerste: <strong>de statusfilters doen niets.</strong> Geen filter, het Stata-filter op de snapshot-pandstatus, of het ex-ante filter uit hoofdstuk 2: de coëfficiënt op 2.500 meter beweegt tussen &minus;0,186 en &minus;0,188. Het monnikenwerk aan de statusregels heeft nooit een schatting beïnvloed, en dat wisten we niet totdat we het maten.</p>
 <p>Ten tweede: <strong>de projectsleutel doet wél iets.</strong> Met de pooling-fout wordt &minus;0,187 tot &minus;0,235; met de ruimtelijk-temporele cluster in plaats van het documentnummer wordt het &minus;0,159. Die laatste is een echte keuze, geen fout. Het cluster bundelt 22% van de documentnummers tot grotere projecten (mediaan 2), en omdat we per project de kleinste afstand nemen, schuiven objecten daarmee naar binnen. Documentnummer is nauwer en het cluster ruimer; de waarheid ligt ertussen en het effect is er in beide gevallen.</p>
@@ -282,6 +315,18 @@ dfn{font-style:normal;font-weight:600}
   <div class="legend"><span><i style="border-color:var(--treated)"></i>IRR</span><span><i class="band" style="background:var(--treated-wash)"></i>95%-BI</span><span><i class="ev"></i>PAS-uitspraak, intern salderen</span></div>
   <figcaption>De pre-periode springt tussen 0,5 en 2,4 en de joint Wald verwerpt parallelle trends met p &lt; 0,001. Dat is geen ruis: het is een systematisch verschil in de dynamiek van grote en kleine projecten.</figcaption>
   <details class="tabel"><summary>Tabel: acht varianten</summary><div class="tw"><table id="t-dep"></table></div></details>
+  <details class="code"><summary>Hoe dit is geschat</summary>
+<div class="lab">R (fixest)</div>
+<pre># depositie per object = projectomvang x mol_woning(afstand), EIB-curve
+# ln(mol/woning) = 6,411 - 1,738 ln(afstand); klassen bij 0,005 / 0,1 / 0,5 / 1
+s[, depk := cut(projectomvang * mol_woning, c(-Inf, .005, .1, .5, 1, Inf), labels = 1:5)]
+# paneel op provincie x depositieklasse x kwartaal; D = 1 als klasse &gt;= 3 (&gt;= 0,1 mol)
+es &lt;- fepois(y ~ i(t, D, ref = c(25, 26, 27, 28)) | prov_t + prov_k + k_szn, data = p, cluster = ~prov_k)</pre>
+<div class="lab">Stata (do_analysis_stikstof_matrix.do)</div>
+<pre>gen geraakt_va_01 = inrange(depositie_cluster_cat, 3, 5)
+gen jtr = jaar * geraakt_va_01
+ppmlhdfe nieuwbouw ib2018.jtr, absorb(prov_cat prov_tijd) vce(cluster prov_cat) irr</pre>
+  </details>
 </figure>
 <p>Het resultaat is ondubbelzinnig, en negatief. In alle acht varianten (twee uitkomsten, twee project-id's, twee drempels) is de pre-trend gebroken en is de DiD-coëfficiënt positief. Behandeld op depositie betekent in de praktijk: grote projecten. Boven 0,1 mol zit je op 1.000 meter pas bij 26 woningen en op 2.500 meter bij 140. En grote projecten, stedelijke appartementencomplexen, hebben hun eigen conjunctuur, die na 2019 omhoog ging. Het depositie-ontwerp meet dus vooral dat grote projecten anders bewegen dan kleine, en dat verschil is groter dan wat stikstof doet.</p>
 <p>Het is een nuttige negatieve bevinding: het verklaart waarom het afstandsontwerp de betere keuze is, hoewel het theoretisch grover is. Afstand is exogeen aan de projectkeuze; omvang niet. Het conceptartikel zegt dat zelf ook, in sectie 5.2, als reden om omvang niet in de behandeling te stoppen. Nu is het gemeten.</p>
@@ -289,8 +334,8 @@ dfn{font-style:normal;font-weight:600}
 
 <section id="s9" class="col">
 <h2><span class="n">9</span>Gestrand, vertraagd, in de pijplijn</h2>
-<p>Dit is het onderdeel dat het conceptartikel nog niet heeft, en waar de juridisch reviewer expliciet om vroeg: hoeveel woningen zijn er vergund maar niet gebouwd, of later gebouwd, en is dat dicht bij natuur vaker gebeurd? We kijken er op drie manieren naar, van eenvoudig naar volledig: een vast venster, de doorlooptijd, en een hazardmodel dat met censurering omgaat.</p>
-<p>De valkuil bij alle drie is censurering. Het extract is een momentopname van juli 2026. Een vergunning uit 2015 heeft elf jaar gehad om tot een oplevering te komen; een vergunning uit 2024 anderhalf jaar. Wie uitvalpercentages over vergunningjaren vergelijkt zonder daar rekening mee te houden, meet vooral de afstand tot de extractdatum.</p>
+<p>Dit is het onderdeel dat het conceptartikel nog niet heeft, en waar de juridisch reviewer expliciet om vroeg: hoeveel woningen zijn er vergund maar niet gebouwd, of later gebouwd, en is dat dicht bij natuur vaker gebeurd? We kijken er op vijf manieren naar, van eenvoudig naar volledig: een vast venster, de doorlooptijd, de bouwstart als tussenstap, een hazardmodel met censurering, en een model met concurrerende risico's.</p>
+<p>De valkuil bij alle vijf is censurering. Het extract is een momentopname van juli 2026. Een vergunning uit 2015 heeft elf jaar gehad om tot een oplevering te komen; een vergunning uit 2024 anderhalf jaar. Wie uitvalpercentages over vergunningjaren vergelijkt zonder daar rekening mee te houden, meet vooral de afstand tot de extractdatum.</p>
 <figure class="wide">
   <div class="fig-h">Aandeel van de vergunningen dat nog in de pijplijn zit, per vergunningjaar</div>
   <div class="fig-s">objectstatus "gevormd" op de extractdatum; behandeld = binnen 2.500 m</div>
@@ -308,6 +353,15 @@ dfn{font-style:normal;font-weight:600}
   <div class="legend"><span><i style="border-color:var(--treated)"></i>behandeld (&le; 2.500 m)</span><span><i style="border-color:var(--control)"></i>controle</span><span><i class="ev"></i>PAS-uitspraak</span></div>
   <figcaption>Beide groepen realiseren 90 tot 94 procent binnen vier jaar, voor en na 2019. De DiD op objectniveau (lineaire kans, vaste effecten provincie × cohort en provincie × afstandsklasse) is &minus;0,0002 (se 0,014). Nul, met een smal interval. Met een venster van drie of vijf jaar is het niet anders.</figcaption>
   <details class="tabel"><summary>Tabel, ook met vensters van 3 en 5 jaar</summary><div class="tw"><table id="t-uitval"></table><table id="t-vensters" style="margin-top:14px"></table></div></details>
+  <details class="code"><summary>Hoe dit is geschat</summary>
+<div class="lab">R (fixest)</div>
+<pre># co: een rij per object, cohorten 2012-2021; y4 = 1 als opgeleverd binnen 4 jaar
+co[, `:=`(D = kl2500, post = as.integer(vergunning_jaar &gt;= 2019))]
+m &lt;- feols(y4 ~ D:post | prov_jaar + prov_k, data = co, cluster = ~prov_k)</pre>
+<div class="lab">Stata (reghdfe)</div>
+<pre>gen y4 = gerealiseerd_binnen_4jr
+reghdfe y4 c.D#c.post, absorb(prov_jaar prov_k) vce(cluster prov_k)</pre>
+  </details>
 </figure>
 <h3>De doorlooptijd</h3>
 <p>Een venster zegt of het lukt, niet hoe lang het duurt. Onder de objecten die binnen vier jaar zijn opgeleverd is de mediane doorlooptijd nabij natuur structureel korter dan verderop, in elk cohort: 450 tot 640 dagen tegen 520 tot 690. Dat is de grondgebonden-versus-gestapeld-verklaring van hierboven. De vraag is of dat verschil na 2019 kleiner werd. De DiD op de logaritme van de doorlooptijd is &minus;0,006 (se 0,023): nabij natuur werd na 2019 niet relatief trager.</p>
@@ -318,47 +372,181 @@ dfn{font-style:normal;font-weight:600}
   <div class="legend"><span><i style="border-color:var(--treated)"></i>behandeld (&le; 2.500 m)</span><span><i style="border-color:var(--control)"></i>controle</span><span><i class="ev"></i>PAS-uitspraak</span></div>
   <figcaption>Beide reeksen lopen op vanaf 2019, wat de bouwsector als geheel weerspiegelt (materiaal, arbeid, rente). Het gat tussen nabij en ver blijft even groot.</figcaption>
   <details class="tabel"><summary>Tabel</summary><div class="tw"><table id="t-duur"></table></div></details>
+  <details class="code"><summary>Hoe dit is geschat</summary>
+<div class="lab">R (fixest)</div>
+<pre>dd &lt;- co[!is.na(duur_tot_oplevering) &amp; duur_tot_oplevering &lt;= 4 * 365.25]
+m &lt;- feols(log(duur_tot_oplevering) ~ D:post | prov_jaar + prov_k, data = dd, cluster = ~prov_k)</pre>
+<div class="lab">Stata (reghdfe)</div>
+<pre>gen lnduur = ln(duur_tot_oplevering)
+reghdfe lnduur c.D#c.post if duur_tot_oplevering &lt;= 4*365.25, absorb(prov_jaar prov_k) vce(cluster prov_k)</pre>
+  </details>
+</figure>
+<h3>Bouwstart als tussenstap</h3>
+<p>Als de natuurvergunning vertraagt, zou dat vooral tussen vergunning en bouwstart moeten zitten: dat is de fase waarin de initiatiefnemer op toestemming wacht. De bouwstartdatum is een pandkenmerk en bij 78% van de opgeleverde objecten bekend. We splitsen de doorlooptijd in twee fasen: van vergunning tot bouwstart (mediaan 155 tot 240 dagen) en van bouwstart tot oplevering (mediaan 280 tot 430 dagen).</p>
+<figure class="wide">
+  <div class="fig-h">Mediane duur per fase, per vergunningcohort</div>
+  <div class="fig-s">dagen; objecten met bekende bouwstart; cohorten 2012 tot 2021</div>
+  <div class="panels two">
+    <div class="panel"><div class="pt"><b>Vergunning tot bouwstart</b></div><div class="cv"><canvas id="c-bs1"></canvas></div></div>
+    <div class="panel"><div class="pt"><b>Bouwstart tot oplevering</b></div><div class="cv"><canvas id="c-bs2"></canvas></div></div>
+  </div>
+  <div class="legend"><span><i style="border-color:var(--treated)"></i>behandeld (&le; 2.500 m)</span><span><i style="border-color:var(--control)"></i>controle</span><span><i class="ev"></i>PAS-uitspraak</span></div>
+  <figcaption>De eerste fase is nabij natuur korter en dat verandert niet na 2019: DiD op de logaritme +0,032 (se 0,054). De tweede fase evenmin: &minus;0,040 (se 0,044). Een Cox-model op de tijd tot bouwstart, met objecten zonder bouwstart als gecensureerd, geeft een hazard ratio van 0,939 (0,828 tot 1,065). Als er ergens gewacht wordt op een natuurvergunning, laat dat zich in de BAG niet zien.</figcaption>
+  <details class="tabel"><summary>Tabel</summary><div class="tw"><table id="t-bouwstart"></table></div></details>
+  <details class="code"><summary>Hoe dit is geschat</summary>
+<div class="lab">R (fixest, survival)</div>
+<pre>bs[, `:=`(d1 = as.integer(bouwstart_eerste_datum - vergunning_datum),
+          d2 = as.integer(oplevering_eerste_datum - bouwstart_eerste_datum))]
+feols(log1p(d1) ~ D:post | prov_jaar + prov_k, data = bs[d1 &gt;= 0], cluster = ~prov_k)
+feols(log(d2)   ~ D:post | prov_jaar + prov_k, data = bs[d2 &gt;  0], cluster = ~prov_k)
+# Cox op tijd tot bouwstart; zonder bouwstart = gecensureerd op de extractdatum
+coxph(Surv(tijd, event) ~ jaarf + D:post + strata(prov_k), data = cbs, cluster = prov_k)</pre>
+<div class="lab">Stata</div>
+<pre>reghdfe ln_d1 c.D#c.post, absorb(prov_jaar prov_k) vce(cluster prov_k)
+stset tijd, failure(event)
+stcox i.jaar c.D#c.post, strata(prov_k) vce(cluster prov_k)</pre>
+  </details>
 </figure>
 <h3>Het hazardmodel</h3>
-<p>Beide vorige maten gooien informatie weg: het venster negeert wat er na vier jaar gebeurt, en de doorlooptijd conditioneert op realisatie. Het volledige beeld komt uit een duurmodel dat objecten die op de extractdatum nog niet zijn opgeleverd als gecensureerd meeneemt. We schatten een Cox proportional hazards-model op de tijd van vergunning tot oplevering, op alle 1.006.018 vergunde objecten van 2012 tot 2025, waarvan er 792.968 zijn opgeleverd en 213.050 gecensureerd. De baseline hazard is gestratificeerd op provincie × afstandsklasse, er zijn cohortdummies, en behandeld × post is de DiD-term. Objecten die definitief zijn gestrand worden als gecensureerd behandeld (een cause-specific hazard); dat is gebruikelijk en het alternatief, een competing-risks-model, verandert bij 4% uitval weinig.</p>
+<p>De vorige maten gooien informatie weg: het venster negeert wat er na vier jaar gebeurt, en de doorlooptijd conditioneert op realisatie. Het volledige beeld komt uit een duurmodel dat objecten die op de extractdatum nog niet zijn opgeleverd als gecensureerd meeneemt. We schatten een Cox proportional hazards-model op de tijd van vergunning tot oplevering, op alle 1.006.018 vergunde objecten van 2012 tot 2025, waarvan er 792.968 zijn opgeleverd en 213.050 gecensureerd. De baseline hazard is gestratificeerd op provincie × afstandsklasse, er zijn cohortdummies, en behandeld × post is de DiD-term.</p>
 <figure class="wide">
   <div class="fig-h">Hazard ratio van oplevering, behandeld tegenover controle, per vergunningcohort</div>
   <div class="fig-s">Cox-model met censurering; referentie cohort 2018; HR &lt; 1 = trager opgeleverd nabij natuur dan verwacht</div>
   <div class="panel"><div class="cv tall"><canvas id="c-cox"></canvas></div></div>
   <div class="legend"><span><i style="border-color:var(--treated)"></i>hazard ratio</span><span><i class="band" style="background:var(--treated-wash)"></i>95%-BI</span><span><i class="ev"></i>PAS-uitspraak</span></div>
-  <figcaption>De DiD-versie geeft een hazard ratio van 1,069 (95%-BI 0,967 tot 1,182): objecten nabij natuur werden na 2019 eerder iets sneller dan trager opgeleverd, en het verschil is niet significant. Cohorten vanaf 2022 zijn grotendeels gecensureerd en hun intervallen zijn navenant breed.</figcaption>
+  <figcaption>De DiD-versie geeft een hazard ratio van 1,069 (95%-BI 0,967 tot 1,182): objecten nabij natuur werden na 2019 eerder iets sneller dan trager opgeleverd, en het verschil is niet significant. Geen enkel cohort wijkt significant af van 2018. Cohorten vanaf 2022 zijn grotendeels gecensureerd en hun intervallen zijn navenant breed.</figcaption>
   <details class="tabel"><summary>Tabel</summary><div class="tw"><table id="t-cox"></table></div></details>
+  <details class="code"><summary>Hoe dit is geschat</summary>
+<div class="lab">R (survival)</div>
+<pre># cb: een rij per object; tijd = dagen tot oplevering, of tot de extractdatum als
+# er (nog) geen oplevering is; event = 1 bij oplevering, 0 bij censurering
+cb[, `:=`(jaarf = factor(vergunning_jaar), D = kl2500, post = as.integer(vergunning_jaar &gt;= 2019))]
+m &lt;- coxph(Surv(tijd, event) ~ jaarf + D:post + strata(prov_k), data = cb, cluster = prov_k, ties = "efron")
+exp(coef(m)["D:post"])                          # hazard ratio
+# event study: Dy2012..Dy2025 = D * 1{cohort = jaar}, zonder Dy2018
+coxph(Surv(tijd, event) ~ jaarf + Dy2012 + ... + Dy2025 + strata(prov_k), data = cb, cluster = prov_k)</pre>
+<div class="lab">Stata</div>
+<pre>stset tijd, failure(event)
+stcox i.vergunning_jaar c.D#c.post, strata(prov_k) vce(cluster prov_k) efron</pre>
+<div class="note">Uitval wordt hier als censurering behandeld (een cause-specific hazard); het model met concurrerende risico's hieronder laat dat los.</div>
+  </details>
 </figure>
-<p>Dit is misschien de belangrijkste bevinding van het rapport voor de vraag van BZK. Het mechanisme dat de media veronderstellen, projecten die vergund zijn maar stranden of jaren stilliggen op de natuurvergunning, laat in de BAG geen spoor na. Het aandeel dat definitief strandt ligt voor alle cohorten sinds 2014 tussen de 1 en 4 procent, nabij en ver, voor en na 2019; de doorlooptijd nabij natuur werd niet relatief langer; en het hazardmodel, dat alles tegelijk meeneemt, geeft nul. Wat er minder is opgeleverd binnen 2.500 meter (hoofdstuk 5) is dus niet gestrand of vertraagd ná de vergunning; het is nooit aangevraagd of nooit vergund. Dat is een ander mechanisme, en het zit vóór de BAG.</p>
+<h3>Concurrerende risico's</h3>
+<p>Een vergund object kan op twee manieren eindigen: het wordt opgeleverd, of het strandt definitief. Het Cox-model hierboven behandelt stranden als censurering, alsof het object nog opgeleverd zou kunnen worden. Dat is de standaardkeuze, maar het onderschat de kans op oplevering iets als uitval vaker voorkomt in de ene groep dan in de andere. Daarom drie aanvullingen. De uitvaldatum is de datum waarop het pand de status "niet gerealiseerd" of "gesloopt" kreeg; 24.156 gestrande objecten hebben zo'n datum, 6.243 niet (het pand ging door terwijl het object werd ingetrokken) en die blijven gecensureerd.</p>
+<figure class="wide">
+  <div class="fig-h">Cumulatieve kans op definitieve uitval, per groep en periode</div>
+  <div class="fig-s">Aalen-Johansen-schatter met oplevering als concurrerend risico; cohorten 2012 tot 2018 (pre) en 2019 tot 2021 (post)</div>
+  <div class="panel"><div class="cv"><canvas id="c-cif"></canvas></div></div>
+  <div class="legend"><span><i style="border-color:var(--treated)"></i>behandeld, na 2019</span><span><i class="dash" style="border-color:var(--treated)"></i>behandeld, voor 2019</span><span><i style="border-color:var(--control)"></i>controle, na 2019</span><span><i class="dash" style="border-color:var(--control)"></i>controle, voor 2019</span></div>
+  <figcaption>Na vier jaar is 1,2% van de behandelde en 0,8% van de controle-objecten uit de cohorten 2019 tot 2021 definitief gestrand, tegen 2,4% en 2,9% in de cohorten ervoor. Uitval daalde dus in beide groepen, iets minder nabij natuur. Het verschil-in-verschil is 0,9 procentpunt.</figcaption>
+  <details class="tabel"><summary>Tabel</summary><div class="tw"><table id="t-cif"></table></div></details>
+  <details class="code"><summary>Hoe dit is geschat</summary>
+<div class="lab">R (survival)</div>
+<pre># evf: factor met niveaus censor / oplevering / uitval; tijd tot het eerste van beide
+sf &lt;- survfit(Surv(tijd, evf) ~ grp, data = cr)          # Aalen-Johansen
+summary(sf, times = 4 * 365.25)$pstate                    # kans per toestand na 4 jaar
+# cause-specific Cox voor uitval
+coxph(Surv(tijd, ev == 2) ~ jaarf + D:post + strata(prov_k), data = cr, cluster = prov_k)
+# Fine-Gray subdistribution hazard, op een steekproef van 150.000 objecten
+fgd &lt;- finegray(Surv(tijd, evf) ~ D + post + jaarf + prov_k, data = cr, etype = "uitval")
+coxph(Surv(fgstart, fgstop, fgstatus) ~ jaarf + D:post + strata(prov_k), data = fgd, weight = fgwt, cluster = prov_k)</pre>
+<div class="lab">Stata</div>
+<pre>stset tijd, failure(ev == 2)
+stcox i.jaar c.D#c.post, strata(prov_k) vce(cluster prov_k)      // cause-specific
+stcrreg i.jaar c.D#c.post i.prov_k, compete(ev == 1) vce(cluster prov_k)   // Fine-Gray; geen strata in stcrreg</pre>
+  </details>
+</figure>
+<div class="tbl"><div class="fig-h">Drie schatters voor uitval en oplevering, behandeld × post-PAS</div><div class="tw"><table id="t-cr"></table></div></div>
+<p>De cause-specific hazard van uitval is na 2019 nabij natuur 1,76 keer die van de controle (0,999 tot 3,10), en de Fine-Gray-versie geeft 1,42 (0,85 tot 2,38). Dat ziet er groot uit, en het moet in perspectief: het gaat om een gebeurtenis die in beide groepen na 2019 minder dan anderhalf procent van de objecten treft, en het verschil-in-verschil in absolute termen is negen op de duizend. Het Fine-Gray-model voor oplevering geeft 1,064 (0,960 tot 1,179), vrijwel identiek aan het Cox-model. Concurrerende risico's veranderen het beeld dus niet: wie vergund is, wordt nabij natuur niet minder vaak of later opgeleverd dan verderop.</p>
+<p>Dit is misschien de belangrijkste bevinding van het rapport voor de vraag van BZK. Het mechanisme dat de media veronderstellen, projecten die vergund zijn maar stranden of jaren stilliggen op de natuurvergunning, laat in de BAG geen spoor na. Het aandeel dat definitief strandt ligt voor alle cohorten sinds 2014 tussen de 1 en 4 procent, nabij en ver, voor en na 2019; de doorlooptijd nabij natuur werd niet relatief langer, ook niet in de fase tussen vergunning en bouwstart; en de hazardmodellen, die alles tegelijk meenemen, geven nul. Wat er minder is opgeleverd binnen 2.500 meter (hoofdstuk 5) is dus niet gestrand of vertraagd ná de vergunning; het is nooit aangevraagd of nooit vergund. Dat is een ander mechanisme, en het zit vóór de BAG. Het volgende hoofdstuk gaat daar naar op zoek.</p>
 <div class="pull">Het effect zit niet in projecten die stranden of vertragen, maar in projecten die er niet komen.</div>
 </section>
 
 <section id="s10" class="col">
-<h2><span class="n">10</span>De uitspraak van 2024</h2>
+<h2><span class="n">10</span>Het plannenspoor</h2>
+<p>Vóór de bouwvergunning ligt het plan. Als de stikstofjurisprudentie projecten tegenhoudt, zou dat zichtbaar moeten zijn in de fase waarin een woningbouwplan van zacht (in voorbereiding) naar hard (vastgesteld door de gemeenteraad) gaat, of in het aantal nieuwe plannen dat überhaupt wordt opgestart. Daarvoor gebruiken we de provinciale planmonitoring: jaarlijkse overzichten van alle woningbouwplannen per gemeente, door Huub over de jaren heen aan elkaar gekoppeld tot 11.669 deelplannen in zes provincies. Alleen Noord-Holland (5.282 plannen vanaf 2004) en Limburg (3.493 vanaf 2007) hebben genoeg jaren vóór 2019 om iets te kunnen zeggen; de zacht-naar-hard-analyse neemt ook Gelderland mee.</p>
+<div class="tbl"><div class="fig-h">Plannen per provincie in het bestand</div><div class="tw"><table id="t-plan-desc"></table></div></div>
+<p>De opzet is die van het conceptartikel, één op één overgezet. Voor de duur gebruiken we een discrete-tijd duurmodel op plan-jaren: de kans dat een plan in jaar t de volgende fase bereikt, gegeven dat het dat nog niet deed (een complementair log-logmodel, het discrete equivalent van Cox). Vaste effecten voor afstandsklasse, jaar en verstreken tijd; controles voor planomvang, ligging binnen of buiten de kern, gemeentegrootte, provincie en de regionale woningprijsontwikkeling. Twee afwijkingen: de controle <code>plansplitsing</code> ontbreekt in het aangeleverde bestand, en de event study gebruikt dezelfde controles als de DiD, waar de Stata-code er in één van de drie blokken twee weglaat. Standaardfouten geclusterd op afstandsklasse, zoals de tekst van het conceptartikel zegt; de tabel geeft ook provincie × afstandsklasse en deelplan.</p>
+<figure class="wide">
+  <div class="fig-h">Kans op de volgende fase, behandeld tegenover controle, per jaar rond de PAS-uitspraak</div>
+  <div class="fig-s">hazard ratio ten opzichte van 2018 met 95%-BI; behandeld = binnen 2.500 m; HR &gt; 1 = sneller</div>
+  <div class="panels three" id="p-plan-es"></div>
+  <div class="legend"><span><i style="border-color:var(--treated)"></i>hazard ratio</span><span><i class="band" style="background:var(--treated-wash)"></i>95%-BI</span><span><i class="ev"></i>PAS-uitspraak</span></div>
+  <figcaption>Complementair log-log op plan-jaren, referentie het jaar vóór de uitspraak. De intervallen zijn breed: het gaat om 2.626, 2.579 en 2.258 plannen en een paar honderd tot vijftienhonderd overgangen.</figcaption>
+  <details class="tabel"><summary>Tabel: DiD per drempel en per clusterniveau</summary><div class="tw"><table id="t-plan-did"></table></div></details>
+  <details class="code"><summary>Hoe dit is geschat</summary>
+<div class="lab">R (fixest)</div>
+<pre># risicoset: per deelplan de jaren na de startdatum tot en met de eerste overgang
+# (zoals stset ... id(subplan_id) origin(...) met exit(failure))
+m &lt;- feglm(d ~ tr + woningprijsindex_d + binnen_kern
+           | afstand + jaar + t + planomvang_cat + inwoners_cat + provincie_cat,
+           family = binomial("cloglog"), data = rs, cluster = ~afstand)
+exp(coef(m)["tr"])                                # hazard ratio
+# event study: vervang tr door i(event, D, ref = 5); event 5 = 2018</pre>
+<div class="lab">Stata (do_analysis_stikstof_jaar.do)</div>
+<pre>stset jaar if inlist(sample_analysis,1,2), fail(hard) id(subplan_id) origin(time jaar_eerst_plan)
+cloglog _d tr i.n2000_afstandsklasse_250 i.jaar i._t i.planomvang_cat binnen_kern ///
+    i.inwoners_cat i.provincie_cat woningprijsindex_d if sample_analyse == 1, vce(cluster afstand) eform</pre>
+  </details>
+</figure>
+<p>Het beeld is hetzelfde als op objectniveau. Van zacht naar hard: hazard ratio's tussen 1,01 en 1,16 op de banden van 500 tot 5.000 meter, geen ervan significant. Plannen nabij natuur werden na 2019 niet trager vastgesteld, eerder iets sneller, precies wat het conceptartikel al vond. Van hard naar realisatie en over het hele traject: tussen 0,85 en 1,15, niet significant, behalve op 5.000 meter, waar de behandelde groep sneller realiseert (1,44 en 1,48). Dat laatste is met een behandelgroep die in Noord-Holland en Limburg vrijwel alle plannen omvat niet als stikstofeffect te lezen; de controlegroep is daar te klein.</p>
+<h3>Nieuwe plannen</h3>
+<p>Dan het aantal. Als initiatiefnemers nabij natuur na 2019 niet meer beginnen, zou het aantal nieuwe plannen daar moeten dalen. We tellen per plan het jaar van de eerste waarneming, van 2013 tot 2022, en schatten hetzelfde Poisson-model als voor de vergunningen.</p>
+<figure class="wide">
+  <div class="fig-h">Nieuwe plannen, behandeld tegenover controle, per jaar</div>
+  <div class="fig-s">IRR ten opzichte van 2018 met 95%-BI; behandeld = binnen 2.500 m; Noord-Holland en Limburg</div>
+  <div class="panel"><div class="cv tall"><canvas id="c-plan-aantal"></canvas></div></div>
+  <div class="legend"><span><i style="border-color:var(--treated)"></i>IRR</span><span><i class="band" style="background:var(--treated-wash)"></i>95%-BI</span><span><i class="ev"></i>PAS-uitspraak</span></div>
+  <figcaption>De enkelvoudige DiD zegt &minus;30 tot &minus;40 procent; de event study ten opzichte van 2018 zegt nul. Het verschil zit in het referentiejaar: de jaren 2014 tot 2017 liggen voor de behandelde groep 1,3 tot 2,2 keer boven 2018, dus 2018 was daar een dal en de jaren erna zijn er niet lager dan.</figcaption>
+  <details class="tabel"><summary>Tabel</summary><div class="tw"><table id="t-plan-aantal"></table><table id="t-plan-aantal-jaar" style="margin-top:14px"></table></div></details>
+  <details class="code"><summary>Hoe dit is geschat</summary>
+<div class="lab">R (fixest)</div>
+<pre># pd: een rij per provincie x afstandsklasse x jaar, plannen = aantal eerste waarnemingen
+fepois(plannen ~ tr | prov_tijd + prov_afstand, data = pd, cluster = ~prov_afstand)
+fepois(plannen ~ i(jaar, D, ref = 2018) | prov_tijd + prov_afstand, data = pd, cluster = ~prov_afstand)</pre>
+<div class="lab">Stata (ppmlhdfe)</div>
+<pre>ppmlhdfe plannen tr, absorb(prov_tijd prov_afstand) vce(cluster prov_afstand)
+ppmlhdfe plannen ib6.jtr, absorb(prov_tijd prov_afstand) vce(cluster prov_afstand) irr</pre>
+  </details>
+</figure>
+<p>Hier past voorzichtigheid, in beide richtingen. De reeks is kort (tien jaar), het aantal plannen per jaar is klein (34 tot 135 nabij natuur), 2022 is bijna leeg omdat de provinciale bestanden daar ophouden, en 2017 bevat in Noord-Holland een batch van 84.000 woningen aan plancapaciteit die de reeks in de controlegroep verstoort. Het conceptartikel concludeert "geen sterk bewijs voor een daling", en dat is ook wat wij zien: er is een verschil met de jaren vóór 2018, niet met 2018 zelf, en met deze aantallen is dat niet te scheiden van ruis.</p>
+<p>Voor de vraag waar de ontbrekende woningen uit hoofdstuk 5 dan wél zitten, is het plannenspoor dus geen sluitend antwoord. Het sluit één mechanisme uit (vertraging in de planfase) en laat een ander open (minder initiatieven), zonder het te bewijzen. De uitspraak van 14 januari 2025, die intern salderen ook voor bestemmingsplannen aan banden legt, valt buiten het bereik van deze data.</p>
+</section>
+
+<section id="s11" class="col">
+<h2><span class="n">11</span>De uitspraak van 2024</h2>
 <p>Op 18 december 2024 oordeelde de Afdeling dat intern salderen niet meer in de voortoets mag worden betrokken, en op 14 januari 2025 trok ze dat door naar bestemmingsplannen. Het EIB raamde dat het aandeel woningen dat niet vergund kan worden daardoor van 7 naar 9 procent stijgt. Kunnen we dat al zien?</p>
 <p>Nee, en dat is geen tekortkoming van de analyse maar van de kalender. Drie redenen.</p>
 <p><strong>Opleveringen: onmogelijk.</strong> Een vergunningeffect van december 2024 landt met een mediane doorlooptijd van 1,6 jaar pas rond augustus 2026 in de opleveringen. De data stopt in juli 2026. Wat er in 2025 werd opgeleverd is bepaald door vergunningen uit 2022 en 2023.</p>
 <p><strong>Vergunningen: zes kwartalen, en vervuild.</strong> De regime-DiD schat de stap na 2024Q4 op &minus;0,35 tot &minus;0,60 voor de banden tot 1.000 meter. Dat ziet er dramatisch uit. Maar dezelfde stap is &minus;0,18 op 5.000 meter, bij een behandelgroep die de helft van alle woningbouw omvat. Een effect dat overal even hard aankomt is geen stikstofgradiënt. Het is de handtekening van de Omgevingswet: grondgebonden woningbouw, gevolgklasse 1, oververtegenwoordigd bij natuur, verdwijnt vanaf 2024 uit de vergunningreeks omdat een bouwmelding geen vergunning is. Elf maanden tussen een meetbreuk in de uitkomst en de gebeurtenis die je wilt meten, met zes kwartalen post: dat is niet te scheiden.</p>
-<div class="tbl"><div class="fig-h">Regime-DiD: incrementele stappen per uitspraak</div><div class="fig-s">coëfficiënt (se); het effect na 2024Q4 is de som van de stappen</div><div class="tw"><table id="t-regime"></table></div></div>
+<div class="tbl"><div class="fig-h">Regime-DiD: incrementele stappen per uitspraak</div><div class="fig-s">coëfficiënt (se); het effect na 2024Q4 is de som van de stappen</div><div class="tw"><table id="t-regime"></table></div>
+<details class="code"><summary>Hoe dit is geschat</summary>
+<div class="lab">R (fixest)</div>
+<pre>p[, `:=`(na_pas = D * (t &gt;= 30), na_por = D * (t &gt;= 44), na_sal = D * (t &gt;= 52))]   # 2019Q2, 2022Q4, 2024Q4
+fepois(y ~ na_pas + na_por + na_sal | prov_t + prov_k + k_szn, data = p, cluster = ~prov_k)</pre>
+<div class="lab">Stata (ppmlhdfe)</div>
+<pre>ppmlhdfe y na_pas na_por na_sal, absorb(prov_t prov_k k_szn) vce(cluster prov_k)</pre>
+</details></div>
 <p><strong>De behandelgroep is een andere.</strong> Intern salderen raakt projecten met een bestaande referentiesituatie: een oude stal, een fabriek, een bestaand pand met stikstofruimte. Dat is niet dezelfde populatie als greenfield woningbouw op afstand van natuur. Met dezelfde behandelvariabele meet je voor 2024 waarschijnlijk vooral ruis.</p>
 <p>Wat er wel kan: een extract van medio 2027 geeft tien kwartalen post op vergunningen en zit verder van de Wkb-transitie. Voor realisatie is 2028 het vroegste. Tot die tijd is de eerlijke tekst in het conceptartikel dat de uitspraak van 2024 nog niet meetbaar is, met de redenen erbij.</p>
 </section>
 
-<section id="s11" class="col">
-<h2><span class="n">11</span>Wat het betekent</h2>
+<section id="s12" class="col">
+<h2><span class="n">12</span>Wat het betekent</h2>
 <p>Voor het conceptartikel blijft de kernconclusie overeind, en wordt ze scherper.</p>
 <ul>
 <li><strong>Nieuwbouw</strong>: een daling van 11 tot 15 procent van de opleveringen binnen 2.500 meter van stikstofgevoelig habitat na de PAS-uitspraak, in absolute termen 11.600 woningen op een landelijk totaal van 393.000 in dezelfde periode, met een bandbreedte van nul tot 28.000. Dat is 3 procent, met als bovengrens 7.</li>
 <li><strong>Vergunningen</strong>: geen identificeerbaar effect. De behandelde groep daalde al vóór 2019 relatief ten opzichte van de controle, en de placebotoets slaat aan.</li>
-<li><strong>Uitval en vertraging</strong>: nul, op drie manieren gemeten. Het realisatiepercentage binnen vier jaar is 90 tot 94 procent, nabij en ver, voor en na; de doorlooptijd werd nabij natuur niet relatief langer; het hazardmodel met censurering geeft 1,07 (niet significant). Wat er minder is gebouwd is niet gestrand maar nooit begonnen.</li>
+<li><strong>Uitval en vertraging</strong>: nul, op vijf manieren gemeten. Het realisatiepercentage binnen vier jaar is 90 tot 94 procent, nabij en ver, voor en na; de doorlooptijd werd nabij natuur niet relatief langer, ook niet tussen vergunning en bouwstart; het hazardmodel met censurering geeft 1,07 en het model met concurrerende risico's 1,06, beide niet significant. Wat er minder is gebouwd is niet gestrand maar nooit begonnen.</li>
+<li><strong>Plannen</strong>: geen vertraging van zacht naar hard, van hard naar realisatie of over het hele traject. Het aantal nieuwe plannen nabij natuur ligt na 2019 lager dan in 2014 tot 2017 maar niet lager dan in 2018, en de reeks is te kort en te klein om dat te beslissen.</li>
 <li><strong>De uitspraak van 2024</strong>: niet meetbaar met dit extract, om redenen die niets met de analyse te maken hebben.</li>
 </ul>
 <p>Tegenover de ramingen: Bouwend Nederland's 244.000 en het EIB's 40.000 gaan over wat er niet vergund zou kunnen worden in de toekomst. Wat we meten is wat er in zeven jaar feitelijk minder is opgeleverd: ruim elfduizend. Buijs (2023) kwam op 23.000 over vier jaar met een vergelijking van meer en minder dan vijf kilometer, zonder controle voor provincie of seizoen; onze schatting op 5.000 meter is nul. Het verschil zit in de zone: het effect is er binnen 2.500 meter en verdwijnt daarbuiten, dus wie de hele zone tot 5 kilometer als behandeld beschouwt, verdunt het tot niets of meet iets anders.</p>
-<p>Voor BZK is de vertaling: de stikstofjurisprudentie heeft de woningbouw dicht bij kwetsbare natuur merkbaar geremd, in de orde van één op de acht woningen die daar anders gebouwd zouden zijn, en dat is landelijk een paar procent. Er is geen aanwijzing dat vergunde projecten op grote schaal stranden of vertragen, en geen aanwijzing dat de vergunningverlening zelf is ingezakt. "Op slot" beschrijft de data niet.</p>
+<p>Voor BZK is de vertaling: de stikstofjurisprudentie heeft de woningbouw dicht bij kwetsbare natuur merkbaar geremd, in de orde van één op de acht woningen die daar anders gebouwd zouden zijn, en dat is landelijk een paar procent. Er is geen aanwijzing dat vergunde projecten op grote schaal stranden of vertragen, geen aanwijzing dat plannen trager worden vastgesteld, en geen aanwijzing dat de vergunningverlening zelf is ingezakt. "Op slot" beschrijft de data niet.</p>
 </section>
 
-<section id="s12" class="col">
-<h2><span class="n">12</span>Voor de kritische lezer</h2>
+<section id="s13" class="col">
+<h2><span class="n">13</span>Voor de kritische lezer</h2>
 <dl class="qa">
 <dt>Jullie behandelgroep is landelijk gebied. Meten jullie niet gewoon het verschil tussen stad en platteland?</dt>
 <dd>Deels is dat het punt van de vaste effecten: provincie × kwartaal haalt de conjunctuur eruit, provincie × afstandsklasse het niveauverschil, en afstandsklasse × seizoen het verschil in bouwseizoen. Wat overblijft is een verandering in het verschil tussen nabij en ver, ná 2019. Dat een stad-landverschil bestaat is zeker; dat het precies in 2019Q2 van richting verandert en binnen 2.500 meter blijft maar op 5.000 meter verdwijnt, is minder makkelijk zonder stikstof te verklaren. De 5.000-meterband is hier de sterkste toets: als het een stad-landeffect was, zou het daar ook zitten.</dd>
@@ -378,51 +566,56 @@ dfn{font-style:normal;font-weight:600}
 <dd>Van de 24.122 panden met meerdere verblijfsobjecten in het bestand heeft er nul meer dan één opleverdatum. Het veld komt uit <code>Pand_VergunningDuur</code> en is gekoppeld op pand. Dat is geen aanname maar een eigenschap van de export.</dd>
 <dt>Waarom Poisson en niet gewoon OLS op de logaritme?</dt>
 <dd>Omdat een kwart van de cellen nul is: een provincie × afstandsklasse × kwartaal zonder oplevering is een echte waarneming, geen ontbrekende. Log(0) bestaat niet, en log(y+1) vertekent bij kleine aantallen. Poisson met vaste effecten schat de proportionele verandering direct en is consistent zolang het conditionele gemiddelde goed is gespecificeerd, ongeacht de verdeling. Het conceptartikel maakt dezelfde keuze.</dd>
-<dt>Waarom Cox en niet het complementaire log-logmodel uit het conceptartikel?</dt>
-<dd>Het conceptartikel gebruikt cloglog op jaarlijkse planwaarnemingen, waar de tijd in discrete stappen komt. Hier is de tijd in dagen bekend, en dan is een continu duurmodel de natuurlijke keuze. Cox laat de baseline hazard vrij per provincie × afstandsklasse en schat alleen de verhouding; dat is minder restrictief dan een discreet model met jaar-dummies. De conclusie is dezelfde als met het venster en de doorlooptijd, dus de modelkeuze draagt het resultaat niet.</dd>
+<dt>Waarom Cox op objectniveau en cloglog op planniveau?</dt>
+<dd>Omdat de tijd op objectniveau in dagen bekend is en op planniveau in jaren. Bij dagen is een continu duurmodel de natuurlijke keuze; Cox laat de baseline hazard vrij per provincie × afstandsklasse en schat alleen de verhouding. Bij jaarlijkse planwaarnemingen is de tijd discreet en dan is cloglog het discrete equivalent van Cox: dezelfde proportionele-hazard-interpretatie, geschat als een binair model op plan-jaren. Dat is ook wat het conceptartikel doet.</dd>
+<dt>De cause-specific hazard van uitval is 1,76 en net significant. Is dat dan niet het effect?</dt>
+<dd>Het is een verhouding van twee kleine kansen. Uitval daalde na 2019 in beide groepen, van 2,4 naar 1,2 procent nabij natuur en van 2,9 naar 0,8 procent in de controle; de behandelde groep daalde dus minder, en dat is wat de hazard ratio uitdrukt. In absolute termen is het verschil-in-verschil negen op de duizend objecten, en het Fine-Gray-model, dat direct de cumulatieve kans modelleert, geeft 1,42 met een interval dat 1 ruim bevat. Het is geen nul, maar het is klein, en het is de enige van vijf maten die iets laat zien. Als er een uitvalmechanisme is, treft het minder dan één procent van de vergunde objecten.</dd>
 <dt>Het clusterniveau van de standaardfouten: de tekst zegt afstandsklasse, de code zegt provincie × afstandsklasse. Wat is het nu?</dt>
 <dd>De code. En op 2.500 meter maakt het niets uit (0,044 tegen 0,044). Op de smalle banden is het probleem fundamenteler: met één behandelde afstandsklasse is elke cluster-robuuste standaardfout ongeldig. Een wild cluster bootstrap zou daar het minimum zijn; we hebben hem niet gedraaid omdat we die banden om andere redenen al niet rapporteren.</dd>
 <dt>Is 2018 als referentiejaar niet toevallig een goed jaar voor de behandelde groep?</dt>
-<dd>2018Q4 was een piekkwartaal voor beide groepen, wat de reden is dat we het hele jaar binnen als referentie en niet één kwartaal. De gemiddelde pre-IRR over 2012 tot 2017 op 2.500 meter is 1,07: de behandelde groep lag daarvoor dus iets hoger, niet lager, wat het effect eerder onderschat dan overschat.</dd>
+<dd>Voor nieuwbouw en vergunningen: 2018Q4 was een piekkwartaal voor beide groepen, wat de reden is dat we het hele jaar binnen als referentie en niet één kwartaal. De gemiddelde pre-IRR over 2012 tot 2017 op 2.500 meter is 1,07: de behandelde groep lag daarvoor dus iets hoger, niet lager, wat het effect eerder onderschat dan overschat. Voor het aantal plannen ligt het precies andersom, en dat is de reden dat hoofdstuk 10 daar geen conclusie aan verbindt.</dd>
 <dt>Wat als ontwikkelaars projecten hebben verkleind of gefaseerd om onder de drempel te blijven? Dan zie je dat niet in de tellingen.</dt>
 <dd>Klopt, en dat is het tweede kanaal uit het conceptartikel, dat hier niet is geport. Het conceptartikel vindt op 500 en 1.000 meter een niet-significante afname van de projectomvang van 7 tot 13 procent. De cluster-id maakt die analyse beter mogelijk dan het documentnummer, omdat een gefaseerd project meerdere documentnummers heeft. Dat is een logische volgende stap.</dd>
 <dt>De uitspraak van 2024 is volgens het EIB de grotere. Waarom staat er dan bijna niets over?</dt>
-<dd>Omdat we haar niet kunnen meten, en iets rapporteren dat je niet kunt meten is erger dan niets rapporteren. Zes kwartalen post, een meetbreuk elf maanden ervoor, en een behandelgroep die niet op afstand maar op referentiesituatie is gedefinieerd. De regime-DiD staat in hoofdstuk 10 met de uitleg waarom de getallen niet zijn wat ze lijken.</dd>
+<dd>Omdat we haar niet kunnen meten, en iets rapporteren dat je niet kunt meten is erger dan niets rapporteren. Zes kwartalen post, een meetbreuk elf maanden ervoor, en een behandelgroep die niet op afstand maar op referentiesituatie is gedefinieerd. De regime-DiD staat in hoofdstuk 11 met de uitleg waarom de getallen niet zijn wat ze lijken.</dd>
 </dl>
 </section>
 
-<section id="s13" class="col">
-<h2><span class="n">13</span>Verantwoording</h2>
-<p>Alle cijfers in dit rapport komen uit één run van <code>R/06_rapport.R</code> op het extract van 30 juli 2026 (BAG van 10 juli 2026), en zijn herleidbaar naar de JSON die dat script wegschrijft. De pipeline staat in <code>jipclaassens/Stikstof</code> onder <code>R/</code>; de HTML-bron van dit rapport onder <code>R/rapport/</code>. De StatLine-cijfers komen uit tabel 82235NED (Voorraad woningen; standen en mutaties vanaf 1921), opgehaald op 2 september 2026.</p>
+<section id="s14" class="col">
+<h2><span class="n">14</span>Verantwoording</h2>
+<p>Alle cijfers in dit rapport komen uit één run van <code>R/06_rapport.R</code> (objectenspoor) en <code>R/07_plannen.R</code> (plannenspoor) op het extract van 30 juli 2026 (BAG van 10 juli 2026), en zijn herleidbaar naar de JSON die die scripts wegschrijven. De pipeline staat in <code>jipclaassens/Stikstof</code> onder <code>R/</code>; de HTML-bron van dit rapport onder <code>R/rapport/</code>. De StatLine-cijfers komen uit tabel 82235NED (Voorraad woningen; standen en mutaties vanaf 1921), opgehaald op 2 september 2026. Het plannenbestand is <code>afstand_n2000_plannen.dta</code> uit Huubs Stata-pipeline; de koppeling van de provinciale planbestanden zelf is niet geport.</p>
 <h3>Wat er niet in zit</h3>
 <ul>
-<li>Het plannenspoor: provinciale plancapaciteit, duur van initiatief tot vaststelling, aantal nieuwe plannen. Dat blijft Stata.</li>
-<li>De projectomvang als uitkomst (tweede kanaal), en bouwstart als tussenstap in de duuranalyse.</li>
-<li>COROP-indeling en tijdvariërende covariaten (woningprijsindex, inwoners). Provincie en gemeente zitten erin.</li>
+<li>De projectomvang als uitkomst (tweede kanaal).</li>
+<li>De controle <code>plansplitsing</code> in het plannenspoor, en de plannen van Utrecht, Overijssel, Zeeland en Flevoland (te weinig jaren vóór 2019).</li>
+<li>COROP-indeling en tijdvariërende covariaten op objectniveau (woningprijsindex, inwoners). Provincie en gemeente zitten erin.</li>
 <li><code>Object_InNatuur</code> (objecten binnen de N2000-begrenzing) en <code>N2000_Opp_perDistKlasse_perGemeente</code> (hoeveel natuur er nabij ligt). Beide zijn beschikbaar in de exportmap en zouden de blootstellingsmaat verfijnen.</li>
-<li>Een wild cluster bootstrap voor de smalle banden, en een competing-risks-versie van het hazardmodel.</li>
+<li>Een wild cluster bootstrap voor de smalle banden. Het Fine-Gray-model is op een steekproef van 150.000 objecten geschat omdat de gewogen dataset anders te groot wordt; de 6.243 gestrande objecten zonder eigen uitvaldatum zijn in het model met concurrerende risico's gecensureerd.</li>
 </ul>
 <h3>Wat er in het conceptartikel zou moeten veranderen</h3>
 <ul>
 <li>Tekst en code gelijktrekken: kwartalen (de tekst zegt het al), project-id (de tekst beschrijft het cluster, de code gebruikt het documentnummer), en het statusfilter (de tekst zegt "laatst geregistreerde pandstatus", de code gebruikt de snapshot).</li>
 <li>De 250-meterkolom laten vallen en de 500- en 1.000-meterkolommen als indicatief markeren.</li>
 <li>De uitval- en duuranalyse op objectniveau toevoegen; ze beantwoordt de vraag van de juridisch reviewer en is het ontbrekende derde kanaal.</li>
+<li>Bij het aantal plannen het referentiejaar bespreken: de DiD en de event study spreken elkaar tegen, en dat is informatie.</li>
 <li>Logtsebaan (2021) en Pasgeld-West (2025) opnemen in de tijdlijn, en de Omgevingswet als meetbreuk benoemen.</li>
 <li>Wnb vervangen door Ow art. 5.1 lid 1 onder e/g waar het over de situatie na 1 januari 2024 gaat.</li>
 </ul>
 <h3>Open punten</h3>
 <p class="small">Issues #25 (IsCensored en IsNieuwbouw meten op verschillende niveaus), #26 (herkomst van de &minus;6) en #27 (objectstatus in het nieuwbouwbestand) zijn na het laatste overleg beantwoord en verwerkt. Open staan #17 (documentnummer bij het ministerie) en #28 (deze classificatie, ter bevestiging).</p>
 <h3>Bronnen</h3>
-<p class="small">Ploegmakers, Rouwendal, Van der Wielen &amp; Claassens (2025), Stikstofbeleid en woningbouw; idem, Stikstofbeleid en woningbouwplannen, conceptartikel voor RERQ, versie JvB T (juli 2026). Rouwendal (2023), ESB: Aantal bouwvergunningen is toegenomen, ondanks stikstofarrest. Koning &amp; Endhoven (2023), EIB. Greve et al. (2025), EIB. Stäbler et al. (2025), SEO. Buijs (2023). ABRvS 29 mei 2019 (ECLI:NL:RVS:2019:1603); 20 januari 2021 (Logtsebaan, ECLI:NL:RVS:2021:71); 2 november 2022 (Porthos, ECLI:NL:RVS:2022:3159); 18 december 2024 (Rendac, ECLI:NL:RVS:2024:4923; Amercentrale); 14 januari 2025 (Pasgeld-West). CBS StatLine 82235NED en 81955NED.</p>
+<p class="small">Ploegmakers, Rouwendal, Van der Wielen &amp; Claassens (2025), Stikstofbeleid en woningbouw; idem, Stikstofbeleid en woningbouwplannen, conceptartikel voor RERQ, versie JvB T (juli 2026). Rouwendal (2023), ESB: Aantal bouwvergunningen is toegenomen, ondanks stikstofarrest. Koning &amp; Endhoven (2023), EIB. Greve et al. (2025), EIB. Stäbler et al. (2025), SEO. Buijs (2023). ABRvS 29 mei 2019 (ECLI:NL:RVS:2019:1603); 20 januari 2021 (Logtsebaan, ECLI:NL:RVS:2021:71); 2 november 2022 (Porthos, ECLI:NL:RVS:2022:3159); 18 december 2024 (Rendac, ECLI:NL:RVS:2024:4923; Amercentrale); 14 januari 2025 (Pasgeld-West). CBS StatLine 82235NED en 81955NED. Fine &amp; Gray (1999), JASA 94:496. Therneau, survival-package.</p>
 </section>
 </main>
 </div>
 
 <script id="data" type="application/json">__DATA__</script>
+<script id="plannen" type="application/json">__PLANNEN__</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
 (function(){
 const D = JSON.parse(document.getElementById('data').textContent);
+const P = JSON.parse(document.getElementById('plannen').textContent);
 const css = () => getComputedStyle(document.documentElement);
 const tok = k => css().getPropertyValue(k).trim();
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -436,11 +629,12 @@ const OVERIG_OPLEVERJAAR = {2012:4547,2013:3430,2014:2293,2015:1286,2016:1308,20
 
 /* ---------- tables ---------- */
 function table(id, cols, rows, opts={}){
-  const t = document.getElementById(id); if(!t) return;
+  const t = document.getElementById(id); if(!t || !rows) return;
   const th = cols.map(c => `<th class="${c.num?'n':''}">${c.h}</th>`).join('');
   const tr = rows.map(r => `<tr${opts.hl && opts.hl(r) ? ' class="hl"':''}>` + cols.map(c => `<td class="${c.num?'n':''}">${c.f(r)}</td>`).join('') + '</tr>').join('');
   t.innerHTML = `<thead><tr>${th}</tr></thead><tbody>${tr}</tbody>`;
 }
+const fmtP = p => p<0.001?'&lt; 0,001':nl(p,3);
 table('t-bronnen', [
   {h:'Bestand', f:r=>`<code>${r.bestand}</code>`},{h:'Eenheid', f:r=>r.eenheid},{h:'Rijen', num:true, f:r=>nl(r.rijen)},{h:'Inhoud', f:r=>r.inhoud}
 ], D.data.bronnen);
@@ -472,7 +666,7 @@ function sumTable(id, u){
   const rows = ['500','1000','2500','5000'].map(k=>D.es[u][k]);
   table(id, [
     {h:'Behandeld = binnen',f:r=>nl(r.drempel)+' m'},
-    {h:'Pre-trend, joint Wald p',num:true,f:r=>r.pre_wald.p<0.001?'&lt; 0,001':nl(r.pre_wald.p,3)},
+    {h:'Pre-trend, joint Wald p',num:true,f:r=>fmtP(r.pre_wald.p)},
     {h:'Gem. IRR 2012 tot 2017',num:true,f:r=>nl(r.gem_pre.irr,3)},
     {h:'Gem. IRR 2019Q2 tot 2024Q3 [95%-BI]',num:true,f:r=>`${nl(r.gem_pas.irr,3)} [${nl(r.gem_pas.lo,3)} tot ${nl(r.gem_pas.hi,3)}]`},
     {h:'Gem. IRR na 2024Q4 [95%-BI]',num:true,f:r=>`${nl(r.gem_sal.irr,3)} [${nl(r.gem_sal.lo,3)} tot ${nl(r.gem_sal.hi,3)}]`},
@@ -490,18 +684,34 @@ table('t-homes', [{h:'Behandeld = binnen',f:r=>nl(r.drempel)+' m'},{h:'Opgelever
   const rows=[]; for(const u of ['nieuwbouw','vergunningen']){ const by={}; for(const r of D.robust[u]){ (by[r.variant]=by[r.variant]||{u,variant:r.variant})[r.drempel]=r; } rows.push(...Object.values(by)); }
   table('t-rob',[{h:'Uitkomst',f:r=>r.u},{h:'Variant',f:r=>r.variant},{h:'≤ 1.000 m',num:true,f:r=>r[1000]?`${sgn(r[1000].b)} (${nl(r[1000].se,3)})`:'·'},{h:'≤ 2.500 m',num:true,f:r=>r[2500]?`${sgn(r[2500].b)} (${nl(r[2500].se,3)})`:'·'}], rows);
 })();
-table('t-dep',[{h:'Uitkomst',f:r=>r.uitkomst},{h:'Project-id',f:r=>r.id==='doc'?'documentnummer':'cluster'},{h:'Behandeld = depositie',f:r=>r.drempel},{h:'% behandeld',num:true,f:r=>nl(r.aandeel_behandeld,1)},{h:'Pre-trend p',num:true,f:r=>r.pre_p<0.001?'&lt; 0,001':nl(r.pre_p,3)},{h:'DiD post-PAS (se)',num:true,f:r=>`${sgn(r.did_b)} (${nl(r.did_se,3)})`},{h:'Gem. IRR 2019Q2 tot 2024Q3',num:true,f:r=>nl(r.gem_pas.irr,3)}], Object.values(D.depositie));
+table('t-dep',[{h:'Uitkomst',f:r=>r.uitkomst},{h:'Project-id',f:r=>r.id==='doc'?'documentnummer':'cluster'},{h:'Behandeld = depositie',f:r=>r.drempel},{h:'% behandeld',num:true,f:r=>nl(r.aandeel_behandeld,1)},{h:'Pre-trend p',num:true,f:r=>fmtP(r.pre_p)},{h:'DiD post-PAS (se)',num:true,f:r=>`${sgn(r.did_b)} (${nl(r.did_se,3)})`},{h:'Gem. IRR 2019Q2 tot 2024Q3',num:true,f:r=>nl(r.gem_pas.irr,3)}], Object.values(D.depositie));
 table('t-cens',[{h:'Vergunningjaar',f:r=>r.jaar},{h:'Nog in pijplijn, ≤ 2.500 m (%)',num:true,f:r=>nl(r.nabij,1)},{h:'Nog in pijplijn, controle (%)',num:true,f:r=>nl(r.ver,1)}], D.data.censurering);
 table('t-uitval',[{h:'Cohort',f:r=>r.jaar},{h:'Binnen 4 jaar opgeleverd, ≤ 2.500 m (%)',num:true,f:r=>nl(r.pct_nabij,1)},{h:'N',num:true,f:r=>nl(r.N_nabij)},{h:'Binnen 4 jaar opgeleverd, controle (%)',num:true,f:r=>nl(r.pct_ver,1)},{h:'N',num:true,f:r=>nl(r.N_ver)},{h:'Definitief gestrand ≤ 2.500 m (%)',num:true,f:r=>{const x=D.uitval.uitval_eind.find(e=>e.jaar===r.jaar);return x?nl(x.nabij,1):'·';}},{h:'controle (%)',num:true,f:r=>{const x=D.uitval.uitval_eind.find(e=>e.jaar===r.jaar);return x?nl(x.ver,1):'·';}}], D.uitval.binnen4jr);
 if(D.duur){
   table('t-vensters',[{h:'Venster',f:r=>r.venster_jr+' jaar'},{h:'Cohorten',f:r=>r.cohorten},{h:'Basis nabij, pre (%)',num:true,f:r=>nl(100*r.basis_nabij_pre,1)},{h:'Basis controle, pre (%)',num:true,f:r=>nl(100*r.basis_ver_pre,1)},{h:'DiD (procentpunt, se)',num:true,f:r=>`${sgn(100*r.b,2)} (${nl(100*r.se,2)})`},{h:'N',num:true,f:r=>nl(r.n)}], D.duur.vensters);
   table('t-duur',[{h:'Cohort',f:r=>r.jaar},{h:'Mediaan dagen, ≤ 2.500 m',num:true,f:r=>nl(r.med_nabij)},{h:'N',num:true,f:r=>nl(r.N_nabij)},{h:'Mediaan dagen, controle',num:true,f:r=>nl(r.med_ver)},{h:'N',num:true,f:r=>nl(r.N_ver)},{h:'Verschil (dagen)',num:true,f:r=>sgn(r.med_nabij-r.med_ver,0)}], D.duur.mediaan);
   table('t-cox',[{h:'Cohort',f:r=>r.jaar},{h:'Hazard ratio',num:true,f:r=>nl(r.hr,3)},{h:'95%-BI',num:true,f:r=>r.se===0?'referentie':`${nl(r.lo,3)} tot ${nl(r.hi,3)}`}], D.duur.cox_es.filter(r=>r.hr!=null));
+  if(D.duur.bouwstart){ const b=D.duur.bouwstart; const f2=Object.fromEntries(b.mediaan_fase2.map(r=>[r.jaar,r]));
+    table('t-bouwstart',[{h:'Cohort',f:r=>r.jaar},{h:'Vergunning tot bouwstart, ≤ 2.500 m',num:true,f:r=>nl(r.nabij)},{h:'controle',num:true,f:r=>nl(r.ver)},{h:'Bouwstart tot oplevering, ≤ 2.500 m',num:true,f:r=>f2[r.jaar]?nl(f2[r.jaar].nabij):'·'},{h:'controle',num:true,f:r=>f2[r.jaar]?nl(f2[r.jaar].ver):'·'}], b.mediaan); }
+  if(D.duur.competing){ const c=D.duur.competing; const G={nabij_pre:'behandeld, cohorten 2012 tot 2018',nabij_post:'behandeld, cohorten 2019 tot 2021',ver_pre:'controle, cohorten 2012 tot 2018',ver_post:'controle, cohorten 2019 tot 2021'};
+    table('t-cif',[{h:'Groep',f:r=>G[r.grp]},{h:'Opgeleverd binnen 4 jaar (%)',num:true,f:r=>nl(100*r.oplevering,1)},{h:'Definitief gestrand binnen 4 jaar (%)',num:true,f:r=>nl(100*r.uitval,2)}], ['nabij_pre','nabij_post','ver_pre','ver_post'].map(g=>c.cif4.find(r=>r.grp===g)));
+    const rows=[{m:'Cox, cause-specific, oplevering (uitval gecensureerd)',v:D.duur.cox_did},{m:'Cox, cause-specific, uitval (oplevering gecensureerd)',v:c.cox_uitval},{m:'Fine-Gray subdistribution, oplevering (steekproef 150.000)',v:c.finegray_oplevering,s:true},{m:'Fine-Gray subdistribution, uitval (steekproef 150.000)',v:c.finegray_uitval,s:true}];
+    table('t-cr',[{h:'Model',f:r=>r.m},{h:'Ratio behandeld × post',num:true,f:r=>r.v?nl(r.s?r.v.shr:r.v.hr,3):'·'},{h:'95%-BI',num:true,f:r=>r.v?`${nl(r.v.lo,3)} tot ${nl(r.v.hi,3)}`:'·'}], rows); }
 }
 (function(){
   const rows=[]; for(const u of ['nieuwbouw','vergunningen']) for(const r of D.regime[u]) rows.push({u,...r});
   table('t-regime',[{h:'Uitkomst',f:r=>r.u},{h:'Behandeld = binnen',f:r=>nl(r.drempel)+' m'},{h:'Stap na 2019Q2 (PAS)',num:true,f:r=>`${sgn(r.pas3)} (${nl(r.pas3_se,3)})`},{h:'Stap na 2022Q4 (Porthos)',num:true,f:r=>`${sgn(r.por3)} (${nl(r.por3_se,3)})`},{h:'Stap na 2024Q4 (salderen)',num:true,f:r=>`${sgn(r.sal3)} (${nl(r.sal3_se,3)})`}], rows, {hl:r=>r.drempel===5000&&r.u==='vergunningen'});
 })();
+/* plannen tables */
+if(P){
+  table('t-plan-desc',[{h:'Provincie',f:r=>r.provincienaam},{h:'Deelplannen',num:true,f:r=>nl(r.plannen)},{h:'Eerste jaar',num:true,f:r=>r.eerste_jaar},{h:'Laatste jaar',num:true,f:r=>r.laatste_jaar},{h:'In de analyses',f:r=>[27,31].includes(r.provinciecode)?'duur en aantal':(r.provinciecode===26?'alleen zacht naar hard':'niet')}], P.descriptief.per_provincie);
+  const AN={zacht_hard:'zacht naar hard',hard_realisatie:'hard naar realisatie',volledig:'initiatief naar realisatie'};
+  const rows=[]; for(const k of Object.keys(AN)){ const a=P[k]; for(const dr of [500,1000,2500,5000]){ const g=cl=>a.did.find(r=>r.drempel===dr&&r.cluster===cl); const x=g('afstand'); rows.push({an:AN[k], dr, hr:x.hr, se_a:x.se, se_p:g('prov_afstand').se, se_s:g('subplan_id').se, n:a.n_plannen}); } }
+  table('t-plan-did',[{h:'Overgang',f:r=>r.an},{h:'Behandeld = binnen',f:r=>nl(r.dr)+' m'},{h:'Hazard ratio',num:true,f:r=>nl(r.hr,3)},{h:'se, cluster afstandsklasse',num:true,f:r=>nl(r.se_a,3)},{h:'se, provincie × klasse',num:true,f:r=>nl(r.se_p,3)},{h:'se, deelplan',num:true,f:r=>nl(r.se_s,3)},{h:'Plannen',num:true,f:r=>nl(r.n)}], rows, {hl:r=>r.dr===2500});
+  table('t-plan-aantal',[{h:'Behandeld = binnen',f:r=>nl(r.drempel)+' m'},{h:'DiD 2013 tot 2018 vs 2019 tot 2022 (IRR)',num:true,f:r=>nl(r.irr,3)},{h:'coëfficiënt (se)',num:true,f:r=>`${sgn(r.b)} (${nl(r.se,3)})`},{h:'Gem. IRR 2019 tot 2022 t.o.v. 2018 [95%-BI]',num:true,f:r=>{const e=P.aantal.es[String(r.drempel)]; return e?`${nl(e.gem.irr,3)} [${nl(e.gem.lo,2)} tot ${nl(e.gem.hi,2)}]`:'·';}}], P.aantal.did.filter(r=>r.drempel>=500), {hl:r=>r.drempel===2500});
+  const pj={}; for(const r of P.aantal.per_jaar){ (pj[r.jaar]=pj[r.jaar]||{jaar:r.jaar})[r.nabij?'n1':'n0']=r.plannen; }
+  table('t-plan-aantal-jaar',[{h:'Jaar',f:r=>r.jaar},{h:'Nieuwe plannen ≤ 2.500 m',num:true,f:r=>nl(r.n1)},{h:'Nieuwe plannen controle',num:true,f:r=>nl(r.n0)}], Object.values(pj));
+}
 
 /* ---------- charts ---------- */
 const eventLines = {
@@ -531,11 +741,11 @@ function baseOpts(extra={}){
 function yearTicks(labels){ return { callback:(v,i)=>{ const l=labels[i]; return l && l.endsWith('Q1') && (+l.slice(0,4))%2===0 ? l.slice(0,4) : ''; }, autoSkip:false, maxRotation:0 }; }
 function mk(id, cfg){ const el=document.getElementById(id); if(!el) return; return new Chart(el.getContext('2d'), cfg); }
 
-/* ratio chart (IRR or HR) with CI band on a log axis; shared for event studies and Cox */
+/* ratio chart (IRR or HR) with CI band on a log axis */
 function ratioChart(canvas, rows, opts){
   const labels=rows.map(r=>opts.label(r)); const tr=tok('--treated'), wash=tok('--treated-wash');
   const ylim = opts.ylim || [Math.max(0.25, Math.min(0.5,...rows.map(r=>r.lo))*0.95), Math.min(4, Math.max(2,...rows.map(r=>r.hi))*1.05)];
-  const xt = opts.quarterly ? yearTicks(labels) : {autoSkip:true, maxRotation:0};
+  const xt = opts.quarterly ? yearTicks(labels) : {autoSkip:false, maxRotation:0};
   return new Chart(canvas.getContext('2d'), {type:'line', data:{labels, datasets:[
     {label:'95%-BI boven', data:rows.map(r=>r.hi), borderWidth:0, pointRadius:0, fill:'+1', backgroundColor:wash, tension:.1},
     {label:'95%-BI onder', data:rows.map(r=>r.lo), borderWidth:0, pointRadius:0, fill:false, tension:.1},
@@ -547,7 +757,6 @@ function ratioChart(canvas, rows, opts){
 }
 
 function buildCharts(){
-/* index series */
 function idxChart(id, u){
   const s = D.series[u].kwartaal; const qs=[...new Set(s.map(r=>r.q))].sort((a,b)=>a-b);
   const labels=qs.map(kw); const ser=dd=>qs.map(q=>{const r=s.find(x=>x.q===q&&x.D===dd); return r?r.index:null;});
@@ -560,7 +769,6 @@ function idxChart(id, u){
 }
 idxChart('c-idx-nwb','nieuwbouw'); idxChart('c-idx-verg','vergunningen');
 
-/* event study panels, common y-axis per figure */
 function esPanels(hostId, u){
   const host=document.getElementById(hostId); host.innerHTML='';
   const ks=['500','1000','2500','5000'];
@@ -569,24 +777,21 @@ function esPanels(hostId, u){
   for(const k of ks){
     const e=D.es[u][k]; const qmax=e.coef[e.coef.length-1].t;
     const p=document.createElement('div'); p.className='panel';
-    p.innerHTML=`<div class="pt"><b>Binnen ${nl(+k)} m</b><span>pre-trend p ${e.pre_wald.p<0.001?'&lt; 0,001':nl(e.pre_wald.p,2)} · gem. ${nl(e.gem_pas.irr,2)}</span></div><div class="cv"><canvas></canvas></div>`;
+    p.innerHTML=`<div class="pt"><b>Binnen ${nl(+k)} m</b><span>pre-trend p ${fmtP(e.pre_wald.p)} · gem. ${nl(e.gem_pas.irr,2)}</span></div><div class="cv"><canvas></canvas></div>`;
     host.appendChild(p);
     ratioChart(p.querySelector('canvas'), e.coef.map(r=>({v:r.irr,lo:r.lo,hi:r.hi,kw:r.kw})), {name:'IRR', label:r=>r.kw, quarterly:true, lines:evLines(qmax), ylim});
   }
 }
 esPanels('p-es-nwb','nieuwbouw'); esPanels('p-es-verg','vergunningen');
 
-/* depositie */
 (function(){ const e=D.depositie.nieuwbouw_doc_va01; const qmax=e.coef[e.coef.length-1].t;
   ratioChart(document.getElementById('c-dep'), e.coef.map(r=>({v:r.irr,lo:r.lo,hi:r.hi,kw:r.kw})), {name:'IRR', label:r=>r.kw, quarterly:true, lines:evLines(qmax)}); })();
 
-/* Cox event study by cohort */
 if(D.duur && document.getElementById('c-cox')){
   const rows=D.duur.cox_es.filter(r=>r.hr!=null).map(r=>({v:r.hr,lo:r.lo,hi:r.hi,jaar:r.jaar}));
   ratioChart(document.getElementById('c-cox'), rows, {name:'HR', label:r=>String(r.jaar), quarterly:false, lines:[{x:'2019',hoofd:true}]});
 }
 
-/* robustness dot plots */
 function robChart(id, u, dr){
   const rows=D.robust[u].filter(r=>r.drempel===dr); const labels=rows.map(r=>r.variant);
   const tr=tok('--treated'), ev=tok('--event');
@@ -601,7 +806,6 @@ function robChart(id, u, dr){
 }
 robChart('c-rob-2500','nieuwbouw',2500); robChart('c-rob-1000','nieuwbouw',1000);
 
-/* two-series line helpers */
 function twoLines(id, labels, a, b, opts){
   const tr=tok('--treated'), co=tok('--control');
   mk(id,{type:'line', data:{labels, datasets:[
@@ -612,8 +816,39 @@ function twoLines(id, labels, a, b, opts){
 (function(){ const r=D.data.censurering; twoLines('c-cens', r.map(x=>x.jaar), r.map(x=>x.nabij), r.map(x=>x.ver), {fmt:v=>nl(v,1)+'%', y:{min:0,max:100,ticks:{callback:v=>v+'%'}}}); })();
 (function(){ const r=D.uitval.binnen4jr; twoLines('c-uitval', r.map(x=>x.jaar), r.map(x=>x.pct_nabij), r.map(x=>x.pct_ver), {fmt:v=>nl(v,1)+'%', y:{min:70,max:100,ticks:{callback:v=>v+'%'}}, lines:[{x:2019,hoofd:true}]}); })();
 if(D.duur && document.getElementById('c-duur')){ const r=D.duur.mediaan; twoLines('c-duur', r.map(x=>x.jaar), r.map(x=>x.med_nabij), r.map(x=>x.med_ver), {fmt:v=>nl(v)+' dagen', y:{min:300,max:800,ticks:{callback:v=>nl(v)}}, lines:[{x:2019,hoofd:true}]}); }
+if(D.duur && D.duur.bouwstart && document.getElementById('c-bs1')){ const b=D.duur.bouwstart;
+  twoLines('c-bs1', b.mediaan.map(x=>x.jaar), b.mediaan.map(x=>x.nabij), b.mediaan.map(x=>x.ver), {fmt:v=>nl(v)+' dagen', y:{min:100,max:300,ticks:{callback:v=>nl(v)}}, lines:[{x:2019,hoofd:true}]});
+  twoLines('c-bs2', b.mediaan_fase2.map(x=>x.jaar), b.mediaan_fase2.map(x=>x.nabij), b.mediaan_fase2.map(x=>x.ver), {fmt:v=>nl(v)+' dagen', y:{min:200,max:500,ticks:{callback:v=>nl(v)}}, lines:[{x:2019,hoofd:true}]}); }
 
-/* koppelgraad bars */
+/* cumulative incidence of uitval: 4 series */
+if(D.duur && D.duur.competing && document.getElementById('c-cif')){
+  const c=D.duur.competing.cif; const times=[...new Set(c.map(r=>r.tijd_jr))].sort((a,b)=>a-b);
+  const ser=g=>times.map(t=>{const r=c.find(x=>x.grp===g&&x.tijd_jr===t); return r?100*r.uitval:null;});
+  const tr=tok('--treated'), co=tok('--control');
+  mk('c-cif',{type:'line', data:{labels:times.map(t=>nl(t,1)+' jr'), datasets:[
+    {label:'behandeld, na 2019', data:ser('nabij_post'), borderColor:tr, backgroundColor:tr, borderWidth:2, pointRadius:2, tension:.2},
+    {label:'behandeld, voor 2019', data:ser('nabij_pre'), borderColor:tr, backgroundColor:tr, borderWidth:2, borderDash:[5,4], pointRadius:2, tension:.2},
+    {label:'controle, na 2019', data:ser('ver_post'), borderColor:co, backgroundColor:co, borderWidth:2, pointRadius:2, tension:.2},
+    {label:'controle, voor 2019', data:ser('ver_pre'), borderColor:co, backgroundColor:co, borderWidth:2, borderDash:[5,4], pointRadius:2, tension:.2}]},
+    options: baseOpts({plugins:{tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${nl(c.parsed.y,2)}%`}}}, scales:{x:{ticks:{autoSkip:false,maxRotation:0}}, y:{min:0, max:4, ticks:{callback:v=>nl(v,1)+'%'}}}})});
+}
+
+/* plannen charts */
+if(P){
+  const host=document.getElementById('p-plan-es'); if(host){ host.innerHTML='';
+    const AN={zacht_hard:'Zacht naar hard',hard_realisatie:'Hard naar realisatie',volledig:'Initiatief naar realisatie'};
+    const all=Object.keys(AN).flatMap(k=>P[k].es['2500']?P[k].es['2500'].tab:[]);
+    const ylim=[Math.max(0.2, Math.min(...all.map(r=>r.lo))*0.95), Math.min(6, Math.max(...all.map(r=>r.hi))*1.05)];
+    for(const k of Object.keys(AN)){ const e=P[k].es['2500']; if(!e) continue;
+      const p=document.createElement('div'); p.className='panel';
+      p.innerHTML=`<div class="pt"><b>${AN[k]}</b><span>gem. 2019 tot 2022: ${nl(e.gem.hr,2)}</span></div><div class="cv"><canvas></canvas></div>`;
+      host.appendChild(p);
+      ratioChart(p.querySelector('canvas'), e.tab.map(r=>({v:r.hr,lo:r.lo,hi:r.hi,label:r.label})), {name:'HR', label:r=>r.label, quarterly:false, lines:[{x:'0',hoofd:true}], ylim});
+    } }
+  const e=P.aantal.es['2500']; if(e && document.getElementById('c-plan-aantal')){
+    ratioChart(document.getElementById('c-plan-aantal'), e.tab.map(r=>({v:r.irr,lo:r.lo,hi:r.hi,jaar:r.jaar})), {name:'IRR', label:r=>String(r.jaar), quarterly:false, lines:[{x:'2019',hoofd:true}]}); }
+}
+
 (function(){ const rows=D.data.koppelgraad; const co=tok('--control');
   mk('c-koppel',{type:'bar', data:{labels:rows.map(r=>r.jaar), datasets:[{label:'zonder vergunningrecord', data:rows.map(r=>r.pct), backgroundColor:co, borderRadius:{topLeft:4,topRight:4}, borderSkipped:'bottom', maxBarThickness:24}]},
     options: baseOpts({plugins:{tooltip:{callbacks:{label:c=>` ${nl(c.parsed.y,1)}%`}}}, scales:{y:{min:0,max:30,ticks:{callback:v=>v+'%'}}}})});
@@ -622,7 +857,6 @@ if(D.duur && document.getElementById('c-duur')){ const r=D.duur.mediaan; twoLine
 
 buildCharts();
 
-/* theme change: rebuild the charts in place so their colors follow the tokens */
 let rebuildTimer = null;
 function rebuildAll(){
   clearTimeout(rebuildTimer);
