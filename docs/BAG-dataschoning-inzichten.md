@@ -53,7 +53,9 @@ terughoudend met 2024–2025 vergunning-/pipelinecijfers.
   Het is een **transiënte** status: na afronding keert het pand terug naar
   `Pand in gebruik`. Vóór 2018 dook een verbouwing/renovatie op als een
   BVV-achtige statusovergang op een bestaand pand. → De status vangt renovatie maar
-  deels; de **bouwjaar-delta (§6) is de robuuste discriminator**.
+  deels; de **bouwjaar-delta (§6)** vult hem aan. Let op: die delta-regel is
+  wél de beste discriminator die we hebben, maar hij is **inert** — hij raakt
+  1,5% van het bestand en verandert de uitkomsten niet (§8).
 - **CBS-voorraaddefinitie**: een VBO telt tot de voorraad bij status
   `in gebruik`, `in gebruik (niet ingemeten)`, `buiten gebruik` (en `verbouwing`).
   **`buiten gebruik` telt dus mee.** Realisatie/voorraad in de Object-exports bepalen
@@ -130,6 +132,82 @@ Wél artefacten:
 **Les**: BAG-BVV-instroom is klonterig op gemeenteniveau; één gemeente kan een maand
 kapen. Niet "laatste maand afknippen" als vaste regel, maar **aggregeren naar
 kwartaal/jaar** (zoals het paper) en/of **gemeente-maand-uitschieters markeren/winsorizen**.
+
+## 8. Waarom de bouwjaar-delta op −6 staat (issue #26)
+
+Korte versie: **de 6 is geen geschat afkappunt, en het maakt niet uit.**
+
+### Waar de 6 vandaan komt
+
+Niet uit de data. `bouwjaar_mismatch` in `N2000_Analyse.dms` is een symmetrisch
+plausibiliteitsvenster — `|pand_bouwjaar − vergunningjaar| > 5` — bedoeld om
+records als "vergunning 1950 + bouwjaar 2017" op te sporen. `reno_delta = −6`
+in `00_config.R` is letterlijk de negatieve helft van datzelfde venster.
+Geverifieerd op het 20260730-extract: van de 1.313.265 VBO's met een delta valt
+elke `bouwjaar_mismatch` in precies één van beide helften (19.437 met δ ≤ −6,
+17.022 met δ ≥ +6, 0 elders).
+
+### Waarom de precieze waarde niet uitmaakt
+
+De verdeling van δ is scherp en de negatieve staart is **bimodaal**:
+
+| δ | −1 | −2 | −3 | −4 | −5 | −6 | −7 | −8 | 0 | 1 | 2 | 3 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| % | 0,71 | 0,20 | 0,10 | 0,05 | 0,02 | 0,02 | 0,03 | 0,01 | 23,4 | 32,7 | 25,8 | 9,6 |
+
+82% van alles zit op δ ∈ {0, 1, 2}; p95 = +4. Aan de negatieve kant staat een
+schouder op −1..−4 (≈14k) en, na een vrijwel leeg gebied, een dikke staart op
+δ < −20 (16.213 VBO's, 1,23%). Tussen −5 en −20 gebeurt bijna niets. Verschuiven
+van de drempel binnen die zone verplaatst dus nauwelijks records:
+
+| drempel | −1 | −3 | −5 | **−6** | −8 | −10 | −15 | −20 |
+|---|---|---|---|---|---|---|---|---|
+| VBO's als verbouwing | 33.604 | 21.659 | 19.733 | **19.437** | 18.794 | 18.502 | 17.403 | 16.425 |
+| % van het bestand | 2,56 | 1,65 | 1,50 | **1,48** | 1,43 | 1,41 | 1,33 | 1,25 |
+
+En dat vertaalt zich in niets. DiD-coëfficiënt op `tr` in de vergunningen-
+analyse (`fepois`, provincie×jaar + provincie×afstandsklasse, 2012–2025):
+
+| reno_delta | N | 250 m | 500 m | 1000 m | 2500 m |
+|---|---|---|---|---|---|
+| −1 | 999.121 | −0,2374 | −0,3021 | −0,2276 | −0,1670 |
+| −3 | 1.004.869 | −0,2439 | −0,3063 | −0,2310 | −0,1676 |
+| −5 | 1.005.832 | −0,2402 | −0,3031 | −0,2299 | −0,1663 |
+| **−6** | **1.006.018** | **−0,2394** | **−0,3024** | **−0,2293** | **−0,1663** |
+| −10 | 1.006.512 | −0,2399 | −0,3028 | −0,2294 | −0,1654 |
+| −20 | 1.006.850 | −0,2402 | −0,3027 | −0,2290 | −0,1644 |
+| regel helemaal uit | 1.010.570 | −0,2434 | −0,3070 | −0,2343 | −0,1633 |
+
+De spreiding over de hele reeks is 0,007 op 250 m, tegen een standaardfout van
+0,088. De regel is met andere woorden **inert**: hij raakt 1,5% van het bestand
+en verandert de uitkomst niet, ook niet als je hem helemaal weglaat. Voor de
+nieuwbouwtelling naar mutatiejaar is de coëfficiënt zelfs bit-identiek over alle
+drempels, omdat `in_sample_nwb` niet op `projecttype == nieuwbouw` filtert.
+
+### Wat er wél aan de hand is
+
+Drie dingen die belangrijker zijn dan de drempelwaarde:
+
+1. **De regel vangt lang niet alles.** Van wat δ ≤ −6 als verbouwing aanmerkt
+   staat 14,6% óók in de CBS-nieuwbouwreeks — een directe tegenspraak. Dat
+   aandeel is vlak over alle drempels (14,6–15,8%), dus verschuiven helpt niet.
+   Omgekeerd draagt de pandstatus `Verbouwing_pand` maar 1,9% bij binnen die
+   groep; §4 zei al dat die status renovatie maar deels vangt.
+2. **De regel is een 2012–2013-verschijnsel.** Aandeel δ ≤ −6 per vergunningjaar:
+   2,79% (2012), 2,61% (2013), daarna 0,08–0,48%. Dat is dezelfde
+   BAG-opbouwperiode als de koppelgraad in `03_checks.R` CHECK 2.
+3. **En het correleert met de behandeling, in de pre-periode.** Aandeel δ ≤ −6
+   nabij (≤1000 m) versus ver: 1,91 vs 2,87 (2012) en 1,43 vs 2,75 (2013),
+   daarna verwaarloosbaar en zonder richting. Het is dus asymmetrisch precies
+   in de jaren vóór 2019. Bij de gegeven omvang (≈1,5%) is dat niet genoeg om
+   iets te doen, maar het hoort in de gevoeligheidsanalyse thuis en niet in een
+   voetnoot.
+
+**Conclusie**: −6 blijft staan, niet omdat het het juiste getal is maar omdat
+elk getal tussen −5 en −20 hetzelfde doet en −6 tenminste aansluit op het
+plausibiliteitsvenster dat er al was. De grijze band −1..−5 is apart getagd
+(`vlag_delta_grijs`). Wie de drempel wil verdedigen in het paper: verdedig hem
+niet, laat de tabel hierboven zien.
 
 ## Bronnen (extern geverifieerd)
 

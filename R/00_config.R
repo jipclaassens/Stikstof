@@ -64,6 +64,15 @@ PARAMS <- list(
 
   ## Renovatie-drempel: pand_bouwjaar - vergunningjaar <= -6 betekent dat
   ## het gebouw er al stond. Zie docs/BAG-dataschoning-inzichten.md sec. 6.
+  ##
+  ## Waarom -6 (issue #26)? De 6 is geen geschat afkappunt maar de spiegel
+  ## van het plausibiliteitsvenster |delta| > 5 in `bouwjaar_mismatch`
+  ## (N2000_Analyse.dms). Empirisch maakt de keuze niet uit: de negatieve
+  ## staart van de delta-verdeling is bimodaal met een gat tussen -5 en -20,
+  ## dus elke drempel daarbinnen deelt dezelfde ~19.000 VBO's in (1,5%).
+  ## De DiD-coefficient op 250 m loopt van -0,2374 (drempel -1) via -0,2394
+  ## (-6) tot -0,2434 (regel helemaal uit), bij een standaardfout van 0,088.
+  ## De regel is dus inert; zie docs sec. 8 voor de volledige tabel.
   reno_delta       = -6,
 
   ## Afstandsklassen: breedte in meters en bovengrens (alles daarboven in
@@ -102,6 +111,14 @@ PAND_IN_VOORRAAD <- c(
 PAND_PIPELINE <- c(
   "Bouwvergunning_verleend",
   "Bouw_gestart"
+)
+
+## Pandstatussen die op sloop duiden. Sloop is orthogonaal aan realisatie:
+## een gebouw kan zijn opgeleverd en later gesloopt, of nooit zijn gebouwd
+## terwijl het oude pand wel is gesloopt. Zie 02_classify.R regel (e).
+PAND_GESLOOPT <- c(
+  "Pand_gesloopt",
+  "Sloopvergunning_verleend"
 )
 
 ## ---------------------------------------------------------------------

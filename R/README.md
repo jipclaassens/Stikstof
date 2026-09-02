@@ -208,16 +208,8 @@ project-id-pooling hierboven:
   rijen wijkt hij af van `last_pand_status`. Beide zitten in het
   analysebestand, onder verschillende namen (`pand_status_mutatie` en
   `last_pand_status`). De Stata-versie gebruikt ze door elkaar.
-- Voor de 43.000 VBO's zonder vergunningrecord was het gebruiksdoel onbekend.
-  Sinds [issue #27](https://github.com/jipclaassens/Stikstof/issues/27) levert
-  `Object_Nieuwbouw` ook `last_vbo_status` en `last_vbo_gebruiksdoel` mee, uit
-  dezelfde `uq_vbo` als het vergunningenbestand, zodat die VBO's een echte
-  waarde krijgen. `01_build_vbo.R` vult ze aan waar het vergunningenbestand
-  niets zegt; `03_checks.R` CHECK 9 controleert dat beide bronnen het eens zijn
-  waar ze overlappen. **Dit vergt een nieuwe GeoDMS-export**: op extracts t/m
-  `20260730` ontbreken de kolommen en valt de pipeline terug op de oude
-  afleiding (`Object_Nieuwbouw` is de CBS-woningreeks, 99,9% van de gekoppelde
-  VBO's heeft `woon`, dus die krijgen `woon` met de vlag
-  `gebruiksdoel_afgeleid`).
+- De renovatiedrempel `reno_delta = -6` is inert: elke waarde tussen −1 en −20
+  geeft dezelfde DiD-coëfficiënt (spreiding 0,007 tegen een standaardfout van
+  0,088). Zie docs §8 voor de tabel.
 - De EIB-depositiecurve (`PARAMS$eib_a`, `eib_b`) is overgenomen uit de
   Stata-versie en hier niet opnieuw geschat.
