@@ -4,37 +4,43 @@
 ## Input : _derived/vbo_base.rds   (uit 01_build_vbo.R)
 ## Output: _derived/vbo_analyse.rds
 ##
-## Hoort bij issue #28: "Hoe gaan we de uiteindelijke data filteren, wat
-## is ruis en wat is relevant voor onze analyse?"
+## Hoort bij issue #28: "We willen echte nieuwbouw en gestaakte (als er wel
+## iets is vergund, maar uiteindelijk niet gerealiseerd) objecten meenemen.
+## En daarnaast is er ook veel in de pijplijn, daar willen we ook iets mee."
 ##
 ## ---------------------------------------------------------------------
-## Het probleem met een enkele `status`-variabele
+## Waarom drie assen in plaats van een enkele status
 ## ---------------------------------------------------------------------
-## De Stata-versie perst alles in een variabele `status` met zeven
-## niveaus, en selecteert daar vervolgens op (`keep if inlist(status,2,4,7)`).
-## Dat mengt drie dingen die uit elkaar moeten:
+## De Stata-versie perst alles in een variabele met zeven niveaus en
+## selecteert daarop. Dat mengt drie dingen die uit elkaar moeten:
 ##
-##   1. WAT VOOR PROJECT was dit?      -- bekend bij vergunningverlening,
-##                                        niet beinvloed door stikstof
-##   2. WAT IS ERMEE GEBEURD?          -- de uitkomst die we willen meten
-##   3. WAT WETEN WE NOG NIET?         -- censurering
+##   1. WAT VOOR PROJECT was dit?   -- bekend bij vergunningverlening,
+##                                     niet beinvloed door stikstof
+##   2. WAT IS ERMEE GEBEURD?       -- de uitkomst die we willen meten
+##   3. WAT WETEN WE NOG NIET?      -- censurering
 ##
-## Selecteren op (2) is selecteren op de uitkomst. Dat is hier niet
-## onschuldig, want niet-realisatie is juist het veronderstelde effect
-## van stikstof. Het huidige filter is bovendien intern asymmetrisch:
-## status 6 (gerealiseerd, geen nieuwbouw) valt af, maar status 7 (nog
-## niet opgeleverd) blijft -- terwijl daar de toekomstige 6'en in zitten.
-## Naarmate een vergunningcohort ouder wordt lekt 7 naar 6 en valt weg.
-## Dat is per constructie een jaarafhankelijke uitval.
+## Filteren doe je op as 1. Meten doe je op as 2. Selecteren op as 2 is
+## selecteren op de uitkomst, en niet-realisatie is juist het
+## veronderstelde effect van stikstof.
 ##
-## Daarom drie aparte assen:
+## ---------------------------------------------------------------------
+## Welke bron is waarvoor gezaghebbend
+## ---------------------------------------------------------------------
+## De BAG kent twee statusreeksen die elkaar kunnen tegenspreken:
 ##
-##   projecttype   ex ante: nieuwbouw / verbouwing / admin_fout
-##   uitkomst      ex post: gerealiseerd_nieuwbouw / gerealiseerd_overig /
-##                          uitval / pipeline / onbepaald
-##   vlaggen       later_gesloopt, pand_vbo_inconsistent, ...
+##   realisatie van een OBJECT   -> vbo_status  (CBS-voorraaddefinitie,
+##                                  docs/BAG-dataschoning-inzichten.md sec. 4)
+##   lot van het GEBOUW          -> last_pand_status
+##   datums (vergunning, bouwstart, oplevering) -> PAND-niveau
 ##
-## Filteren doe je op `projecttype`. Meten doe je op `uitkomst`.
+## Die laatste regel is makkelijk mis te gaan. oplevering_eerste_datum
+## komt uit Pand_VergunningDuur en is gekoppeld op pand_bag_nr: van de
+## 24.122 panden met meerdere verblijfsobjecten heeft er nul meer dan een
+## opleverdatum. Een opleverdatum is dus GEEN bewijs dat een specifiek
+## object is gerealiseerd, alleen dat het pand is opgeleverd. Hem toch als
+## objectbewijs gebruiken zette 19.014 objecten ten onrechte op
+## "gerealiseerd", terwijl hun eigen status niet-gerealiseerd, gevormd,
+## ingetrokken of ten onrechte opgevoerd was.
 ## =====================================================================
 
 .here <- local({
@@ -51,23 +57,20 @@ d <- read_derived("vbo_base")
 ## ---------------------------------------------------------------------
 ## 1. As 1: projecttype -- alleen op ex-ante informatie
 ## ---------------------------------------------------------------------
-## Mag NIET afhangen van of er uiteindelijk is opgeleverd. Gebruikte
-## bronnen en waarom die ex ante zijn:
+## Mag NIET afhangen van of er uiteindelijk is opgeleverd.
 ##
 ##  - "ten onrechte opgevoerd": administratieve correctie, het object
-##    heeft nooit bestaan. Geen uitkomst maar een registratiefout.
+##    heeft nooit bestaan. Registratiefout, geen uitkomst.
 ##  - pand_bouwjaar - vergunningjaar <= -6: het gebouw stond er al, dus
 ##    de vergunning ging over een verbouwing. oorspronkelijkBouwjaar is
 ##    een verplicht pandattribuut dat al BIJ vergunningverlening wordt
-##    ingevuld (zie docs/BAG-dataschoning-inzichten.md sec. 5), dus dit
-##    is bekend op t=0.
+##    ingevuld (docs sec. 5), dus bekend op t=0.
 ##  - last_pand_status == "Verbouwing_pand": status sinds BAG 2.0,
 ##    bedoeld voor reeds opgeleverde objecten.
 ##
-## `duur_negatief` (oplevering voor vergunning) gebruikt WEL de
-## opleverdatum en is dus strikt genomen post-treatment. Die zit hier
-## bewust niet in het type, maar als losse vlag. Het gaat om weinig
-## gevallen; 03_checks.R rapporteert hoeveel.
+## duur_negatief (oplevering voor vergunning) gebruikt wel de
+## opleverdatum en is dus post-treatment; die zit hier bewust niet in
+## het type maar als losse vlag.
 
 d[, projecttype := NA_character_]
 
@@ -84,72 +87,89 @@ d[is.na(projecttype) &
 d[is.na(projecttype), projecttype := "nieuwbouw"]
 
 ## ---------------------------------------------------------------------
-## 2. As 2: uitkomst -- wat is er met het object gebeurd
+## 2. As 2: uitkomst -- wat is er met het OBJECT gebeurd
 ## ---------------------------------------------------------------------
-## Realisatie wordt bepaald op `vbo_status`, niet op de pandstatus.
-## Een pand kan meerdere VBO's hebben en de pandstatus is de laatste
-## stand van het hele pand; de CBS-voorraaddefinitie werkt op VBO-niveau
-## (docs/BAG-dataschoning-inzichten.md sec. 4). Dat lost meteen de
-## inconsistentie op waar dit onderzoek mee begon: 2.691 VBO's met
-## pandstatus "Niet_gerealiseerd_pand" staan zelf op "in gebruik".
 
-d[, vbo_in_voorraad := vbo_status %in% VBO_IN_VOORRAAD]
-d[, heeft_oplevering := !is.na(oplevering_eerste_datum)]
+d[, vbo_in_voorraad := vbo_status %chin% VBO_IN_VOORRAAD]
+d[, pand_opgeleverd := !is.na(oplevering_eerste_datum)]   # PAND-niveau
+d[, later_gesloopt  := last_pand_status %chin% PAND_GESLOOPT]
 
 d[, uitkomst := NA_character_]
+d[, uitkomst_ambigu := FALSE]
 
-## (a) Gerealiseerd en door CBS als nieuwbouw geteld. Dit is de harde
-##     realisatie: het object staat in de CBS-nieuwbouwreeks met een
-##     mutatiemaand. Gaat voor op alles, ook als het pand later is
-##     gesloopt -- gesloopt-na-oplevering is een aparte vlag, geen
-##     ander soort uitkomst.
+## (a) Staat in de CBS-nieuwbouwreeks: met een mutatiemaand aan de
+##     woningvoorraad toegevoegd. Het hardste realisatiebewijs dat er is,
+##     en het gaat voor op alles -- ook als het pand later is gesloopt of
+##     het object later is ingetrokken. Dat zijn gebeurtenissen NA
+##     realisatie; die worden vlaggen, geen aparte uitkomst.
 d[is.na(uitkomst) & cbs_nieuwbouw == TRUE, uitkomst := "gerealiseerd_nieuwbouw"]
 
-## (b) Gerealiseerd, maar niet als nieuwbouw geteld: toevoegingen,
-##     transformaties, splitsingen. Wel in de voorraad gekomen.
-d[is.na(uitkomst) & (vbo_in_voorraad | heeft_oplevering),
-  uitkomst := "gerealiseerd_overig"]
+## (b) Object staat zelf in de voorraad, maar telt niet als nieuwbouw:
+##     toevoegingen, transformaties, splitsingen.
+d[is.na(uitkomst) & vbo_in_voorraad == TRUE, uitkomst := "gerealiseerd_overig"]
 
-## (c) Uitval: vergund, uiteindelijk niet gerealiseerd. Strikt op
-##     VBO-niveau en zonder opleverdatum, zodat objecten die alsnog in
-##     de voorraad zitten hier niet in belanden.
+## (c) Object is expliciet niet gerealiseerd.
 d[is.na(uitkomst) &
-    vbo_status %in% c("Niet_gerealiseerd_verblijfsobject",
-                      "Verblijfsobject_ingetrokken") &
-    !heeft_oplevering,
+    vbo_status %chin% c("Niet_gerealiseerd_verblijfsobject",
+                        "Verblijfsobject_ten_onrechte_opgevoerd"),
   uitkomst := "uitval"]
 
-## (d) Pijplijn: vergund, object bestaat administratief, nog niet
-##     opgeleverd en niet ingetrokken. Dit is issue #28's "veel in de
-##     pijplijn, daar willen we ook iets mee".
-d[is.na(uitkomst) &
-    (vbo_status == "Verblijfsobject_gevormd" |
-     last_pand_status %in% PAND_PIPELINE),
+## (d) Object bestaat administratief maar is nog niet in gebruik:
+##     de pijplijn uit issue #28.
+d[is.na(uitkomst) & vbo_status == "Verblijfsobject_gevormd",
   uitkomst := "pipeline"]
 
+## (e) "Verblijfsobject_ingetrokken" is dubbelzinnig: het dekt zowel
+##     "vergunning ingetrokken, nooit gebouwd" als "bestond en is
+##     opgegaan in een ander object". Hier beslist de PANDSTATUS wel,
+##     want de vraag is nu wat er met het gebouw is gebeurd -- precies
+##     waar de pandreeks over gaat. Alles wat via deze regel wordt
+##     toegewezen krijgt de vlag uitkomst_ambigu, zodat je er in een
+##     gevoeligheidsanalyse op kunt terugvallen.
+ing <- is.na(d$uitkomst) & d$vbo_status == "Verblijfsobject_ingetrokken"
+
+##   pand staat in de voorraad -> gebouw is er, object is samengevoegd
+d[ing & last_pand_status %chin% PAND_IN_VOORRAAD,
+  c("uitkomst", "uitkomst_ambigu") := .("gerealiseerd_overig", TRUE)]
+
+##   pand nog in de vergunningfase of niet gerealiseerd -> nooit gebouwd.
+##   Mediaan vergunningjaar 2023-2024 voor de vergunde groep: te recent
+##   om gebouwd en alweer ingetrokken te zijn.
+d[ing & last_pand_status %chin% c(PAND_PIPELINE, "Niet_gerealiseerd_pand"),
+  c("uitkomst", "uitkomst_ambigu") := .("uitval", TRUE)]
+
+##   pand gesloopt -> hier is de pand-opleverdatum wel het juiste bewijs,
+##   want de vraag is of het gebouw ooit af is gekomen
+d[ing & later_gesloopt & pand_opgeleverd,
+  c("uitkomst", "uitkomst_ambigu") := .("gerealiseerd_overig", TRUE)]
+d[ing & later_gesloopt & !pand_opgeleverd,
+  c("uitkomst", "uitkomst_ambigu") := .("uitval", TRUE)]
+
 d[is.na(uitkomst), uitkomst := "onbepaald"]
+
+## De drie categorieen uit issue #28, plus wat er buiten valt
+d[, groep28 := fcase(
+  uitkomst == "gerealiseerd_nieuwbouw", "1_nieuwbouw",
+  uitkomst == "uitval",                 "2_gestrand",
+  uitkomst == "pipeline",               "3_pijplijn",
+  default =                             "4_overig")]
 
 ## ---------------------------------------------------------------------
 ## 3. Vlaggen -- informatie die niet in een van beide assen past
 ## ---------------------------------------------------------------------
 
-## Pand gesloopt of sloopvergunning: orthogonaal aan realisatie.
-d[, later_gesloopt := last_pand_status %in% c("Pand_gesloopt",
-                                              "Sloopvergunning_verleend")]
-
-## Pandstatus en VBO-status spreken elkaar tegen. Dit is de "ruis" die
-## de aanleiding was; hij wordt gemeten in plaats van weggepoetst.
+## Pandstatus en objectstatus spreken elkaar tegen. Wordt gemeten in
+## plaats van weggepoetst; dit was de aanleiding voor de hele exercitie.
 d[, pand_vbo_inconsistent :=
     (last_pand_status == "Niet_gerealiseerd_pand" & vbo_in_voorraad) |
-    (last_pand_status %in% PAND_IN_VOORRAAD &
+    (last_pand_status %chin% PAND_IN_VOORRAAD &
        vbo_status == "Niet_gerealiseerd_verblijfsobject")]
 
 ## Oplevering voor de eerste vergunning -- zie toelichting bij as 1
 d[, vlag_duur_negatief := !is.na(duur_negatief) & duur_negatief]
 
-## Grijze band -1..-5 in de bouwjaar-delta: te weinig om renovatie te
-## zijn, te veel voor een normale nieuwbouwvolgorde. Apart taggen was
-## een openstaand punt in docs/BAG-dataschoning-inzichten.md sec. 6.
+## Grijze band -1..-5 in de bouwjaar-delta: te weinig voor renovatie, te
+## veel voor een normale nieuwbouwvolgorde. Openstaand punt in docs sec. 6.
 d[, vlag_delta_grijs := !is.na(bouwjaar_delta) &
     bouwjaar_delta < 0 & bouwjaar_delta > PARAMS$reno_delta]
 
@@ -157,45 +177,38 @@ d[, vlag_delta_grijs := !is.na(bouwjaar_delta) &
 ## 4. Steekproefvlaggen
 ## ---------------------------------------------------------------------
 ## Ex-ante steekproef: alles wat als woningbouwvergunning is afgegeven,
-## ongeacht de afloop. Dit is de universe voor elke analyse van
-## vergunningen, uitval en duur.
+## ongeacht de afloop. Universe voor vergunningen, uitval en duur.
 
 d[, in_sample := projecttype == "nieuwbouw" &
                  vbo_gebruiksdoel == "woon" &
                  !is.na(dist2n2000_m) &
                  !is.na(provinciecode)]
 
-## Voor analyses op vergunningjaar moet er ook een vergunningjaar zijn
 d[, in_sample_verg := in_sample & !is.na(vergunning_jaar) &
     vergunning_jaar >= PARAMS$jaar_min & vergunning_jaar <= PARAMS$jaar_max]
 
-## Voor analyses op realisatiejaar: het CBS-mutatiebestand is zelf de
-## uitkomst, dus hier geldt alleen de administratieve schoning en de
-## jaargrens. 2026 valt af (halve jaargang, mutaties t/m juli).
+## Voor analyses op realisatiejaar is het CBS-mutatiebestand zelf de
+## uitkomst: alleen administratieve schoning en de jaargrens. 2026 valt
+## af (halve jaargang, mutaties t/m juli).
 d[, in_sample_nwb := cbs_nieuwbouw & projecttype != "admin_fout" &
-    !is.na(dist2n2000_m) & !is.na(provinciecode) &
-    !is.na(mutatiejaar) &
+    !is.na(dist2n2000_m) & !is.na(provinciecode) & !is.na(mutatiejaar) &
     mutatiejaar >= PARAMS$jaar_min & mutatiejaar <= PARAMS$jaar_max]
 
 ## ---------------------------------------------------------------------
 ## 5. Censurering
 ## ---------------------------------------------------------------------
-## Het extract is een momentopname. Een vergunning uit 2024 kan nog niet
-## zijn opgeleverd, dus "niet opgeleverd" betekent iets anders voor een
-## cohort uit 2015 dan voor een uit 2024. Zonder vast opvolgvenster meet
-## een vergelijking van uitvalpercentages over vergunningjaren vooral de
-## afstand tot de extractdatum.
+## Het extract is een momentopname. "Niet opgeleverd" betekent iets
+## anders voor een cohort uit 2015 dan voor een uit 2024, en het verschil
+## loopt niet gelijk op tussen nabij en ver (zie 03_checks.R CHECK 3).
 
 EXTRACT_DATUM <- as.Date(EXTRACT, format = "%Y%m%d")
 
-d[, opvolgtijd_dagen := as.integer(EXTRACT_DATUM - vergunning_datum)]
-d[, opvolgtijd_jaar  := opvolgtijd_dagen / 365.25]
-
-## Tijd tot oplevering (NA als niet opgeleverd)
+d[, opvolgtijd_dagen    := as.integer(EXTRACT_DATUM - vergunning_datum)]
+d[, opvolgtijd_jaar     := opvolgtijd_dagen / 365.25]
 d[, duur_tot_oplevering := as.integer(oplevering_eerste_datum - vergunning_datum)]
 
-## Uitkomst binnen een vast venster van n jaar na vergunning; NA als het
-## venster nog niet vol is. Hiermee zijn cohorten onderling vergelijkbaar.
+## Uitkomst binnen een vast venster van n jaar na vergunning; NA zolang
+## het venster niet vol is, zodat cohorten vergelijkbaar blijven.
 uitkomst_binnen <- function(dt, jaren) {
   grens <- jaren * 365.25
   gerealiseerd <- !is.na(dt$duur_tot_oplevering) & dt$duur_tot_oplevering <= grens
@@ -210,12 +223,18 @@ for (j in c(3, 4, 5)) {
 ## 6. Overzicht
 ## ---------------------------------------------------------------------
 
-kop("Projecttype x uitkomst (alle VBO's met gebruiksdoel woon)")
+kop("Projecttype x uitkomst (objecten met gebruiksdoel woon)")
 print(dcast(d[vbo_gebruiksdoel == "woon", .N, by = .(projecttype, uitkomst)],
             projecttype ~ uitkomst, value.var = "N", fill = 0))
 
+kop("De drie categorieen uit issue #28, binnen de ex-ante steekproef")
+s <- d[in_sample == TRUE]
+print(s[, .(N = .N, pct = round(100 * .N / nrow(s), 2)), by = groep28][order(groep28)])
+cat(sprintf("\ntoegewezen via de ambigue ingetrokken-regel: %s (%.2f%%)\n",
+            nfmt(sum(s$uitkomst_ambigu)), 100 * mean(s$uitkomst_ambigu)))
+
 kop("Steekproefomvang")
-cat(sprintf("VBO's totaal                      : %s\n", nfmt(nrow(d))))
+cat(sprintf("objecten totaal                   : %s\n", nfmt(nrow(d))))
 cat(sprintf("in_sample (ex ante, woon)         : %s\n", nfmt(sum(d$in_sample))))
 cat(sprintf("in_sample_verg (%d-%d)         : %s\n", PARAMS$jaar_min,
             PARAMS$jaar_max, nfmt(sum(d$in_sample_verg))))
@@ -223,13 +242,9 @@ cat(sprintf("in_sample_nwb  (%d-%d)         : %s\n", PARAMS$jaar_min,
             PARAMS$jaar_max, nfmt(sum(d$in_sample_nwb))))
 
 kop("Vlaggen binnen de ex-ante steekproef")
-cat(sprintf("pand/VBO-status inconsistent      : %s\n",
-            nfmt(sum(d$pand_vbo_inconsistent & d$in_sample))))
-cat(sprintf("later gesloopt                    : %s\n",
-            nfmt(sum(d$later_gesloopt & d$in_sample))))
-cat(sprintf("oplevering voor vergunning        : %s\n",
-            nfmt(sum(d$vlag_duur_negatief & d$in_sample))))
-cat(sprintf("bouwjaar-delta in grijze band     : %s\n",
-            nfmt(sum(d$vlag_delta_grijs & d$in_sample))))
+for (v in c("pand_vbo_inconsistent", "later_gesloopt", "uitkomst_ambigu",
+            "vlag_duur_negatief", "vlag_delta_grijs")) {
+  cat(sprintf("  %-24s %s\n", v, nfmt(sum(d[[v]] & d$in_sample))))
+}
 
 write_derived(d, "vbo_analyse")
