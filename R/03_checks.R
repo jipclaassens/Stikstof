@@ -144,6 +144,34 @@ for (v in vars) {
               nfmt(sum(is.na(d[[v]]))), 100 * mean(is.na(d[[v]]))))
 }
 
+## ---------------------------------------------------------------------
+## CHECK 9 -- VBO-velden uit Object_Nieuwbouw  (issue #27)
+## ---------------------------------------------------------------------
+## Sinds #27 leveren beide objectbestanden last_vbo_status en
+## last_vbo_gebruiksdoel. Waar ze elkaar overlappen moeten ze gelijk zijn:
+## het is dezelfde eindstand van hetzelfde VBO uit dezelfde uq_vbo.
+
+kop("CHECK 9 -- consistentie last_vbo_* tussen beide exports (#27)")
+if (!"nwb_vbo_status" %in% names(d) || all(is.na(d$nwb_vbo_status))) {
+  cat("  Object_Nieuwbouw levert deze velden nog niet (extract van voor #27).\n")
+  cat(sprintf("  gebruiksdoel afgeleid als 'woon' zonder bron: %s VBO's\n",
+              nfmt(sum(d$gebruiksdoel_afgeleid))))
+} else {
+  ## NA's tellen niet als verschil, anders levert != een NA op die de som wist
+  wijkt_af <- function(a, b) sum(!is.na(a) & !is.na(b) & a != b)
+  ov <- d[bron_vergunning == TRUE & !is.na(nwb_vbo_status)]
+  cat(sprintf("VBO's in beide bestanden: %s\n", nfmt(nrow(ov))))
+  cat(sprintf("  status wijkt af       : %s\n",
+              nfmt(wijkt_af(ov$vbo_status, ov$nwb_vbo_status))))
+  cat(sprintf("  gebruiksdoel wijkt af : %s\n",
+              nfmt(wijkt_af(ov$vbo_gebruiksdoel, ov$nwb_vbo_gebruiksdoel))))
+  cat("  -> beide horen 0 te zijn; anders komen de exports niet uit dezelfde run.\n")
+  cat(sprintf("\nnog afgeleid ('woon' zonder bron): %s VBO's (was ~43.000)\n",
+              nfmt(sum(d$gebruiksdoel_afgeleid))))
+  cat("\ngebruiksdoel van de VBO's zonder vergunningrecord:\n")
+  print(d[bron_vergunning == FALSE, .N, by = vbo_gebruiksdoel][order(-N)])
+}
+
 kop("Klaar -- log staat in %s", logbestand)
 
 sink()

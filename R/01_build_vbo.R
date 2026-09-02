@@ -111,6 +111,16 @@ verg <- bvv[, .(
 
 nwb[, mutatiemaand_d := as_maand(mutatiemaand)]
 
+## Sinds issue #27 levert de export ook de eindstand van het VBO zelf mee.
+## Oudere extracts (t/m 20260730) hebben die kolommen niet; dan blijven ze NA
+## en valt stap 5 terug op de oude afleiding.
+NWB_HEEFT_VBO_VELDEN <- all(c("last_vbo_status", "last_vbo_gebruiksdoel") %in% names(nwb))
+if (!NWB_HEEFT_VBO_VELDEN) {
+  message("  let op: Object_Nieuwbouw mist last_vbo_status/last_vbo_gebruiksdoel ",
+          "(extract van voor issue #27); gebruiksdoel wordt afgeleid.")
+  nwb[, `:=`(last_vbo_status = NA_character_, last_vbo_gebruiksdoel = NA_character_)]
+}
+
 nieuw <- nwb[, .(
   vbo_bag_nr,
   pand_bag_nr,
@@ -123,6 +133,8 @@ nieuw <- nwb[, .(
   mutatiejaar           = as.integer(substr(mutatiemaand, 1, 4)),
   vbo_oppervlakte,
   pand_status_mutatie   = pand_status,      # snapshot, NIET de eindstatus
+  nwb_vbo_status        = last_vbo_status,
+  nwb_vbo_gebruiksdoel  = last_vbo_gebruiksdoel,
   cbs_nieuwbouw         = TRUE
 )]
 
@@ -145,16 +157,37 @@ vbo[is.na(bron_vergunning), bron_vergunning := FALSE]
 ## nieuwbouwkenmerken erbij
 vbo <- merge(vbo,
              nieuw[, .(vbo_bag_nr, mutatiemaand, mutatiejaar, vbo_oppervlakte,
-                       pand_status_mutatie, cbs_nieuwbouw)],
+                       pand_status_mutatie, nwb_vbo_status, nwb_vbo_gebruiksdoel,
+                       cbs_nieuwbouw)],
              by = "vbo_bag_nr", all.x = TRUE)
 vbo[is.na(cbs_nieuwbouw), cbs_nieuwbouw := FALSE]
 
-## Object_Nieuwbouw is de CBS-nieuwbouwreeks voor WONINGEN: 99,9% van de
-## gekoppelde VBO's heeft gebruiksdoel "woon". Voor de VBO's zonder
-## vergunningrecord is het gebruiksdoel onbekend; die krijgen "woon" met
-## een vlag, zodat de keuze zichtbaar blijft in plaats van weg te vallen.
+## Gebruiksdoel en VBO-status voor de VBO's zonder vergunningrecord (issue #27).
+##
+## Beide bestanden geven dezelfde eindstand van hetzelfde VBO, dus vullen ze
+## elkaar aan: het vergunningenbestand dekt de VBO's met een vergunning, het
+## nieuwbouwbestand dekt ook de ~43.000 zonder. Waar beide iets zeggen moeten ze
+## gelijk zijn; dat wordt gecontroleerd in 03_checks.R (CHECK 9).
+##
+## Zolang het extract die kolommen nog niet heeft, valt het terug op de oude
+## afleiding: Object_Nieuwbouw is de CBS-nieuwbouwreeks voor WONINGEN (99,9% van
+## de gekoppelde VBO's heeft gebruiksdoel "woon"), dus die krijgen "woon"
+## toegewezen. De vlag houdt de keuze zichtbaar in plaats van weg te vallen.
+vbo[is.na(vbo_status)       & !is.na(nwb_vbo_status),
+    vbo_status       := nwb_vbo_status]
+vbo[is.na(vbo_gebruiksdoel) & !is.na(nwb_vbo_gebruiksdoel),
+    vbo_gebruiksdoel := nwb_vbo_gebruiksdoel]
+
 vbo[, gebruiksdoel_afgeleid := is.na(vbo_gebruiksdoel) & cbs_nieuwbouw]
 vbo[gebruiksdoel_afgeleid == TRUE, vbo_gebruiksdoel := "woon"]
+
+if (NWB_HEEFT_VBO_VELDEN) {
+  message(sprintf("Uit Object_Nieuwbouw aangevuld: %s x vbo_status, %s x gebruiksdoel",
+                  nfmt(sum(!is.na(vbo$nwb_vbo_status) & !vbo$bron_vergunning)),
+                  nfmt(sum(!is.na(vbo$nwb_vbo_gebruiksdoel) & !vbo$bron_vergunning))))
+  message(sprintf("  nog afgeleid ('woon' zonder bron): %s",
+                  nfmt(sum(vbo$gebruiksdoel_afgeleid))))
+}
 
 ## ---------------------------------------------------------------------
 ## 6. Pandtijdlijn erbij (m:1 op pand_bag_nr)

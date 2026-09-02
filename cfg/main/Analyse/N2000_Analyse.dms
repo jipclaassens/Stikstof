@@ -142,14 +142,23 @@ container N2000_Analyse :  using = "units;classifications/bag;geography;sourceda
 		attribute<int32>           last_pand_bouwvergunningberleend_datum := Analyse/Redev_obv_hele_bag/PrepDomains/N/domain/LastDatum_BouwvergunningVerleend;
 		
 		attribute<uint32>          dist2N2000_m          := uint32(dist_info(RelevantHabitats/geometry, vbo_geometry));
-		attribute<string>          vbo_documentnummer    := uq_vbo/vbo_documentnummer[rlookup(vbo_bag_nr, uq_vbo/values)];  // via uq_vbo: domain/vbo_documentnummer bestaat niet
+		attribute<string>          vbo_documentnummer    := uq_vbo/vbo_documentnummer[uq_vbo_rel];  // via uq_vbo: domain/vbo_documentnummer bestaat niet
+
+		// #27: eindstand van het VBO zelf. pand_status hierboven is een SNAPSHOT op de mutatiemaand;
+		// realisatie/voorraad hoort volgens de CBS-definitie op VBO-niveau te worden bepaald
+		// (docs/BAG-dataschoning-inzichten.md sec. 4). Zonder deze twee velden is het gebruiksdoel
+		// onbekend voor de ~43k nieuwbouw-VBO's zonder vergunningrecord.
+		attribute<string>          last_vbo_status       := vbo_status/name[uq_vbo/vbo_status_rel[uq_vbo_rel]];
+		attribute<string>          last_vbo_gebruiksdoel := vbo_gebruiksdoel_ext/name[uq_vbo/gebruiksdoel_rel[uq_vbo_rel]];
 
 		attribute<uint32>          GM_CODE               := SourceData/RegioIndelingen/Impl/CBS/Y2024/Gemeente/gem_nr[point_in_polygon(vbo_geometry, /SourceData/RegioIndelingen/Impl/CBS/Y2024/Gemeente/geometry)];
 		attribute<string>          PRV_CODE              := SourceData/RegioIndelingen/Impl/CBS/Y2024/Provincie/PRV_CODE[point_in_polygon(vbo_geometry, /SourceData/RegioIndelingen/Impl/CBS/Y2024/Provincie/geometry)];
 		attribute<string>          PRV_NAAM              := SourceData/RegioIndelingen/Impl/CBS/Y2024/Provincie/name[point_in_polygon(vbo_geometry, /SourceData/RegioIndelingen/Impl/CBS/Y2024/Provincie/geometry)];
+
+		attribute<uq_vbo>          uq_vbo_rel            := rlookup(vbo_bag_nr, uq_vbo/values), DisableStorage = "TRUE";
 	}
-	
-	
+
+
 	unit<uint32> Object_BouwvergunningVerleend_Export := select_with_org_rel(IsDefined(uq_vbo/Pand_BouwvergunningVerleend_rel))
 	, Descr = "Export deze unit voor analyses voor Huub. Op object niveau."
 	, StorageName = "='%LocalDataProjDir%/Object_BouwvergunningVerleend_'+Export_Date+'.csv'"
