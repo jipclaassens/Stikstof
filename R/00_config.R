@@ -65,14 +65,19 @@ PARAMS <- list(
   ## Renovatie-drempel: pand_bouwjaar - vergunningjaar <= -6 betekent dat
   ## het gebouw er al stond. Zie docs/BAG-dataschoning-inzichten.md sec. 6.
   ##
-  ## Waarom -6 (issue #26)? De 6 is geen geschat afkappunt maar de spiegel
-  ## van het plausibiliteitsvenster |delta| > 5 in `bouwjaar_mismatch`
-  ## (N2000_Analyse.dms). Empirisch maakt de keuze niet uit: de negatieve
-  ## staart van de delta-verdeling is bimodaal met een gat tussen -5 en -20,
-  ## dus elke drempel daarbinnen deelt dezelfde ~19.000 VBO's in (1,5%).
-  ## De DiD-coefficient op 250 m loopt van -0,2374 (drempel -1) via -0,2394
-  ## (-6) tot -0,2434 (regel helemaal uit), bij een standaardfout van 0,088.
-  ## De regel is dus inert; zie docs sec. 8 voor de volledige tabel.
+  ## Waarom -6 (issue #26)? Het is een EIGEN WERKAFSPRAAK, geen norm uit CBS
+  ## of BAG: de spiegel van het plausibiliteitsvenster |delta| > 5 in
+  ## `bouwjaar_mismatch` (N2000_Analyse.dms, ingevoerd onder "//adhoc tests").
+  ## Presenteer hem ook zo, en suggereer geen bron die er niet is.
+  ##
+  ## Hij ligt wel ongeveer op de empirische knik: op pandniveau storten de
+  ## aantallen in van 3.639 (delta -1) naar 210 (-5) en worden daarna vlak, en
+  ## het aandeel "Pand_in_gebruik" springt van 15-37% bij -1..-5 naar 60-98%
+  ## vanaf -6 -- pas daar zijn het bestaande, bewoonde panden (= renovatie).
+  ##
+  ## En hij is inert: robuustheidscheck -4 / -6 / -9 geeft op 250 m -0,2398 /
+  ## -0,2394 / -0,2399 bij een standaardfout van 0,088; de regel helemaal
+  ## uitzetten scheelt 0,004. Zie docs sec. 8 voor de volledige tabellen.
   reno_delta       = -6,
 
   ## Afstandsklassen: breedte in meters en bovengrens (alles daarboven in
