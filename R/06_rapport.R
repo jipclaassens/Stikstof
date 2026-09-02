@@ -1,0 +1,433 @@
+## =====================================================================
+## 06_rapport.R -- alle analyses voor het rapport, in een run
+##
+## Input : _derived/vbo_analyse.rds
+## Output: _output/rapport_<extract>.json   (alle cijfers, tabellen, reeksen)
+##         _output/rapport_<extract>.txt    (leesbare log)
+##
+## Het rapport (een HTML-artifact) leest deze JSON in. Alles wat in het
+## rapport staat komt hiervandaan, zodat elk cijfer herleidbaar is naar
+## een regel code en een extract.
+##
+## Opbouw volgt het verhaal van het rapport:
+##   1. data        wat er in het objectenbestand zit
+##   2. project     documentnummer vs. ruimtelijk-temporeel cluster
+##   3. series      de ruwe reeksen, behandeld vs. controle
+##   4. es          event study per kwartaal, 2019 en 2024
+##   5. regime      regime-DiD met incrementele stappen
+##   6. robust      robuustheid: filters, id's, venster, clustering, placebo
+##   7. depositie   behandeling op depositie (EIB-matrix) i.p.v. afstand
+##   8. uitval      cohortanalyse met vast opvolgvenster
+##   9. homes       vertaling naar aantallen woningen
+## =====================================================================
+
+.here <- local({
+  a <- commandArgs(trailingOnly = FALSE)
+  f <- sub("^--file=", "", a[grep("^--file=", a)])
+  if (length(f)) dirname(normalizePath(f)) else getwd()
+})
+source(file.path(.here, "00_config.R"))
+suppressPackageStartupMessages(library(fixest))
+options(width = 200)
+
+sink(file.path(PATHS$output, sprintf("rapport_%s.txt", EXTRACT)), split = TRUE)
+t0 <- Sys.time()
+
+## ---------------------------------------------------------------------
+## Een kleine JSON-schrijver (jsonlite staat niet op deze machine)
+## ---------------------------------------------------------------------
+to_json <- function(x) {
+  esc <- function(s) {
+    s <- gsub("\\\\", "\\\\\\\\", s); s <- gsub("\"", "\\\\\"", s)
+    s <- gsub("\n", "\\\\n", s); s <- gsub("\r", "", s); s <- gsub("\t", "\\\\t", s)
+    paste0("\"", s, "\"")
+  }
+  scalar <- function(v) {
+    if (is.na(v)) return("null")
+    if (is.logical(v)) return(if (v) "true" else "false")
+    if (inherits(v, "Date")) return(esc(format(v)))
+    if (is.numeric(v)) { if (!is.finite(v)) return("null"); return(format(round(v, 5), scientific = FALSE, trim = TRUE)) }
+    esc(as.character(v))
+  }
+  if (is.null(x)) return("null")
+  if (is.data.frame(x)) {
+    x <- as.data.frame(x)
+    rows <- lapply(seq_len(nrow(x)), function(i) {
+      paste0("{", paste(sprintf("%s:%s", esc(names(x)), sapply(names(x), function(n) scalar(x[[n]][i]))), collapse = ","), "}")
+    })
+    return(paste0("[", paste(rows, collapse = ",\n"), "]"))
+  }
+  if (is.list(x)) {
+    if (!is.null(names(x)) && all(names(x) != "")) {
+      return(paste0("{", paste(sprintf("%s:%s", esc(names(x)), sapply(x, to_json)), collapse = ",\n"), "}"))
+    }
+    return(paste0("[", paste(sapply(x, to_json), collapse = ","), "]"))
+  }
+  if (length(x) == 1 && is.null(names(x))) return(scalar(x))
+  paste0("[", paste(sapply(x, scalar), collapse = ","), "]")
+}
+
+R <- list()   # het resultaatobject
+
+## ---------------------------------------------------------------------
+## Data, tijdindex, gebeurtenissen
+## ---------------------------------------------------------------------
+d <- read_derived("vbo_analyse")
+
+KW_START <- 2012L
+kw_index <- function(datum) {
+  y <- as.integer(format(datum, "%Y")); m <- as.integer(format(datum, "%m"))
+  (y - KW_START) * 4L + (m - 1L) %/% 3L + 1L
+}
+kw_label <- function(q) sprintf("%dQ%d", KW_START + (q - 1L) %/% 4L, (q - 1L) %% 4L + 1L)
+
+EVENTS <- data.table(
+  naam   = c("PAS-uitspraak", "Logtsebaan", "bouwvrijstelling", "Porthos", "Omgevingswet + Wkb", "intern salderen", "Pasgeld-West"),
+  datum  = as.Date(c("2019-05-29", "2021-01-20", "2021-07-01", "2022-11-02", "2024-01-01", "2024-12-18", "2025-01-14")),
+  soort  = c("aanscherping", "versoepeling", "versoepeling", "aanscherping", "meetbreuk", "aanscherping", "aanscherping"),
+  hoofd  = c(TRUE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE),
+  ecli   = c("ECLI:NL:RVS:2019:1603", "ECLI:NL:RVS:2021:71", "Wsn, Stb. 2021, 140", "ECLI:NL:RVS:2022:3159", "Ow / Wkb", "ECLI:NL:RVS:2024:4923", "ECLI:NL:RVS:2025:87"),
+  strekking = c(
+    "PAS mag niet meer als toestemmingsbasis; per project passende beoordeling",
+    "intern salderen niet vergunningplichtig (terugwerkend tot 1-1-2020)",
+    "bouwfase-emissies buiten de toets (Wet stikstofreductie en natuurverbetering)",
+    "bouwvrijstelling in strijd met de Habitatrichtlijn",
+    "Wnb wordt Ow art. 5.1; gevolgklasse 1 krijgt bouwmelding i.p.v. vergunning",
+    "intern salderen niet meer in de voortoets; natuurvergunning weer nodig",
+    "ook voor bestemmingsplannen geen intern salderen zonder passende beoordeling"))
+EVENTS[, q := kw_index(datum)]
+EVENTS[, kw := kw_label(q)]
+Q_REF <- kw_index(as.Date(c("2018-01-01", "2018-04-01", "2018-07-01", "2018-10-01")))
+Q_PAS <- EVENTS[naam == "PAS-uitspraak", q]
+Q_POR <- EVENTS[naam == "Porthos", q]
+Q_SAL <- EVENTS[naam == "intern salderen", q]
+Q_MAX_VERG <- kw_index(as.Date("2026-03-31"))   # 2026Q2 = batchregistratie
+Q_MAX_NWB  <- kw_index(as.Date("2026-06-30"))
+
+R$meta <- list(extract = EXTRACT, bag_datum = "20260710", gemaakt = format(Sys.time(), "%Y-%m-%d %H:%M"),
+               kw_start = KW_START, q_ref = Q_REF, q_pas = Q_PAS, q_por = Q_POR, q_sal = Q_SAL,
+               q_max_verg = Q_MAX_VERG, q_max_nwb = Q_MAX_NWB,
+               kw_labels = kw_label(1:Q_MAX_NWB))
+R$events <- EVENTS[, .(naam, datum, kwartaal = kw, q, soort, hoofd, ecli, strekking)]
+
+## ---------------------------------------------------------------------
+## 1. DATA
+## ---------------------------------------------------------------------
+kop("1. Data")
+w <- d[vbo_gebruiksdoel == "woon"]
+s <- d[in_sample == TRUE]
+
+R$data <- list(
+  totaal = list(objecten = nrow(d), panden = uniqueN(d$pand_bag_nr), projecten = uniqueN(d$projectid),
+                met_vergunning = sum(d$bron_vergunning), in_cbs_nieuwbouw = sum(d$cbs_nieuwbouw),
+                alleen_nieuwbouw = sum(d$cbs_nieuwbouw & !d$bron_vergunning),
+                woon = nrow(w), in_sample = nrow(s)),
+  bronnen = data.table(
+    bestand = c("Object_BouwvergunningVerleend", "Object_Nieuwbouw", "Pand_VergunningDuur"),
+    eenheid = c("verblijfsobject", "verblijfsobject", "pand"),
+    rijen = c(1313420L, 927382L, 620816L),
+    inhoud = c("elk object waarvoor een bouwvergunning is verleend, met eindstatus van object en pand",
+               "elk object dat CBS als nieuwbouw telt, met de mutatiemaand",
+               "tijdlijn per pand: eerste vergunning, bouwstart, oplevering, bouwjaar")),
+  projecttype = w[, .N, by = projecttype][order(-N)],
+  groep28 = s[, .(groep = groep28, N = .N), by = groep28][order(groep28)][, .(groep, N, pct = round(100 * N / nrow(s), 2))],
+  uitkomst = s[, .N, by = uitkomst][order(-N)][, .(uitkomst, N, pct = round(100 * N / nrow(s), 2))],
+  vlaggen = data.table(
+    vlag = c("pand_vbo_inconsistent", "later_gesloopt", "uitkomst_ambigu", "vlag_duur_negatief", "vlag_delta_grijs", "gebruiksdoel_afgeleid"),
+    N = c(sum(s$pand_vbo_inconsistent), sum(s$later_gesloopt), sum(s$uitkomst_ambigu),
+          sum(s$vlag_duur_negatief), sum(s$vlag_delta_grijs), sum(s$gebruiksdoel_afgeleid))),
+  koppelgraad = d[cbs_nieuwbouw == TRUE & !is.na(mutatiejaar) & mutatiejaar <= 2025,
+                  .(nieuwbouw = .N, zonder_vergunning = sum(!bron_vergunning),
+                    pct = round(100 * mean(!bron_vergunning), 1)), by = .(jaar = mutatiejaar)][order(jaar)]
+)
+
+## beslismatrix: pand x object x cbs -> groep
+s[, pand := fifelse(is.na(last_pand_status), "(geen vergunningrecord)", last_pand_status)]
+s[, vbo  := fifelse(is.na(vbo_status), "(geen vergunningrecord)", vbo_status)]
+R$data$matrix <- s[, .(N = .N, ambigu = sum(uitkomst_ambigu), gesloopt = sum(later_gesloopt)),
+                    by = .(cbs = cbs_nieuwbouw, pand, vbo, groep = groep28)][N >= 200][order(groep, -N)]
+
+## censurering: aandeel pipeline per vergunningjaar x nabij
+sv <- s[!is.na(vergunning_jaar) & vergunning_jaar >= 2012 & vergunning_jaar <= 2025]
+sv[, nabij := fifelse(kl2500 == 1, "nabij", "ver")]
+R$data$censurering <- dcast(sv[, .(pct = round(100 * mean(uitkomst == "pipeline"), 1)), by = .(jaar = vergunning_jaar, nabij)],
+                            jaar ~ nabij, value.var = "pct")
+dur <- s[!is.na(duur_tot_oplevering) & duur_tot_oplevering > 0 & vergunning_jaar >= 2012]
+R$data$doorlooptijd <- list(mediaan_jr = round(median(dur$duur_tot_oplevering) / 365.25, 2),
+                            p25 = round(quantile(dur$duur_tot_oplevering, .25) / 365.25, 2),
+                            p75 = round(quantile(dur$duur_tot_oplevering, .75) / 365.25, 2))
+print(R$data$groep28); print(R$data$koppelgraad)
+
+## ---------------------------------------------------------------------
+## 2. PROJECT-ID: documentnummer vs. ruimtelijk-temporeel cluster
+## ---------------------------------------------------------------------
+kop("2. Project-id")
+s[, pid_doc := projectid]
+s[, pid_cl  := fifelse(!is.na(cluster_rel), paste(gemeentecode, cluster_rel), paste0("__los_", vbo_bag_nr))]
+s[, omv_doc := .N, by = pid_doc]
+s[, omv_cl  := .N, by = pid_cl]
+s[, dep_doc := omv_doc * mol_woning]
+s[, dep_cl  := omv_cl  * mol_woning]
+eib_cut <- function(x) as.integer(cut(x, c(-Inf, 0.005, 0.1, 0.5, 1, Inf), labels = 1:5))
+s[, depk_doc := eib_cut(dep_doc)]
+s[, depk_cl  := eib_cut(dep_cl)]
+EIB_LABELS <- c("< 0,005", "0,005 - 0,1", "0,1 - 0,5", "0,5 - 1", "> 1")
+
+sz <- function(v) { n <- s[bron_vergunning == TRUE, .N, by = v]$N
+  list(projecten = length(n), mediaan = median(n), p75 = quantile(n, .75)[[1]], p90 = quantile(n, .9)[[1]],
+       p99 = quantile(n, .99)[[1]], max = max(n), aandeel_singleton = round(mean(n == 1), 3)) }
+x1 <- s[bron_vergunning == TRUE, .(n_doc = uniqueN(pid_doc)), by = pid_cl]
+x2 <- s[bron_vergunning == TRUE, .(n_cl = uniqueN(pid_cl)), by = pid_doc]
+R$project <- list(
+  documentnr = sz("pid_doc"), cluster = sz("pid_cl"),
+  nesting = list(clusters_met_1_doc = round(mean(x1$n_doc == 1), 3), clusters_met_meer_doc = round(mean(x1$n_doc > 1), 3),
+                 mediaan_docs_bij_meer = median(x1$n_doc[x1$n_doc > 1]),
+                 docs_in_1_cluster = round(mean(x2$n_cl == 1), 3)),
+  eib_labels = EIB_LABELS,
+  eib_crosstab = as.data.table(table(doc = s$depk_doc, cl = s$depk_cl))[, .(doc = as.integer(doc), cl = as.integer(cl), N)],
+  eib_verdeling = rbind(s[, .(id = "documentnummer", .N), by = .(klasse = depk_doc)],
+                        s[, .(id = "cluster", .N), by = .(klasse = depk_cl)])[order(id, klasse)]
+)
+cat("projecten doc:", R$project$documentnr$projecten, " cluster:", R$project$cluster$projecten, "\n")
+
+## ---------------------------------------------------------------------
+## Paneelbouwer en schatters (gedeeld door 3-8)
+## ---------------------------------------------------------------------
+## dt: objecten; tijd: kolomnaam (q of jaar); klasse: kolom met klasse-index;
+## id: project-id kolom; n_k: aantal klassen. Per project de MINIMUM klasse.
+bouw_paneel <- function(dt, tijd, klasse, id, n_k, seizoen = FALSE) {
+  pp  <- dt[, .(k = min(get(klasse)), n = .N), by = c(id, "provinciecode", tijd)]
+  cel <- pp[, .(y = sum(n)), by = c("provinciecode", "k", tijd)]
+  setnames(cel, tijd, "t")
+  vol <- CJ(provinciecode = sort(unique(cel$provinciecode)), k = 1:n_k, t = min(cel$t):max(cel$t))
+  p <- merge(vol, cel, by = c("provinciecode", "k", "t"), all.x = TRUE)
+  p[is.na(y), y := 0]
+  p[, `:=`(prov_t = paste(provinciecode, t), prov_k = paste(provinciecode, k),
+           k_szn = if (seizoen) paste(k, (t - 1L) %% 4L) else "0")]
+  p[]
+}
+fe_formule <- function(p) if (uniqueN(p$k_szn) > 1) "prov_t + prov_k + k_szn" else "prov_t + prov_k"
+
+fit_es <- function(p, ref, cl = ~prov_k) {
+  m <- fepois(as.formula(sprintf("y ~ i(t, D, ref = c(%s)) | %s", paste(ref, collapse = ","), fe_formule(p))),
+              data = p, cluster = cl, notes = FALSE)
+  cf <- coef(m); se <- se(m)
+  tt <- as.integer(sapply(strsplit(names(cf), ":"), `[`, 3))
+  tab <- rbind(data.table(t = tt, b = cf, se = se),
+               data.table(t = ref, b = 0, se = 0))[order(t)]
+  tab[, `:=`(irr = exp(b), lo = exp(b - 1.96 * se), hi = exp(b + 1.96 * se))]
+  list(model = m, tab = tab)
+}
+wald_pre <- function(m, ref_min) {
+  b <- coef(m); V <- vcov(m)
+  tt <- as.integer(sapply(strsplit(names(b), ":"), `[`, 3))
+  idx <- which(tt < ref_min)
+  W <- as.numeric(t(b[idx]) %*% solve(V[idx, idx, drop = FALSE]) %*% b[idx])
+  list(stat = W, df = length(idx), p = pchisq(W, length(idx), lower.tail = FALSE))
+}
+gem_regime <- function(m, t_van, t_tot) {
+  b <- coef(m); V <- vcov(m)
+  tt <- as.integer(sapply(strsplit(names(b), ":"), `[`, 3))
+  idx <- which(tt >= t_van & tt <= t_tot); w <- rep(1 / length(idx), length(idx))
+  est <- sum(w * b[idx]); se <- sqrt(as.numeric(t(w) %*% V[idx, idx] %*% w))
+  list(b = est, se = se, irr = exp(est), lo = exp(est - 1.96 * se), hi = exp(est + 1.96 * se), n = length(idx))
+}
+fit_did <- function(p, post_van, cl = ~prov_k) {
+  p[, tr := D * as.integer(t >= post_van)]
+  m <- fepois(as.formula(sprintf("y ~ tr | %s", fe_formule(p))), data = p, cluster = cl, notes = FALSE)
+  list(b = coef(m)[["tr"]], se = se(m)[["tr"]], n = m$nobs)
+}
+fit_regime <- function(p, cl = ~prov_k) {
+  p[, `:=`(na_pas = D * as.integer(t >= Q_PAS), na_por = D * as.integer(t >= Q_POR), na_sal = D * as.integer(t >= Q_SAL))]
+  m2 <- fepois(as.formula(sprintf("y ~ na_pas + na_sal | %s", fe_formule(p))), data = p, cluster = cl, notes = FALSE)
+  m3 <- fepois(as.formula(sprintf("y ~ na_pas + na_por + na_sal | %s", fe_formule(p))), data = p, cluster = cl, notes = FALSE)
+  list(pas = coef(m2)[["na_pas"]], pas_se = se(m2)[["na_pas"]], sal = coef(m2)[["na_sal"]], sal_se = se(m2)[["na_sal"]],
+       pas3 = coef(m3)[["na_pas"]], pas3_se = se(m3)[["na_pas"]], por3 = coef(m3)[["na_por"]], por3_se = se(m3)[["na_por"]],
+       sal3 = coef(m3)[["na_sal"]], sal3_se = se(m3)[["na_sal"]])
+}
+zet_D_afstand <- function(p, dr) { p[, D := as.integer(k <= dr / PARAMS$klasse_breedte)]; invisible(p) }
+N_KL <- as.integer(PARAMS$klasse_max_m / PARAMS$klasse_breedte) + 1L
+
+## Steekproeven per kwartaal
+verg <- s[!is.na(vergunning_datum) & vergunning_datum >= as.Date("2012-01-01")]
+verg[, q := kw_index(vergunning_datum)]; verg <- verg[q >= 1 & q <= Q_MAX_VERG]
+nwb <- d[cbs_nieuwbouw == TRUE & projecttype != "admin_fout" & !is.na(dist2n2000_m) & !is.na(provinciecode) & !is.na(mutatiemaand)]
+nwb[, q := kw_index(mutatiemaand)]; nwb <- nwb[q >= 1 & q <= Q_MAX_NWB]
+nwb[, pid_cl := fifelse(!is.na(cluster_rel), paste(gemeentecode, cluster_rel), paste0("__los_", vbo_bag_nr))]
+nwb[, pid_doc := projectid]
+nwb[, jaar := mutatiejaar]; verg[, jaar := vergunning_jaar]
+UIT <- list(vergunningen = verg, nieuwbouw = nwb)
+
+## ---------------------------------------------------------------------
+## 3. SERIES
+## ---------------------------------------------------------------------
+kop("3. Reeksen")
+R$series <- list()
+for (u in names(UIT)) {
+  dt <- UIT[[u]]
+  kw <- dt[, .(y = .N), by = .(q, D = kl2500)]
+  basis <- kw[q %in% Q_REF, .(basis = mean(y)), by = D]
+  kw <- merge(kw, basis, by = "D")[, index := y / basis][order(D, q)]
+  jr <- dt[jaar <= 2025, .(y = .N), by = .(jaar, D = kl2500)][order(D, jaar)]
+  bjr <- jr[jaar == 2018, .(basis = y), by = D]; jr <- merge(jr, bjr, by = "D")[, index := y / basis]
+  R$series[[u]] <- list(kwartaal = kw[, .(q, D, y, index = round(index, 3))],
+                        jaar = jr[, .(jaar, D, y, index = round(index, 3))],
+                        totaal_per_jaar = dt[jaar <= 2025, .N, by = jaar][order(jaar)])
+}
+
+## power: hoeveel zit er achter elke drempel
+pn0 <- bouw_paneel(nwb, "q", "afstandsklasse", "pid_doc", N_KL, seizoen = TRUE)
+R$power <- rbindlist(lapply(PARAMS$drempels, function(dr) {
+  zet_D_afstand(pn0, dr)
+  data.table(drempel = dr, klassen = uniqueN(pn0$k[pn0$D == 1]), cellen = sum(pn0$D == 1),
+             objecten = sum(pn0$y[pn0$D == 1]), aandeel = round(100 * sum(pn0$y[pn0$D == 1]) / sum(pn0$y), 1))
+}))
+print(R$power)
+
+## ---------------------------------------------------------------------
+## 4. EVENT STUDY per kwartaal (hoofdanalyse)
+## ---------------------------------------------------------------------
+kop("4. Event study per kwartaal")
+R$es <- list(); R$regime <- list()
+for (u in names(UIT)) {
+  p <- bouw_paneel(UIT[[u]], "q", "afstandsklasse", "pid_doc", N_KL, seizoen = TRUE)
+  q_max <- max(p$t)
+  out <- list(); reg <- list()
+  for (dr in c(500, 1000, 2500, 5000)) {
+    zet_D_afstand(p, dr)
+    es <- fit_es(p, Q_REF)
+    w  <- wald_pre(es$model, min(Q_REF))
+    g1 <- gem_regime(es$model, Q_PAS, Q_SAL - 1L); g2 <- gem_regime(es$model, Q_SAL, q_max)
+    g0 <- gem_regime(es$model, 1L, min(Q_REF) - 1L)
+    out[[as.character(dr)]] <- list(drempel = dr, coef = es$tab[, .(t, kw = kw_label(t), b, se, irr, lo, hi)],
+                                    pre_wald = w, gem_pre = g0, gem_pas = g1, gem_sal = g2)
+    reg[[as.character(dr)]] <- c(list(drempel = dr), fit_regime(p))
+    cat(sprintf("%-12s %5dm  pre p=%.3f  pas IRR %.3f [%.3f-%.3f]  sal IRR %.3f [%.3f-%.3f]\n", u, dr, w$p,
+                g1$irr, g1$lo, g1$hi, g2$irr, g2$lo, g2$hi))
+  }
+  R$es[[u]] <- out; R$regime[[u]] <- rbindlist(lapply(reg, as.data.table))
+}
+
+## ---------------------------------------------------------------------
+## 5. ROBUUSTHEID (enkelvoudige DiD op PAS, coefficient op behandeld x post)
+## ---------------------------------------------------------------------
+kop("5. Robuustheid")
+robuust <- function(u) {
+  dt <- UIT[[u]]
+  rij <- function(naam, p, post = Q_PAS, cl = ~prov_k, tijd = "kw") {
+    rbindlist(lapply(c(1000, 2500), function(dr) {
+      zet_D_afstand(p, dr); r <- fit_did(p, post, cl)
+      data.table(variant = naam, drempel = dr, b = r$b, se = r$se, n = r$n)
+    }))
+  }
+  P <- function(x, tijd = "q", id = "pid_doc", szn = TRUE) bouw_paneel(x, tijd, "afstandsklasse", id, N_KL, seizoen = szn)
+  out <- list(
+    rij("basis (kwartaal, documentnr, seizoens-FE)", P(dt)),
+    rij("zonder seizoens-FE", P(dt, szn = FALSE)),
+    rij("jaar i.p.v. kwartaal", P(dt, tijd = "jaar", szn = FALSE), post = 2019),
+    rij("cluster-id i.p.v. documentnr", P(dt, id = "pid_cl")),
+    rij("vanaf 2014", P(dt[q >= kw_index(as.Date("2014-01-01"))])),
+    rij("t/m 2023 (voor Omgevingswet)", P(dt[q <= kw_index(as.Date("2023-12-31"))])),
+    rij("cluster se: afstandsklasse", P(dt), cl = ~k),
+    rij("cluster se: provincie", P(dt), cl = ~provinciecode),
+    rij("placebo: 2016Q1 op 2012-2018", P(dt[q <= max(Q_REF)]), post = kw_index(as.Date("2016-01-01")))
+  )
+  if (u == "nieuwbouw") {
+    alles <- d[cbs_nieuwbouw == TRUE & !is.na(dist2n2000_m) & !is.na(provinciecode) & !is.na(mutatiemaand)]
+    alles[, q := kw_index(mutatiemaand)]; alles <- alles[q >= 1 & q <= Q_MAX_NWB]; alles[, pid_doc := projectid]
+    out <- c(out, list(rij("geen statusfilter", P(alles))))
+    st <- alles[!grepl("Niet_gerealiseerd_pand|Pand_gesloopt|Sloopvergunning_verleend|Pand_ten_onrechte_opgevoerd", pand_status_mutatie)]
+    out <- c(out, list(rij("Stata-filter (pand_status snapshot)", P(st))))
+    ## de pooling-bug reproduceren
+    pool <- copy(alles); pool[bron_vergunning == FALSE, pid_doc := paste("NA", gemeentecode, q)]
+    out <- c(out, list(rij("projectid-NA gepoold (Stata)", P(pool))))
+  }
+  rbindlist(out)
+}
+R$robust <- list(nieuwbouw = robuust("nieuwbouw"), vergunningen = robuust("vergunningen"))
+print(dcast(R$robust$nieuwbouw[, .(variant, drempel, v = sprintf("%+.3f (%.3f)", b, se))], variant ~ drempel, value.var = "v"))
+
+## ---------------------------------------------------------------------
+## 6. DEPOSITIE als behandeling (EIB-matrix), per kwartaal
+## ---------------------------------------------------------------------
+kop("6. Depositie als behandeling")
+nwb <- merge(nwb, s[, .(vbo_bag_nr, depk_doc, depk_cl)], by = "vbo_bag_nr", all.x = TRUE)
+nwb[is.na(depk_doc), depk_doc := eib_cut(mol_woning)]   # losse objecten: omvang 1
+nwb[is.na(depk_cl),  depk_cl  := eib_cut(mol_woning)]
+UIT$nieuwbouw <- nwb
+R$depositie <- list(); zet_D_dep <- function(p, k_min) { p[, D := as.integer(k >= k_min)]; invisible(p) }
+for (u in names(UIT)) {
+  for (id in c("doc", "cl")) {
+    p <- bouw_paneel(UIT[[u]], "q", paste0("depk_", id), paste0("pid_", id), 5L, seizoen = TRUE)
+    for (k_min in c(3L, 4L)) {
+      zet_D_dep(p, k_min)
+      es <- fit_es(p, Q_REF); w <- wald_pre(es$model, min(Q_REF))
+      g1 <- gem_regime(es$model, Q_PAS, Q_SAL - 1L); g2 <- gem_regime(es$model, Q_SAL, max(p$t))
+      dd <- fit_did(p, Q_PAS)
+      nm <- sprintf("%s_%s_%s", u, id, if (k_min == 3) "va01" else "va05")
+      R$depositie[[nm]] <- list(uitkomst = u, id = id, drempel = if (k_min == 3) ">= 0,1 mol" else ">= 0,5 mol",
+                                did_b = dd$b, did_se = dd$se, pre_p = w$p, gem_pas = g1, gem_sal = g2,
+                                aandeel_behandeld = round(100 * sum(p$y[p$D == 1]) / sum(p$y), 1),
+                                coef = es$tab[, .(t, kw = kw_label(t), irr, lo, hi)])
+      cat(sprintf("%-12s %-4s %-10s DiD %+.3f (%.3f)  pre p=%.3f  aandeel %.1f%%\n", u, id,
+                  R$depositie[[nm]]$drempel, dd$b, dd$se, w$p, R$depositie[[nm]]$aandeel_behandeld))
+    }
+  }
+}
+
+## ---------------------------------------------------------------------
+## 7. UITVAL en PIJPLIJN: cohortanalyse met vast venster
+## ---------------------------------------------------------------------
+kop("7. Uitval en pijplijn")
+co <- s[!is.na(vergunning_jaar) & vergunning_jaar >= 2012 & vergunning_jaar <= 2021]
+co[, `:=`(D = kl2500, post = as.integer(vergunning_jaar >= 2019), y4 = as.integer(gerealiseerd_binnen_4jr),
+          prov_jaar = paste(provinciecode, vergunning_jaar), prov_k = paste(provinciecode, afstandsklasse))]
+cat("cohorten 2012-2021, NA in gerealiseerd_binnen_4jr:", sum(is.na(co$y4)), "\n")
+tab4 <- dcast(co[!is.na(y4), .(pct = round(100 * mean(y4), 1), N = .N), by = .(jaar = vergunning_jaar, nabij = fifelse(D == 1, "nabij", "ver"))],
+              jaar ~ nabij, value.var = c("pct", "N"))
+m4 <- feols(y4 ~ D:post | prov_jaar + prov_k, data = co[!is.na(y4)], cluster = ~prov_k)
+es4 <- feols(y4 ~ i(vergunning_jaar, D, ref = 2018) | prov_jaar + prov_k, data = co[!is.na(y4)], cluster = ~prov_k)
+cf <- coef(es4); se4 <- se(es4)
+## uitval-eindstand voor oude cohorten (<= 2019, minstens 6 jaar opvolging)
+uit <- s[!is.na(vergunning_jaar) & vergunning_jaar >= 2012 & vergunning_jaar <= 2019]
+tabu <- dcast(uit[, .(pct = round(100 * mean(uitkomst == "uitval"), 2)), by = .(jaar = vergunning_jaar, nabij = fifelse(kl2500 == 1, "nabij", "ver"))],
+              jaar ~ nabij, value.var = "pct")
+R$uitval <- list(
+  binnen4jr = tab4,
+  did = list(b = coef(m4)[["D:post"]], se = se(m4)[["D:post"]], n = m4$nobs,
+             basis_nabij_pre = round(mean(co[D == 1 & post == 0 & !is.na(y4), y4]), 3)),
+  es = data.table(jaar = as.integer(sapply(strsplit(names(cf), ":"), `[`, 3)), b = cf, se = se4)[order(jaar)],
+  uitval_eind = tabu,
+  pipeline = R$data$censurering
+)
+cat(sprintf("gerealiseerd binnen 4 jaar, DiD (pp): %+.4f (%.4f)\n", coef(m4)[["D:post"]], se(m4)[["D:post"]]))
+print(tab4)
+
+## ---------------------------------------------------------------------
+## 8. VERTALING NAAR WONINGEN
+## ---------------------------------------------------------------------
+kop("8. Woningen")
+R$homes <- list()
+for (u in names(UIT)) {
+  p <- bouw_paneel(UIT[[u]], "q", "afstandsklasse", "pid_doc", N_KL, seizoen = TRUE)
+  q_max <- max(p$t)
+  R$homes[[u]] <- rbindlist(lapply(c(1000, 2500), function(dr) {
+    zet_D_afstand(p, dr)
+    g <- R$es[[u]][[as.character(dr)]]$gem_pas
+    Ypost <- sum(p$y[p$D == 1 & p$t >= Q_PAS & p$t < Q_SAL]); Ytot <- sum(p$y[p$t >= Q_PAS & p$t < Q_SAL])
+    minder <- function(irr) Ypost / irr - Ypost
+    data.table(drempel = dr, behandeld_post = Ypost, totaal_post = Ytot,
+               irr = g$irr, minder_punt = round(minder(g$irr)), minder_ondergrens = round(minder(g$lo)), minder_bovengrens = round(minder(g$hi)),
+               pct_punt = round(100 * minder(g$irr) / Ytot, 2), pct_ondergrens = round(100 * minder(g$lo) / Ytot, 2))
+  }))
+  print(R$homes[[u]])
+}
+
+## ---------------------------------------------------------------------
+## Wegschrijven
+## ---------------------------------------------------------------------
+json <- to_json(R)
+writeLines(json, file.path(PATHS$output, sprintf("rapport_%s.json", EXTRACT)), useBytes = TRUE)
+kop("Klaar in %.0f sec -- %s", as.numeric(difftime(Sys.time(), t0, units = "secs")),
+    file.path(PATHS$output, sprintf("rapport_%s.json", EXTRACT)))
+sink()
