@@ -16,7 +16,8 @@
 scripts <- c("01_build_vbo.R",
              "02_classify.R",
              "03_checks.R",
-             "04_analyse_aanbod.R")
+             "04_analyse_aanbod.R",
+             "05_eventstudy_kwartaal.R")
 
 for (s in scripts) {
   message("\n>>> ", s, " ...")
