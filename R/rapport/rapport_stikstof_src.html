@@ -109,6 +109,15 @@ tbody tr:hover td{background:var(--surface-2)}
 .qa dd{margin:0 0 6px;max-width:68ch}
 .small{font-size:14.5px;color:var(--ink-2)}
 dfn{font-style:normal;font-weight:600}
+.cap{font-family:var(--ui);color:var(--muted);font-weight:600;margin-right:.45em}
+h3 .hn{color:var(--muted);font-weight:400;margin-right:.4em;font-family:var(--ui);font-size:.78em;letter-spacing:.02em}
+tr.sub td{background:var(--surface-2);font-weight:600;border-bottom:1px solid var(--muted)}
+tr.rest td{color:var(--ink-2)}
+td.fx{font-family:var(--mono);font-size:12px;white-space:pre-wrap}
+.ernst{display:inline-block;font-family:var(--ui);font-size:11px;font-weight:600;letter-spacing:.03em;padding:2px 7px;border-radius:3px;white-space:nowrap}
+.ernst.blok{background:rgba(196,98,42,.16);color:var(--event)}
+.ernst.stil{background:rgba(58,111,216,.14);color:var(--control)}
+.ernst.cos{background:var(--surface-2);color:var(--ink-2)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
@@ -129,7 +138,8 @@ dfn{font-style:normal;font-weight:600}
     <li><a href="#s11"><span class="n">11</span><span>De uitspraak van 2024</span></a></li>
     <li><a href="#s12"><span class="n">12</span><span>Wat het betekent</span></a></li>
     <li><a href="#s13"><span class="n">13</span><span>Voor de kritische lezer</span></a></li>
-    <li><a href="#s14"><span class="n">14</span><span>Verantwoording</span></a></li>
+    <li><a href="#s14"><span class="n">14</span><span>Fouten in de do-files</span></a></li>
+    <li><a href="#s15"><span class="n">15</span><span>Verantwoording</span></a></li>
   </ol>
 </nav>
 
@@ -180,7 +190,8 @@ dfn{font-style:normal;font-weight:600}
 <p>Voor nieuwbouw: ja, tot op een half procent. Voor "overig": nee, en dat hoort ook niet. StatLine telt jaarlijks 18.000 tot 64.000 "overige toevoegingen" aan de woningvoorraad; ons bestand heeft er 600 tot 4.500 per opleverjaar. De verklaring is de afbakening. Ons universum is: objecten waarvoor een bouwvergunning is verleend op pandniveau, plus objecten die CBS als nieuwbouw telt. De meeste overige toevoegingen, zoals de splitsing van een bestaande woning of de transformatie van een kantoor, zijn mutaties op objectniveau binnen een bestaand pand, en die passeren nooit de pandstatus "bouwvergunning verleend". Ze zitten dus niet in de exports. De 71.869 die we wel hebben zijn de overige toevoegingen die toevallig met een pandvergunning gepaard gingen. Voor dit rapport is dat geen probleem: de uitkomstmaat is nieuwbouw, en die sluit aan.</p>
 <div class="tbl"><div class="fig-h">Nieuwbouw en overige toevoegingen: dit bestand tegenover StatLine 82235NED</div><div class="fig-s">nieuwbouw naar CBS-mutatiejaar; "overig" naar pand-opleverjaar; StatLine per kalenderjaar</div><div class="tw"><table id="t-statline"></table></div></div>
 <p>De ruis zit in de combinaties eronder. De volledige beslismatrix, welke combinatie van pandstatus, objectstatus en CBS-nieuwbouw in welke groep valt, staat hieronder voor alle cellen met minstens tweehonderd objecten. Twee principes lossen bijna alles op: sloop is geen realisatiestatus (een object dat gebouwd is en waarvan het pand later is gesloopt, blijft gebouwd), en "ingetrokken" is dubbelzinnig en wordt beslist op de pandstatus, met een vlag zodat het omkeerbaar is.</p>
-<div class="tbl"><div class="fig-h">Beslismatrix: pandstatus &times; objectstatus &times; CBS-nieuwbouw</div><div class="fig-s">alle combinaties met &ge; 200 objecten; vet = de combinaties die zonder regel als ruis zouden gelden</div><div class="tw"><table id="t-matrix"></table></div></div>
+<div class="tbl"><div class="fig-h">Beslismatrix: pandstatus &times; objectstatus &times; CBS-nieuwbouw</div><div class="fig-s">alle 31 combinaties met &ge; 200 objecten, gegroepeerd per uitkomst; vet = de combinaties die zonder regel als ruis zouden gelden</div><div class="tw"><table id="t-matrix"></table></div></div>
+<p>De matrix telt per groep op tot het totaal uit de vorige tabel. De regel "overige combinaties" vangt de cellen met minder dan tweehonderd objecten: samen 790 van de 1.302.465, verdeeld over enkele tientallen zeldzame statuscombinaties. Wie de volledige uitsplitsing wil, vindt hem in <code>_output/rapport_20260730.json</code> onder <code>data.matrix</code>.</p>
 </section>
 
 <section id="s3" class="col">
@@ -190,7 +201,7 @@ dfn{font-style:normal;font-weight:600}
 <p>Dat is meteen de eerste waarschuwing: de drempels zijn geneste deelverzamelingen met een factor 28 verschil in omvang. De 250-meterband is één afstandsklasse; de 5.000-meterband is bijna de helft van alle woningbouw. De vijf kolommen naast elkaar presenteren suggereert een precisie die er niet is.</p>
 <h3>De uitspraken</h3>
 <p>Er zijn er meer dan twee, en ze gaan niet allemaal dezelfde kant op.</p>
-<div class="tbl"><div class="tw"><table id="t-events"></table></div></div>
+<div class="tbl"><div class="fig-h">De uitspraken en wetswijzigingen in de reeks</div><div class="tw"><table id="t-events"></table></div></div>
 <p>De twee die ertoe doen zijn 29 mei 2019 en 18 december 2024. Maar de tussenliggende horen erbij: Logtsebaan maakte intern salderen in 2021 juist vergunningvrij, dus de uitspraak van 2024 is een terugdraai, geen nieuwe stap. En de Omgevingswet van 1 januari 2024 is geen gedragsbreuk maar een meetbreuk: voor gevolgklasse 1, het merendeel van de grondgebonden woningbouw, verving een bouwmelding de vergunning, en meldingen staan niet in de BAG-vergunningreeks.</p>
 <h3>De specificatie</h3>
 <p>We volgen het conceptartikel: een Poisson-model op het aantal objecten per provincie, afstandsklasse en periode, met vaste effecten voor provincie × periode en provincie × afstandsklasse, standaardfouten geclusterd op provincie × afstandsklasse. Twee dingen zijn anders.</p>
@@ -582,7 +593,37 @@ fepois(y ~ na_pas + na_por + na_sal | prov_t + prov_k + k_szn, data = p, cluster
 </section>
 
 <section id="s14" class="col">
-<h2><span class="n">14</span>Verantwoording</h2>
+<h2><span class="n">14</span>Fouten in de do-files</h2>
+<p>Bij het overzetten naar R is elk blok van de Stata-code naast de data gelegd. Daar kwamen dertien dingen uit die niet doen wat de code lijkt te zeggen. Ze staan hieronder met vindplaats en oplossing, geordend naar hoe erg ze zijn. Gecontroleerd op 9 september 2026, op <code>do_analysis_stikstof_jaar.do</code> (gewijzigd 9 september 13:13) en <code>do_analysis_files_stikstof.do</code> (17 augustus). Regelnummers verschuiven zodra er iets wordt toegevoegd, dus zoek op de code in de kolom ernaast.</p>
+<p>Drie soorten. <span class="ernst blok">blokkerend</span> betekent dat Stata een foutmelding geeft en het script stopt; die merk je vanzelf, maar ze verklaren wel waarom sommige blokken nooit gedraaid kunnen hebben. <span class="ernst stil">stil</span> is het gevaarlijke type: de code draait door en geeft een getal dat verkeerd is. <span class="ernst cos">cosmetisch</span> raakt alleen de leesbaarheid van de output.</p>
+<div class="tbl"><div class="fig-h">Wat er misgaat, waar, en hoe het te repareren is</div><div class="tw"><table id="t-fouten"></table></div></div>
+<h3>De twee die de cijfers echt raken</h3>
+<p><strong>De <code>collapse</code> met een lege sleutel.</strong> Dit is de enige fout die een gepubliceerd getal verandert, en flink: de nieuwbouwcoëfficiënt op 250 meter gaat van &minus;0,325 naar &minus;0,099 als je hem repareert, en de gefabriceerde pre-trend in 2012 verdwijnt. De oorzaak staat in hoofdstuk 2. De reparatie is één regel vóór elke <code>collapse</code>:</p>
+<div class="tbl"><details class="code" open><summary>De reparatie</summary>
+<div class="lab">Stata, vóór regel 167 en vóór regel 325</div>
+<pre>* elk object zonder projectnummer wordt zijn eigen project, in plaats van
+* samen met alle andere lege sleutels in de gemeente een pseudo-project
+replace projectid_doc = -_n if projectid_doc == .
+
+* controle achteraf: dit hoort 0 te zijn
+count if projectid_doc == .</pre>
+<div class="note">Structureler is de sleutel uit gemeentecode en documentnummer opbouwen, zoals de R-pipeline doet; dan kán hij niet leeg zijn. Zie hoofdstuk 2.</div>
+</details></div>
+<p><strong>De statusfilters die nergens landen.</strong> De regels 22 en 29 selecteren op <code>status</code> en op gebruiksdoel, maar tussen die regels en de <code>use</code> op regel 53 staat geen enkele schatting. Alles wat daar wordt weggegooid komt op regel 53 weer terug. Dat is geen ramp voor de uitkomsten (hoofdstuk 7 laat zien dat het statusfilter de coëfficiënt met hooguit 0,002 beweegt), maar het betekent wel dat de tekst van het conceptartikel iets beschrijft wat de code niet doet. Wie het filter écht wil toepassen, moet het herhalen ná regel 137 en ná regel 305.</p>
+<h3>Hoe je dit soort dingen voorkomt</h3>
+<p>Vier gewoonten die de meeste van deze dertien vooraf zouden hebben gevangen.</p>
+<ul>
+<li><strong>Draai het script één keer van boven naar beneden in een schone sessie.</strong> Vier van de dertien zijn blokkerende fouten die alleen onzichtbaar blijven als je regel voor regel werkt met data die nog uit een vorig blok in het geheugen staat. Een <code>do</code> van het hele bestand legt ze binnen een minuut bloot.</li>
+<li><strong>Controleer aannames met <code>assert</code> in plaats van met <code>tab</code>.</strong> <code>tab</code> laat je iets zien; <code>assert</code> stopt als het niet klopt. Voor de collapse-fout volstaat <code>assert !missing(projectid_doc)</code>. Voor het gebruik van <code>jaar</code> in het vergunningenbestand had <code>confirm variable jaar</code> genoeg geweest.</li>
+<li><strong>Wees bedacht op missings in ongelijkheden.</strong> In Stata is een ontbrekende waarde groter dan elk getal, dus <code>leeftijdverschil &gt; -6</code> is waar als het bouwjaar ontbreekt. Nu gaat het om veertien panden, maar dat aantal hangt af van het extract. Schrijf <code>!missing(x) &amp; x &gt; -6</code>.</li>
+<li><strong>Laat de naam van een variabele zeggen wat erin zit.</strong> <code>pand_status</code> in het nieuwbouwbestand is de stand op de mutatiemaand, <code>last_pand_status</code> in het vergunningenbestand is de eindstand. Ze verschillen in 697.094 van de 884.382 gekoppelde rijen. Het filter op regel 145 tot 148 gebruikt de eerste terwijl de tekst de tweede beschrijft, en dropt daardoor 0,41% in plaats van 1,47%.</li>
+</ul>
+<div class="aside"><div class="t">Wat ik niet heb kunnen controleren</div>
+<p>De Stata-licentie op deze machine is op 21 juni 2026 verlopen, dus ik heb de do-files gelezen en tegen de data gelegd, niet uitgevoerd. Voor de blokkerende fouten betekent dat: ik weet zeker dat de variabele op dat punt niet bestaat, maar niet met welke foutmelding Stata precies stopt. Het punt over <code>absorb()</code> naast <code>noabsorb</code> is daarom als "controleren" gemarkeerd en niet als vaststaand.</p></div>
+</section>
+
+<section id="s15" class="col">
+<h2><span class="n">15</span>Verantwoording</h2>
 <p>Alle cijfers in dit rapport komen uit één run van <code>R/06_rapport.R</code> (objectenspoor) en <code>R/07_plannen.R</code> (plannenspoor) op het extract van 30 juli 2026 (BAG van 10 juli 2026), en zijn herleidbaar naar de JSON die die scripts wegschrijven. De pipeline staat in <code>jipclaassens/Stikstof</code> onder <code>R/</code>; de HTML-bron van dit rapport onder <code>R/rapport/</code>. De StatLine-cijfers komen uit tabel 82235NED (Voorraad woningen; standen en mutaties vanaf 1921), opgehaald op 2 september 2026. Het plannenbestand is <code>afstand_n2000_plannen.dta</code> uit Huubs Stata-pipeline; de koppeling van de provinciale planbestanden zelf is niet geport.</p>
 <h3>Wat er niet in zit</h3>
 <ul>
@@ -631,7 +672,8 @@ const OVERIG_OPLEVERJAAR = {2012:4547,2013:3430,2014:2293,2015:1286,2016:1308,20
 function table(id, cols, rows, opts={}){
   const t = document.getElementById(id); if(!t || !rows) return;
   const th = cols.map(c => `<th class="${c.num?'n':''}">${c.h}</th>`).join('');
-  const tr = rows.map(r => `<tr${opts.hl && opts.hl(r) ? ' class="hl"':''}>` + cols.map(c => `<td class="${c.num?'n':''}">${c.f(r)}</td>`).join('') + '</tr>').join('');
+  const cls = r => opts.cls ? opts.cls(r) : (opts.hl && opts.hl(r) ? 'hl' : '');
+  const tr = rows.map(r => `<tr${cls(r) ? ` class="${cls(r)}"`:''}>` + cols.map(c => `<td class="${[c.num?'n':'', c.cls||''].filter(Boolean).join(' ')}">${c.f(r)}</td>`).join('') + '</tr>').join('');
   t.innerHTML = `<thead><tr>${th}</tr></thead><tbody>${tr}</tbody>`;
 }
 const fmtP = p => p<0.001?'&lt; 0,001':nl(p,3);
@@ -650,10 +692,25 @@ const PS = s => s.replace('Pand_','').replace('Niet_gerealiseerd_pand','niet ger
 const VS = s => s.replace('Verblijfsobject_','').replace('Niet_gerealiseerd_verblijfsobject','niet gerealiseerd').replace('Verbouwing_verblijfsobject','verbouwing').replace('_',' ').replace('(geen vergunningrecord)','·');
 const GS = g => ({'1_nieuwbouw':'nieuwbouw','2_gestrand':'gestrand','3_pijplijn':'pijplijn','4_overig':'overig'})[g];
 const susp = r => (r.cbs && (r.pand.includes('gesloopt')||r.pand.includes('Niet_gerealiseerd')||r.vbo.includes('ingetrokken')||r.vbo.includes('Niet_gerealiseerd'))) || (!r.cbs && r.pand.includes('in_gebruik') && (r.vbo.includes('Niet_gerealiseerd')||r.vbo.includes('gevormd')));
-table('t-matrix', [
-  {h:'CBS-nieuwbouw',f:r=>r.cbs?'ja':'·'},{h:'Pandstatus',f:r=>susp(r)?`<strong>${PS(r.pand)}</strong>`:PS(r.pand)},{h:'Objectstatus',f:r=>susp(r)?`<strong>${VS(r.vbo)}</strong>`:VS(r.vbo)},
-  {h:'→ groep',f:r=>GS(r.groep)},{h:'Objecten',num:true,f:r=>nl(r.N)},{h:'Vlag',f:r=>[r.ambigu>0?'ambigu':'',r.gesloopt>0?'gesloopt':''].filter(Boolean).join(', ')}
-], D.data.matrix.slice(0,18));
+(function(){
+  const tot = Object.fromEntries(D.data.groep28.map(r=>[r.groep, r.N]));
+  const rows = [];
+  for (const g of ['1_nieuwbouw','2_gestrand','3_pijplijn','4_overig']) {
+    const rs = D.data.matrix.filter(r=>r.groep===g).slice().sort((a,b)=>b.N-a.N);
+    rows.push(...rs);
+    const som = rs.reduce((s,r)=>s+r.N, 0);
+    if (tot[g] - som > 0) rows.push({rest:true, groep:g, N:tot[g]-som});
+    rows.push({sub:true, groep:g, N:tot[g]});
+  }
+  table('t-matrix', [
+    {h:'CBS-nieuwbouw',f:r=>r.sub?'':(r.rest?'':(r.cbs?'ja':'·'))},
+    {h:'Pandstatus',f:r=>r.sub?`Totaal ${GS(r.groep)}`:(r.rest?'overige combinaties, elk < 200 objecten':(susp(r)?`<strong>${PS(r.pand)}</strong>`:PS(r.pand)))},
+    {h:'Objectstatus',f:r=>r.sub||r.rest?'':(susp(r)?`<strong>${VS(r.vbo)}</strong>`:VS(r.vbo))},
+    {h:'→ groep',f:r=>r.sub?'':GS(r.groep)},
+    {h:'Objecten',num:true,f:r=>nl(r.N)},
+    {h:'Vlag',f:r=>r.sub||r.rest?'':[r.ambigu>0?'ambigu':'',r.gesloopt>0?'gesloopt':''].filter(Boolean).join(', ')}
+  ], rows, {cls:r=>r.sub?'sub':(r.rest?'rest':'')});
+})();
 table('t-power', [{h:'Behandeld = binnen',f:r=>nl(r.drempel)+' m'},{h:'Afstandsklassen',num:true,f:r=>r.klassen},{h:'Cellen (prov × klasse × kwartaal)',num:true,f:r=>nl(r.cellen)},{h:'Objecten',num:true,f:r=>nl(r.objecten)},{h:'% van alle nieuwbouw',num:true,f:r=>nl(r.aandeel,1)}], D.power, {hl:r=>r.drempel===2500});
 table('t-events', [{h:'Datum',f:r=>r.datum},{h:'Kwartaal',f:r=>r.kwartaal},{h:'Uitspraak',f:r=>r.hoofd?`<strong>${r.naam}</strong>`:r.naam},{h:'Richting',f:r=>r.soort},{h:'Strekking',f:r=>r.strekking}], D.events);
 (function(){
@@ -712,6 +769,75 @@ if(P){
   const pj={}; for(const r of P.aantal.per_jaar){ (pj[r.jaar]=pj[r.jaar]||{jaar:r.jaar})[r.nabij?'n1':'n0']=r.plannen; }
   table('t-plan-aantal-jaar',[{h:'Jaar',f:r=>r.jaar},{h:'Nieuwe plannen ≤ 2.500 m',num:true,f:r=>nl(r.n1)},{h:'Nieuwe plannen controle',num:true,f:r=>nl(r.n0)}], Object.values(pj));
 }
+
+/* fouten in de do-files, handmatig vastgelegd op 2026-09-09 */
+const FOUTEN = [
+ {e:'blok', f:'jaar.do', r:'85', c:'drop if status_invalide == 1',
+  w:'De variabele wordt pas op regel 144 aangemaakt. In een schone sessie stopt Stata hier, dus het hele event-study-blok van regel 76 tot 130 kan nooit gedraaid hebben.',
+  fix:'Verplaats de aanmaak (regel 144 tot 148) naar boven regel 85, of haal de regel uit dit blok.'},
+ {e:'blok', f:'jaar.do', r:'308', c:'keep if jaar >= 2012',
+  w:'afstand_n2000_vergunningen.dta heeft geen variabele jaar. Het hele vergunningenblok stopt hier.',
+  fix:'gen jaar = year(bv_eerste_datum) ervoor. Let op: regel 39 gebruikt bv_laatste_datum; kies er één en doe het overal hetzelfde. De twee verschillen bij 9,7% van de objecten.'},
+ {e:'blok', f:'jaar.do', r:'153, 313', c:'tab jaar_kwartaal if jaar_kwartaal >= 260',
+  w:'jaar_kwartaal bestaat in geen van beide analysebestanden.',
+  fix:'Weghalen, of aanmaken uit de datum: gen jaar_kwartaal = qofd(bv_eerste_datum).'},
+ {e:'blok', f:'jaar.do', r:'108', c:'reghdfe ..., absorb(jaar kl`klasse\') noabsorb',
+  w:'absorb() en noabsorb sluiten elkaar uit. Te controleren: mogelijk weigert reghdfe de combinatie.',
+  fix:'Kies er één. Bij een index per jaar en klasse is absorb(jaar kl) waarschijnlijk bedoeld.'},
+ {e:'stil', f:'jaar.do', r:'167, 325', c:'collapse ... by(projectid_doc projectomvang_doc gemeentecode jaar ...)',
+  w:'Stata behandelt een lege projectid_doc als gewone groepswaarde. Alle 42.429 niet-gekoppelde objecten binnen een gemeente-jaar worden één pseudo-project en krijgen via (min) de kleinste afstandsklasse van die hoop. Dit is de enige fout die een gepubliceerd getal verandert: 250 m gaat van −0,099 naar −0,325, met een gefabriceerde pre-trend in 2012.',
+  fix:'replace projectid_doc = -_n if projectid_doc == . vóór beide collapse-regels.'},
+ {e:'stil', f:'jaar.do', r:'243, 403, 499', c:'recode event (-7=1) ... (6=14)',
+  w:'Het nieuwbouwbestand loopt tot 2026, wat event 7 geeft. Die waarde wordt niet hergecodeerd en valt dus samen met de referentiecategorie ib7.jtr, die 2018 is. 2026 wordt stilzwijgend bij het basisjaar opgeteld.',
+  fix:'drop if jaar == 2026 (het is een halve jaargang, mutaties tot en met juli), of de recode uitbreiden met (7=15).'},
+ {e:'stil', f:'jaar.do', r:'22, 29', c:'keep if inlist(status,2,4,7)  /  keep if last_vbo_gebruiksdoel == "woon"',
+  w:'Tussen deze regels en de use op regel 53 staat geen enkele schatting. Alles wat hier wordt weggegooid komt op regel 53 terug. De filters raken geen enkele uitkomst, terwijl de tekst van het conceptartikel ze wel beschrijft.',
+  fix:'Herhaal ze na regel 137 (nieuwbouw) en regel 305 (vergunningen), of markeer regel 10 tot 52 expliciet als verkennend.'},
+ {e:'stil', f:'jaar.do', r:'145 tot 148', c:'recode status_invalide (0=1) if strpos(pand_status,"...") > 0',
+  w:'pand_status is in het nieuwbouwbestand de stand op de mutatiemaand, niet de eindstand. De twee verschillen in 697.094 van de 884.382 gekoppelde rijen. Het filter dropt daardoor 3.767 objecten (0,41%) waar hetzelfde filter op de eindstatus er 13.648 (1,47%) zou droppen.',
+  fix:'Gebruik last_pand_status uit het vergunningenbestand, of hernoem de variabele naar pand_status_mutatie zodat het verschil zichtbaar is.'},
+ {e:'stil', f:'files.do', r:'56', c:'recode status (.=2) if last_pand_status == "Niet_gerealiseerd_pand" & leeftijdverschil > -6',
+  w:'In Stata is een ontbrekende waarde groter dan elk getal, dus de voorwaarde is waar als het bouwjaar ontbreekt. Nu gaat het om 14 panden, maar dat aantal hangt af van het extract.',
+  fix:'& !missing(leeftijdverschil) & leeftijdverschil > -6'},
+ {e:'stil', f:'jaar.do', r:'1095 tot 1103', c:'projectomvang_doc_doc',
+  w:'Die variabele bestaat niet; het is projectomvang_doc. Het controleblok over het schaalniveau draait dus niet.',
+  fix:'Hernoem naar projectomvang_doc (vier plekken).'},
+ {e:'cos', f:'jaar.do', r:'113, 114', c:'legend(label(2 "woningen ≤5.000m Natura-2000"))',
+  w:'Het bijschrift staat vast op 5.000 meter terwijl de lus over 500, 1000, 2500 en 5000 gaat. Drie van de vier figuren krijgen een verkeerd bijschrift.',
+  fix:'legend(label(2 "woningen ≤`klasse\'m Natura-2000"))'},
+ {e:'cos', f:'jaar.do', r:'246, 502, 641, 766, 888', c:'local letters A A B C D',
+  w:'Vijf klassen, maar 250 en 500 krijgen allebei het label (A).',
+  fix:'local letters A B C D E'},
+ {e:'cos', f:'jaar.do', r:'129', c:'graph export ..., name(graph5000) replace',
+  w:'Exporteert het losse paneel van 5.000 meter, niet de combinatie die op regel 128 is gemaakt.',
+  fix:'Laat name() weg, of geef de combinatie een naam met graph combine ..., name(combi, replace).'}
+];
+(function(){
+  const EL={blok:['blok','blokkerend'],stil:['stil','stil'],cos:['cos','cosmetisch']};
+  table('t-fouten',[
+    {h:'Ernst',f:r=>`<span class="ernst ${EL[r.e][0]}">${EL[r.e][1]}</span>`},
+    {h:'Bestand',f:r=>r.f},
+    {h:'Regel',num:true,f:r=>r.r},
+    {h:'Code',cls:'fx',f:r=>r.c.replace(/&/g,'&amp;').replace(/</g,'&lt;')},
+    {h:'Wat er gebeurt',f:r=>r.w},
+    {h:'Reparatie',cls:'fx',f:r=>r.fix.replace(/&/g,'&amp;').replace(/</g,'&lt;')}
+  ], FOUTEN);
+})();
+
+/* nummering van paragrafen, figuren en tabellen */
+(function(){
+  document.querySelectorAll('main section[id]').forEach(sec=>{
+    const n = sec.querySelector('h2 .n'); if(!n) return;
+    let sub = 0;
+    sec.querySelectorAll('h3').forEach(h=>{ sub++; h.insertAdjacentHTML('afterbegin', `<span class="hn">${n.textContent.trim()}.${sub}</span>`); });
+  });
+  let fig = 0, tab = 0;
+  document.querySelectorAll('main figure > .fig-h, main .tbl > .fig-h').forEach(el=>{
+    const isFig = el.parentElement.tagName === 'FIGURE';
+    const n = isFig ? ++fig : ++tab;
+    el.insertAdjacentHTML('afterbegin', `<span class="cap">${isFig?'Figuur':'Tabel'} ${n}.</span>`);
+  });
+})();
 
 /* ---------- charts ---------- */
 const eventLines = {
