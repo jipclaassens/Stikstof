@@ -4,7 +4,7 @@
 const fs = require("fs"), path = require("path"), cp = require("child_process");
 
 // Verhoog dit bij elke inhoudelijke wijziging van het rapport.
-const VERSIE = "1.6";
+const VERSIE = "1.7";
 
 const extract = process.argv[2] || "20260730";
 const here = __dirname;
