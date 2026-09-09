@@ -141,6 +141,30 @@ R$data <- list(
                     pct = round(100 * mean(!bron_vergunning), 1)), by = .(jaar = mutatiejaar)][order(jaar)]
 )
 
+## Aansluiting tussen de StatLine-vergelijking en de groepstabel. Die twee
+## tellen bewust niet hetzelfde: de StatLine-tabel vergelijkt ALLE CBS-nieuwbouw
+## over 2012-2025 met de CBS-reeks, de groepstabel beschrijft de ex-ante
+## analysesteekproef over alle jaren. Zonder deze brug lijkt het een fout.
+buiten <- d[cbs_nieuwbouw == TRUE & in_sample == FALSE]
+buiten[, reden := fcase(
+  projecttype == "admin_fout",                            "projecttype is administratieve fout",
+  projecttype == "verbouwing",                            "projecttype is verbouwing",
+  is.na(vbo_gebruiksdoel) | vbo_gebruiksdoel != "woon",   "gebruiksdoel is niet woon",
+  is.na(provinciecode),                                   "provincie ontbreekt",
+  is.na(dist2n2000_m),                                    "afstand tot N2000 ontbreekt",
+  default =                                               "overig")]
+R$data$aansluiting <- list(
+  cbs_totaal     = sum(d$cbs_nieuwbouw),
+  jaar_2026      = sum(d$cbs_nieuwbouw & d$mutatiejaar == 2026, na.rm = TRUE),
+  tabel_statline = sum(d$cbs_nieuwbouw & d$mutatiejaar <= 2025, na.rm = TRUE),
+  buiten_sample  = nrow(buiten),
+  tabel_groepen  = sum(d$cbs_nieuwbouw & d$in_sample),
+  beide_filters  = sum(d$cbs_nieuwbouw & d$in_sample & d$mutatiejaar <= 2025, na.rm = TRUE),
+  redenen        = buiten[, .N, by = reden][order(-N)])
+cat("\nAansluiting CBS-nieuwbouw: totaal", nfmt(R$data$aansluiting$cbs_totaal),
+    "| StatLine-tabel", nfmt(R$data$aansluiting$tabel_statline),
+    "| groepstabel", nfmt(R$data$aansluiting$tabel_groepen), "\n")
+
 ## beslismatrix: pand x object x cbs -> groep
 s[, pand := fifelse(is.na(last_pand_status), "(geen vergunningrecord)", last_pand_status)]
 s[, vbo  := fifelse(is.na(vbo_status), "(geen vergunningrecord)", vbo_status)]
@@ -589,10 +613,20 @@ for (u in names(UIT)) {
     zet_D_afstand(p, dr)
     g <- R$es[[u]][[as.character(dr)]]$gem_pas
     Ypost <- sum(p$y[p$D == 1 & p$t >= Q_PAS & p$t < Q_SAL]); Ytot <- sum(p$y[p$t >= Q_PAS & p$t < Q_SAL])
+    ## Aantal woningen dat er meer zou zijn opgeleverd als de behandelde groep
+    ## de controle had gevolgd. Let op: deze functie is DALEND in de IRR, dus
+    ## de ondergrens van het interval in woningen hoort bij de BOVENgrens van
+    ## de IRR en andersom. Een negatieve waarde betekent dat er juist meer is
+    ## opgeleverd dan verwacht.
     minder <- function(irr) Ypost / irr - Ypost
     data.table(drempel = dr, behandeld_post = Ypost, totaal_post = Ytot,
-               irr = g$irr, minder_punt = round(minder(g$irr)), minder_ondergrens = round(minder(g$lo)), minder_bovengrens = round(minder(g$hi)),
-               pct_punt = round(100 * minder(g$irr) / Ytot, 2), pct_ondergrens = round(100 * minder(g$lo) / Ytot, 2))
+               irr = g$irr, irr_lo = g$lo, irr_hi = g$hi,
+               minder_punt = round(minder(g$irr)),
+               minder_lo   = round(minder(g$hi)),
+               minder_hi   = round(minder(g$lo)),
+               pct_punt = round(100 * minder(g$irr) / Ytot, 2),
+               pct_lo   = round(100 * minder(g$hi)  / Ytot, 2),
+               pct_hi   = round(100 * minder(g$lo)  / Ytot, 2))
   }))
   print(R$homes[[u]])
 }

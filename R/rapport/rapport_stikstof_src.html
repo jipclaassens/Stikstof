@@ -44,12 +44,14 @@ nav.toc a span.n{color:var(--muted);font-variant-numeric:tabular-nums}
 nav.toc a:hover{color:var(--ink)}
 nav.toc .eyebrow{letter-spacing:.08em;text-transform:uppercase;font-size:11px;color:var(--muted);margin-bottom:12px}
 main{min-width:0}
-.col{max-width:68ch}
+.col{max-width:none}
 header.kop{padding:64px 0 40px;border-bottom:1px solid var(--line);margin-bottom:40px}
 .eyebrow{font-family:var(--ui);font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
 h1{font-family:var(--display);font-weight:400;font-size:clamp(34px,5vw,54px);line-height:1.05;margin:14px 0 18px;text-wrap:balance;letter-spacing:-.01em}
-.lede{font-size:21px;line-height:1.45;color:var(--ink-2);max-width:62ch;margin:0 0 28px}
+.lede{font-size:21px;line-height:1.45;color:var(--ink-2);max-width:none;margin:0 0 28px}
 .meta{font-family:var(--ui);font-size:13px;color:var(--muted);display:flex;flex-wrap:wrap;gap:6px 22px}
+.meta.bouwinfo{margin-top:8px;padding-top:8px;border-top:1px solid var(--line);font-size:12.5px}
+.meta.bouwinfo b{color:var(--ink-2);font-weight:600}
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin:36px 0 0}
 .tile{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:16px 18px}
 .tile .l{font-family:var(--ui);font-size:12.5px;color:var(--muted);letter-spacing:.02em}
@@ -59,16 +61,15 @@ h2{font-family:var(--display);font-weight:400;font-size:30px;line-height:1.15;ma
 h2 .n{font-family:var(--ui);font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;letter-spacing:.06em}
 h3{font-family:var(--display);font-weight:600;font-size:19px;margin:36px 0 10px;text-wrap:balance}
 p{margin:0 0 16px}
-.col p,.col ul,.col ol{max-width:68ch}
 ul,ol{padding-left:22px}
 li{margin-bottom:6px}
 strong{font-weight:600}
-.pull{border-left:3px solid var(--event);padding:4px 0 4px 18px;margin:26px 0;color:var(--ink);font-size:18px;max-width:62ch}
-.aside{background:var(--surface-2);border-radius:6px;padding:16px 20px;margin:24px 0;font-size:15.5px;max-width:68ch}
+.pull{border-left:3px solid var(--event);padding:4px 0 4px 18px;margin:26px 0;color:var(--ink);font-size:18px}
+.aside{background:var(--surface-2);border-radius:6px;padding:16px 20px;margin:24px 0;font-size:15.5px}
 .aside .t{font-family:var(--ui);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
 .aside p{margin:0 0 10px}.aside p:last-child{margin:0}
 code{font-family:var(--mono);font-size:.88em;background:var(--surface-2);padding:1px 5px;border-radius:3px}
-figure{margin:32px 0 40px;max-width:920px}
+figure{margin:32px 0 40px;max-width:none}
 figure.wide{max-width:none}
 .fig-h{font-family:var(--ui);font-weight:600;font-size:15px;margin:0 0 2px;color:var(--ink)}
 .fig-s{font-family:var(--ui);font-size:13px;color:var(--ink-2);margin:0 0 12px}
@@ -87,7 +88,7 @@ canvas{width:100%!important;height:100%!important}
 .legend i.band{height:10px;border:0;border-radius:2px}
 .legend i.ev{border-top-style:solid;border-color:var(--event)}
 .legend i.dash{border-top-style:dashed}
-figcaption{font-family:var(--ui);font-size:13px;color:var(--ink-2);margin-top:10px;line-height:1.45;max-width:78ch}
+figcaption{font-family:var(--ui);font-size:13px;color:var(--ink-2);margin-top:10px;line-height:1.45}
 details.tabel,details.code{margin-top:8px;font-family:var(--ui);font-size:13px}
 details.tabel summary,details.code summary{cursor:pointer;color:var(--ink-2);list-style:none;display:inline-flex;gap:6px;align-items:center}
 details.tabel summary::before,details.code summary::before{content:"";width:7px;height:7px;border-right:1.5px solid var(--muted);border-bottom:1.5px solid var(--muted);transform:rotate(-45deg);transition:transform .15s}
@@ -103,15 +104,16 @@ th{font-weight:600;color:var(--ink-2);font-size:12.5px;letter-spacing:.02em;bord
 td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 tr.hl td{background:var(--surface-2)}
 tbody tr:hover td{background:var(--surface-2)}
-.tbl{margin:24px 0 32px;max-width:920px}
+.tbl{margin:24px 0 32px;max-width:none}
 .tbl .fig-h{margin-bottom:8px}
 .qa dt{font-family:var(--display);font-weight:600;font-size:18px;margin:26px 0 6px;text-wrap:balance}
-.qa dd{margin:0 0 6px;max-width:68ch}
+.qa dd{margin:0 0 6px}
 .small{font-size:14.5px;color:var(--ink-2)}
 dfn{font-style:normal;font-weight:600}
 .cap{font-family:var(--ui);color:var(--muted);font-weight:600;margin-right:.45em}
 h3 .hn{color:var(--muted);font-weight:400;margin-right:.4em;font-family:var(--ui);font-size:.78em;letter-spacing:.02em}
 tr.sub td{background:var(--surface-2);font-weight:600;border-bottom:1px solid var(--muted)}
+tr.gap td{border-top:14px solid transparent}
 tr.rest td{color:var(--ink-2)}
 td.fx{font-family:var(--mono);font-size:12px;white-space:pre-wrap}
 .ernst{display:inline-block;font-family:var(--ui);font-size:11px;font-weight:600;letter-spacing:.03em;padding:2px 7px;border-radius:3px;white-space:nowrap}
@@ -145,14 +147,15 @@ td.fx{font-family:var(--mono);font-size:12px;white-space:pre-wrap}
 
 <main>
 <header class="kop">
-  <div class="eyebrow">Werkrapport &middot; extract 20260730 &middot; BAG 10 juli 2026</div>
+  <div class="eyebrow" id="eyebrow">Werkrapport &middot; extract 20260730 &middot; BAG 10 juli 2026</div>
   <h1>Zit de woningbouw op slot door stikstof?</h1>
   <p class="lede">Zeven jaar na de PAS-uitspraak volgen we 1,36 miljoen verblijfsobjecten van vergunning tot oplevering en 11.669 woningbouwplannen van initiatief tot realisatie, en meten we wat er dichtbij stikstofgevoelige natuur anders ging dan verderop. Het antwoord is: iets, maar veel minder dan de krantenkoppen zeggen. Over de uitspraak van december 2024 valt nog niets te zeggen.</p>
   <div class="meta"><span>Voor Huub, Jan, Thijmen en Jip</span><span>R-pipeline <code>jipclaassens/Stikstof</code></span><span>Kwartaalreeksen 2012Q1 tot 2026Q2; plannen 2004 tot 2023</span></div>
+  <div class="meta bouwinfo" id="bouwinfo"></div>
   <div class="tiles">
     <div class="tile"><div class="l">Verblijfsobjecten in het bestand</div><div class="v">1.356.420</div><div class="s">waarvan 919.337 gerealiseerde nieuwbouw, 54.590 gestrand, 256.669 in de pijplijn</div></div>
     <div class="tile"><div class="l">Nieuwbouw binnen 2,5 km na de PAS-uitspraak</div><div class="v">&minus;11%</div><div class="s">verhouding 0,887 ten opzichte van de controlegroep; 95%-interval van &minus;24% tot +3%. De enige specificatie met een schone pre-periode</div></div>
-    <div class="tile"><div class="l">Vertaald naar woningen, 2019Q2 tot 2024Q3</div><div class="v">11.600</div><div class="s">minder opgeleverd binnen 2,5 km; 2,9% van het landelijk totaal. Bandbreedte 0 tot 28.000</div></div>
+    <div class="tile"><div class="l">Vertaald naar woningen, 2019Q2 tot 2024Q3</div><div class="v">11.600</div><div class="s">minder opgeleverd binnen 2,5 km; 2,9% van het landelijk totaal. 95%-interval van 2.700 méér tot 28.200 minder</div></div>
     <div class="tile"><div class="l">Vergund maar gestrand of vertraagd</div><div class="v">&plusmn;0</div><div class="s">geen verschil tussen nabij en ver in realisatie binnen 4 jaar, doorlooptijd, bouwstart of hazard; ook niet in het plannenspoor</div></div>
   </div>
 </header>
@@ -184,14 +187,19 @@ td.fx{font-family:var(--mono);font-size:12px;white-space:pre-wrap}
 <p><strong>Realisatie op objectniveau, niet op pandniveau.</strong> De BAG heeft twee statusreeksen die elkaar tegenspreken. 2.950 objecten hebben pandstatus "niet gerealiseerd" en staan zelf "in gebruik"; 2.294 objecten zijn zelf "niet gerealiseerd" in een pand dat wél is opgeleverd. Dat is geen aggregatie-artefact (van de 23.972 betrokken panden zijn er maar 54 gemengd), maar een echte tegenspraak. Conform de CBS-voorraaddefinitie beslist de objectstatus over het object, de pandstatus over het gebouw, en de opleverdatum is een pandkenmerk dat nooit als objectbewijs geldt. Die laatste regel kostte een correctieronde: een eerste versie gebruikte de pand-opleverdatum wél en zette daarmee 19.014 objecten ten onrechte op "gerealiseerd".</p>
 <h3>Wat er dan staat</h3>
 <p>Na de administratieve schoning (objecten die ten onrechte zijn opgevoerd, en verbouwingen, herkend aan een bouwjaar dat minstens zes jaar vóór de vergunning ligt) blijven 1.302.465 woonobjecten over. Ze vallen in de drie categorieën uit issue #28, plus één die daar niet in past.</p>
-<div class="tbl"><div class="fig-h">De ex-ante steekproef in vier groepen</div><div class="tw"><table id="t-groep"></table></div></div>
+<div class="tbl"><div class="fig-h">De ex-ante steekproef in vier groepen</div><div class="fig-s">alle jaren, dus inclusief de halve jaargang 2026</div><div class="tw"><table id="t-groep"></table></div></div>
 <p>"Overig" zijn objecten die wél in de voorraad zijn gekomen maar die CBS geen nieuwbouw noemt: transformaties, splitsingen, toevoegingen. Ze zitten apart, zodat je ze kunt meenemen of weglaten.</p>
 <h3>Klopt dit met StatLine?</h3>
 <p>Voor nieuwbouw: ja, tot op een half procent. Voor "overig": nee, en dat hoort ook niet. StatLine telt jaarlijks 18.000 tot 64.000 "overige toevoegingen" aan de woningvoorraad; ons bestand heeft er 600 tot 4.500 per opleverjaar. De verklaring is de afbakening. Ons universum is: objecten waarvoor een bouwvergunning is verleend op pandniveau, plus objecten die CBS als nieuwbouw telt. De meeste overige toevoegingen, zoals de splitsing van een bestaande woning of de transformatie van een kantoor, zijn mutaties op objectniveau binnen een bestaand pand, en die passeren nooit de pandstatus "bouwvergunning verleend". Ze zitten dus niet in de exports. De 71.869 die we wel hebben zijn de overige toevoegingen die toevallig met een pandvergunning gepaard gingen. Voor dit rapport is dat geen probleem: de uitkomstmaat is nieuwbouw, en die sluit aan.</p>
-<div class="tbl"><div class="fig-h">Nieuwbouw en overige toevoegingen: dit bestand tegenover StatLine 82235NED</div><div class="fig-s">nieuwbouw naar CBS-mutatiejaar; "overig" naar pand-opleverjaar; StatLine per kalenderjaar</div><div class="tw"><table id="t-statline"></table></div></div>
+<div class="tbl"><div class="fig-h">Nieuwbouw en overige toevoegingen: dit bestand tegenover StatLine 82235NED</div><div class="fig-s">alle CBS-nieuwbouw naar mutatiejaar, 2012 tot 2025, zonder steekproeffilter; "overig" naar pand-opleverjaar; StatLine per kalenderjaar</div><div class="tw"><table id="t-statline"></table></div></div>
 <p>De ruis zit in de combinaties eronder. De volledige beslismatrix, welke combinatie van pandstatus, objectstatus en CBS-nieuwbouw in welke groep valt, staat hieronder voor alle cellen met minstens tweehonderd objecten. Twee principes lossen bijna alles op: sloop is geen realisatiestatus (een object dat gebouwd is en waarvan het pand later is gesloopt, blijft gebouwd), en "ingetrokken" is dubbelzinnig en wordt beslist op de pandstatus, met een vlag zodat het omkeerbaar is.</p>
 <div class="tbl"><div class="fig-h">Beslismatrix: pandstatus &times; objectstatus &times; CBS-nieuwbouw</div><div class="fig-s">alle 31 combinaties met &ge; 200 objecten, gegroepeerd per uitkomst; vet = de combinaties die zonder regel als ruis zouden gelden</div><div class="tw"><table id="t-matrix"></table></div></div>
 <p>De matrix telt per groep op tot het totaal uit de vorige tabel. De regel "overige combinaties" vangt de cellen met minder dan tweehonderd objecten: samen 790 van de 1.302.465, verdeeld over enkele tientallen zeldzame statuscombinaties. Wie de volledige uitsplitsing wil, vindt hem in <code>_output/rapport_20260730.json</code> onder <code>data.matrix</code>.</p>
+<p>Deze matrix is geen lijst om over te typen: hij is het resultaat van elf geordende regels, waarbij de eerste die past wint. Wie de regels overneemt krijgt alle 31 combinaties er gratis bij, ook de combinaties die in een volgend extract nieuw opduiken. De Stata-versie van die regels staat in <code>stata/classificatie_objecten.do</code> in de repository; die reproduceert deze tabel en schrijft <code>objecten_geclassificeerd.dta</code> weg.</p>
+<h3>Waarom Tabel 3 en Tabel 4 niet op hetzelfde uitkomen</h3>
+<p>Tel je in Tabel 3 de kolom "nieuwbouw, dit bestand" op, dan kom je op 895.631. In Tabel 4 staat bij echte nieuwbouw 919.337. Dat verschil is geen fout maar een verschil in afbakening, en het gaat twee kanten op tegelijk. Tabel 3 vergelijkt met CBS en gebruikt daarom álle objecten uit de CBS-nieuwbouwreeks, zonder steekproeffilter, maar wel beperkt tot de volle jaargangen 2012 tot 2025. Tabel 4 beschrijft de analysesteekproef en past dus wél het ex-ante filter toe, maar kent geen jaargrens en telt de halve jaargang 2026 mee.</p>
+<div class="tbl"><div class="fig-h">Aansluiting tussen de twee tabellen</div><div class="fig-s">beide beginnen bij dezelfde 927.382 objecten uit de CBS-nieuwbouwreeks</div><div class="tw"><table id="t-aansluiting"></table></div></div>
+<p>De 8.045 objecten die buiten de steekproef vallen zijn vooral verbouwingen en administratieve correcties: objecten die CBS wel als nieuwbouw telt, maar waarvan het bouwjaar minstens zes jaar vóór de vergunning ligt of waarvan het pand als ten onrechte opgevoerd is geregistreerd. Wie beide filters tegelijk toepast houdt 887.882 objecten over, en dat is het getal dat in de analyses van hoofdstuk 5 zit.</p>
 </section>
 
 <section id="s3" class="col">
@@ -263,8 +271,59 @@ ppmlhdfe y ib25.jtr o26.jtr o27.jtr o28.jtr, absorb(prov_t prov_k k_szn) vce(clu
 <p><strong>Op 5.000 meter is er niets</strong>, en dat is geruststellend: als het effect er ook zou zijn bij een behandelgroep die de helft van alle woningbouw omvat, zou het geen stikstofeffect zijn maar iets anders dat stad en land onderscheidt.</p>
 <div class="pull">Er is een effect, het zit binnen 2.500 meter, en het is met deze data niet verder te lokaliseren.</div>
 <h3>Vertaald naar woningen</h3>
-<p>Tussen 2019Q2 en 2024Q3 werden binnen 2.500 meter 90.499 woningen opgeleverd, op een landelijk totaal van 393.309. Als de behandelde groep de controle had gevolgd, waren dat er volgens de puntschatting 11.569 meer geweest: 2,9% van alle opleveringen in die periode. De ondergrens van het interval geeft 28.196 (7,2%); de bovengrens geeft nul.</p>
-<div class="tbl"><div class="fig-h">Minder opgeleverde woningen, 2019Q2 tot 2024Q3</div><div class="tw"><table id="t-homes"></table></div></div>
+<p>Een verhouding van 0,887 zegt een econoom iets, een bestuurder niet. De vertaling naar een aantal woningen is daarom nuttig, maar het is ook de plek waar de meeste aannames binnensluipen. Daarom hier de hele berekening, stap voor stap.</p>
+<p>Het idee is een contrafeitelijke telling. We weten hoeveel woningen er binnen 2.500 meter zijn opgeleverd tussen de PAS-uitspraak en de uitspraak over intern salderen. De event study zegt hoeveel dat er verhoudingsgewijs minder waren dan wanneer die groep dezelfde ontwikkeling had gevolgd als de controlegroep. Deel het waargenomen aantal door die verhouding en je hebt de telling die er zonder het effect zou hebben gestaan. Het verschil is het aantal woningen dat niet is gebouwd.</p>
+<div class="tbl"><div class="fig-h">Minder opgeleverde woningen, 2019Q2 tot 2024Q3</div><div class="fig-s">een negatief getal betekent dat er méér is opgeleverd dan verwacht</div><div class="tw"><table id="t-homes"></table></div>
+<details class="code"><summary>De berekening, stap voor stap, voor de rij van 2.500 meter</summary>
+<div class="lab">1. Waargenomen aantal in de behandelde groep</div>
+<pre>Y = som van alle opleveringen in cellen met afstandsklasse ≤ 2.500 m,
+    over de kwartalen 2019Q2 tot en met 2024Q3 (22 kwartalen)
+  = 90.499 woningen</pre>
+<div class="lab">2. Landelijk totaal in dezelfde periode</div>
+<pre>Y_totaal = som over ALLE cellen, behandeld én controle, zelfde 22 kwartalen
+         = 393.309 woningen</pre>
+<div class="lab">3. Het gemiddelde effect over die periode</div>
+<pre># gewogen gemiddelde van de 22 kwartaalcoëfficiënten uit de event study,
+# elk kwartaal even zwaar; dit is het R-equivalent van Stata's lincom
+w   &lt;- rep(1/22, 22)
+b   &lt;- sum(w * coef(es)[kwartalen 2019Q2..2024Q3])
+se  &lt;- sqrt(t(w) %*% vcov(es)[kwartalen, kwartalen] %*% w)
+IRR &lt;- exp(b)                        # 0,88666
+lo  &lt;- exp(b - 1,96 * se)            # 0,76245
+hi  &lt;- exp(b + 1,96 * se)            # 1,03110</pre>
+<div class="lab">4. Contrafeitelijke telling en het verschil</div>
+<pre>zonder effect  = Y / IRR = 90.499 / 0,88666 = 102.068 woningen
+gemist         = 102.068 − 90.499          =  11.569 woningen
+als % landelijk= 11.569 / 393.309          =       2,9%
+
+ondergrens     = Y / hi − Y = 90.499 / 1,03110 − 90.499 = −2.730
+bovengrens     = Y / lo − Y = 90.499 / 0,76245 − 90.499 = 28.196</pre>
+<div class="lab">Waarom de grenzen wisselen</div>
+<pre>De functie Y/IRR − Y is DALEND in IRR: hoe lager de verhouding, hoe meer
+woningen er gemist zijn. De ondergrens in woningen hoort daarom bij de
+BOVENgrens van de IRR, en andersom. Wie ze een-op-een overneemt uit de
+IRR-kolom, zet het interval op zijn kop.</pre>
+<div class="lab">De code die dit doet (06_rapport.R)</div>
+<pre>Ypost  &lt;- sum(p$y[p$D == 1 &amp; p$t &gt;= Q_PAS &amp; p$t &lt; Q_SAL])
+Ytot   &lt;- sum(p$y[            p$t &gt;= Q_PAS &amp; p$t &lt; Q_SAL])
+minder &lt;- function(irr) Ypost / irr - Ypost
+data.table(minder_punt = minder(g$irr),
+           minder_lo   = minder(g$hi),      # let op: hi hoort bij lo
+           minder_hi   = minder(g$lo))</pre>
+<div class="lab">Stata-equivalent</div>
+<pre>* na de event study, met jtr als interactie behandeld x kwartaal
+lincom (_b[30.jtr] + _b[31.jtr] + ... + _b[51.jtr]) / 22, eform level(95)
+scalar irr = r(estimate)
+scalar lo  = r(lb)
+scalar hi  = r(ub)
+
+summarize y if D == 1 &amp; t &gt;= 30 &amp; t &lt; 52
+scalar Y = r(sum)
+display "gemist: " Y/irr - Y  "  [" Y/hi - Y ", " Y/lo - Y "]"</pre>
+</details></div>
+<p><strong>Waarom deze periode.</strong> De telling loopt van 2019Q2, het kwartaal van de PAS-uitspraak, tot en met 2024Q3, het laatste volle kwartaal vóór de uitspraak over intern salderen. Daarna begint een ander regime, en de kwartalen daarna meetellen zou twee gebeurtenissen door elkaar mengen. Het zijn 22 kwartalen, vijfeneenhalf jaar.</p>
+<p><strong>Waarom de rij van 1.000 meter negatief is.</strong> Daar is de IRR 1,033, dus bóven 1: binnen een kilometer is in die periode iets méér opgeleverd dan verwacht. De puntschatting van "minder woningen" wordt dan negatief, met een interval van 6.209 méér tot 5.351 minder, dus ruim om nul heen. Dat is dezelfde boodschap als hierboven: op 1.000 meter valt geen effect te identificeren, en het getal in de tabel moet je niet lezen als "er zijn duizend woningen extra gebouwd door stikstof".</p>
+<p><strong>Vier dingen die deze berekening níet doet.</strong> Ze weegt elk kwartaal even zwaar, ook de kwartalen met weinig productie; een naar volume gewogen gemiddelde zou een iets ander getal geven, maar de orde van grootte niet veranderen. Ze veronderstelt dat de controlegroep zegt wat er zonder stikstof in de behandelde groep was gebeurd, wat precies de aanname is die de pre-trendtoets controleert en die op 2.500 meter houdt. Ze zegt niets over wáár die woningen dan wel of niet zijn gekomen: als een ontwikkelaar zijn project vijf kilometer verderop heeft gebouwd, telt dat hier als verlies dicht bij natuur terwijl er landelijk niets is misgelopen. En ze telt objecten die volgens CBS nieuwbouw zijn, dus geen transformaties of splitsingen.</p>
 <p>Het conceptartikel kwam op 11.500 voor dezelfde band over 2019 tot 2025. Dat het getal zo dicht bij elkaar ligt is deels toeval (een iets groter effect over een iets kortere periode), maar de orde van grootte is dezelfde: een paar procent van de landelijke productie, geconcentreerd in de zone waar het EIB al in 2019 aangaf dat 15% van de nieuwbouw staat.</p>
 </section>
 
@@ -546,7 +605,7 @@ fepois(y ~ na_pas + na_por + na_sal | prov_t + prov_k + k_szn, data = p, cluster
 <h2><span class="n">12</span>Wat het betekent</h2>
 <p>Voor het conceptartikel blijft de kernconclusie overeind, en wordt ze scherper.</p>
 <ul>
-<li><strong>Nieuwbouw</strong>: een daling van 11 tot 15 procent van de opleveringen binnen 2.500 meter van stikstofgevoelig habitat na de PAS-uitspraak, in absolute termen 11.600 woningen op een landelijk totaal van 393.000 in dezelfde periode, met een bandbreedte van nul tot 28.000. Dat is 3 procent, met als bovengrens 7.</li>
+<li><strong>Nieuwbouw</strong>: een daling van 11 tot 15 procent van de opleveringen binnen 2.500 meter van stikstofgevoelig habitat na de PAS-uitspraak, in absolute termen 11.600 woningen op een landelijk totaal van 393.000 in dezelfde periode, met een 95%-interval van 2.700 méér tot 28.200 minder. Dat is 3 procent, met als uiterste 7.</li>
 <li><strong>Vergunningen</strong>: geen identificeerbaar effect. De behandelde groep daalde al vóór 2019 relatief ten opzichte van de controle, en de placebotoets slaat aan.</li>
 <li><strong>Uitval en vertraging</strong>: nul, op vijf manieren gemeten. Het realisatiepercentage binnen vier jaar is 90 tot 94 procent, nabij en ver, voor en na; de doorlooptijd werd nabij natuur niet relatief langer, ook niet tussen vergunning en bouwstart; het hazardmodel met censurering geeft 1,07 en het model met concurrerende risico's 1,06, beide niet significant. Wat er minder is gebouwd is niet gestrand maar nooit begonnen.</li>
 <li><strong>Plannen</strong>: geen vertraging van zacht naar hard, van hard naar realisatie of over het hele traject. Het aantal nieuwe plannen nabij natuur ligt na 2019 lager dan in 2014 tot 2017 maar niet lager dan in 2018, en de reeks is te kort en te klein om dat te beslissen.</li>
@@ -657,6 +716,7 @@ count if projectid_doc == .</pre>
 (function(){
 const D = JSON.parse(document.getElementById('data').textContent);
 const P = JSON.parse(document.getElementById('plannen').textContent);
+const B = __BUILD__;   /* versie, git-commit en bouwtijd, ingevuld door bouw_rapport.js */
 const css = () => getComputedStyle(document.documentElement);
 const tok = k => css().getPropertyValue(k).trim();
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -711,6 +771,23 @@ const susp = r => (r.cbs && (r.pand.includes('gesloopt')||r.pand.includes('Niet_
     {h:'Vlag',f:r=>r.sub||r.rest?'':[r.ambigu>0?'ambigu':'',r.gesloopt>0?'gesloopt':''].filter(Boolean).join(', ')}
   ], rows, {cls:r=>r.sub?'sub':(r.rest?'rest':'')});
 })();
+if(D.data.aansluiting){
+  const a = D.data.aansluiting;
+  const rows = [
+    {s:'Alle objecten in de CBS-nieuwbouwreeks', n:a.cbs_totaal},
+    {s:'af: mutatiejaar 2026, een halve jaargang', n:-a.jaar_2026},
+    {s:'= Tabel 3, kolom "nieuwbouw, dit bestand", 2012 tot 2025', n:a.tabel_statline, tot:true},
+    {s:'Alle objecten in de CBS-nieuwbouwreeks', n:a.cbs_totaal, gap:true},
+    {s:'af: valt buiten de ex-ante steekproef', n:-a.buiten_sample},
+    {s:'= Tabel 4, groep "echte nieuwbouw", alle jaren', n:a.tabel_groepen, tot:true},
+    {s:'Beide filters tegelijk: steekproef én 2012 tot 2025', n:a.beide_filters, gap:true, tot:true}
+  ];
+  (a.redenen || []).forEach(r => rows.push({s:'   waarvan ' + r.reden, n:-r.N, sub:true}));
+  table('t-aansluiting', [
+    {h:'Stap', f:r=>r.sub?`<span style="color:var(--muted)">${r.s}</span>`:r.s},
+    {h:'Objecten', num:true, f:r=>r.n<0?'−'+nl(-r.n):nl(r.n)}
+  ], rows, {cls:r=>[r.tot?'sub':'', r.gap?'gap':''].filter(Boolean).join(' ')});
+}
 table('t-power', [{h:'Behandeld = binnen',f:r=>nl(r.drempel)+' m'},{h:'Afstandsklassen',num:true,f:r=>r.klassen},{h:'Cellen (prov × klasse × kwartaal)',num:true,f:r=>nl(r.cellen)},{h:'Objecten',num:true,f:r=>nl(r.objecten)},{h:'% van alle nieuwbouw',num:true,f:r=>nl(r.aandeel,1)}], D.power, {hl:r=>r.drempel===2500});
 table('t-events', [{h:'Datum',f:r=>r.datum},{h:'Kwartaal',f:r=>r.kwartaal},{h:'Uitspraak',f:r=>r.hoofd?`<strong>${r.naam}</strong>`:r.naam},{h:'Richting',f:r=>r.soort},{h:'Strekking',f:r=>r.strekking}], D.events);
 (function(){
@@ -736,7 +813,16 @@ function esTable(id,u){
   table(id,[{h:'Kwartaal',f:r=>r.kw}].concat(ks.map((k,j)=>({h:`≤ ${nl(+k)} m: IRR [95%-BI]`,num:true,f:r=>`${nl(r.v[j].irr,3)} [${nl(r.v[j].lo,2)} tot ${nl(r.v[j].hi,2)}]`}))), rows);
 }
 esTable('t-es-nwb','nieuwbouw'); esTable('t-es-verg','vergunningen');
-table('t-homes', [{h:'Behandeld = binnen',f:r=>nl(r.drempel)+' m'},{h:'Opgeleverd, behandeld',num:true,f:r=>nl(r.behandeld_post)},{h:'Opgeleverd, landelijk',num:true,f:r=>nl(r.totaal_post)},{h:'Gem. IRR',num:true,f:r=>nl(r.irr,3)},{h:'Minder woningen (punt)',num:true,f:r=>nl(r.minder_punt)},{h:'ondergrens BI',num:true,f:r=>nl(r.minder_ondergrens)},{h:'bovengrens BI',num:true,f:r=>nl(Math.max(0,r.minder_bovengrens))},{h:'% van landelijk (punt)',num:true,f:r=>nl(r.pct_punt,1)}], D.homes.nieuwbouw, {hl:r=>r.drempel===2500});
+table('t-homes', [
+  {h:'Behandeld = binnen',f:r=>nl(r.drempel)+' m'},
+  {h:'Opgeleverd, behandeld',num:true,f:r=>nl(r.behandeld_post)},
+  {h:'Opgeleverd, landelijk',num:true,f:r=>nl(r.totaal_post)},
+  {h:'Gem. IRR [95%-BI]',num:true,f:r=>`${nl(r.irr,3)} [${nl(r.irr_lo,3)} tot ${nl(r.irr_hi,3)}]`},
+  {h:'Minder woningen (punt)',num:true,f:r=>nl(r.minder_punt)},
+  {h:'Minder woningen [95%-BI]',num:true,f:r=>`${nl(r.minder_lo)} tot ${nl(r.minder_hi)}`},
+  {h:'% van landelijk (punt)',num:true,f:r=>nl(r.pct_punt,1)},
+  {h:'% van landelijk [95%-BI]',num:true,f:r=>`${nl(r.pct_lo,1)} tot ${nl(r.pct_hi,1)}`}
+], D.homes.nieuwbouw, {hl:r=>r.drempel===2500});
 (function(){
   const rows=[]; for(const u of ['nieuwbouw','vergunningen']){ const by={}; for(const r of D.robust[u]){ (by[r.variant]=by[r.variant]||{u,variant:r.variant})[r.drempel]=r; } rows.push(...Object.values(by)); }
   table('t-rob',[{h:'Uitkomst',f:r=>r.u},{h:'Variant',f:r=>r.variant},{h:'≤ 1.000 m',num:true,f:r=>r[1000]?`${sgn(r[1000].b)} (${nl(r[1000].se,3)})`:'·'},{h:'≤ 2.500 m',num:true,f:r=>r[2500]?`${sgn(r[2500].b)} (${nl(r[2500].se,3)})`:'·'}], rows);
@@ -822,6 +908,21 @@ const FOUTEN = [
     {h:'Wat er gebeurt',f:r=>r.w},
     {h:'Reparatie',cls:'fx',f:r=>r.fix.replace(/&/g,'&amp;').replace(/</g,'&lt;')}
   ], FOUTEN);
+})();
+
+/* versie- en bouwinformatie in de kop */
+(function(){
+  const el = document.getElementById('bouwinfo'); if(!el || !B) return;
+  const dt = s => { if(!s) return null; const m = String(s).match(/(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/); if(!m) return String(s);
+    const mnd = ['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december'];
+    return `${+m[3]} ${mnd[+m[2]-1]} ${m[1]}, ${m[4]}:${m[5]}`; };
+  const delen = [
+    `<span><b>Versie ${B.versie}</b></span>`,
+    `<span>rapport gemaakt ${dt(B.gebouwd)}</span>`,
+    `<span>analyses gedraaid ${dt(D.meta && D.meta.gemaakt)}</span>`
+  ];
+  if (B.git) delen.push(`<span>commit <code>${B.git}</code></span>`);
+  el.innerHTML = delen.join('');
 })();
 
 /* nummering van paragrafen, figuren en tabellen */
