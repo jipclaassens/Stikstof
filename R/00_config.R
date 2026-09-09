@@ -175,6 +175,47 @@ read_derived <- function(name) {
   readRDS(p)
 }
 
+## ---------------------------------------------------------------------
+## 5. Cache voor dure rekenblokken
+## ---------------------------------------------------------------------
+## De duurmodellen op een miljoen objecten kosten minuten, de rest van het
+## rapport seconden. Zonder cache betaalt elke tekstuele of beschrijvende
+## wijziging de volle rekentijd.
+##
+## De sleutel bestaat uit: het extract, de wijzigingsdatum van het
+## invoerbestand, en een handmatig versienummer per blok. Verander data of
+## invoerbestand en de cache vervalt vanzelf; verander de SPECIFICATIE van
+## een blok en je hoogt zelf het versienummer op. Dat laatste is bewust
+## handwerk: alleen de auteur weet of een codewijziging de uitkomst raakt.
+##
+## Gebruik:
+##   R$duur <- met_cache("duur", "1", { ... zware berekening ... laatste
+##                                       expressie is wat je bewaart })
+##   Rscript 06_rapport.R --geen-cache   negeert de cache en rekent alles
+
+CACHE_UIT <- any(c("--geen-cache", "--no-cache") %in% commandArgs(trailingOnly = TRUE))
+
+met_cache <- function(blok, versie, expr, invoer = "vbo_analyse") {
+  f   <- file.path(PATHS$derived, paste0("cache_", blok, ".rds"))
+  mt  <- tryCatch(format(file.mtime(derived_path(invoer)), "%Y%m%d%H%M%S"),
+                  error = function(e) "geen-invoer")
+  key <- paste(EXTRACT, invoer, mt, blok, versie, sep = "|")
+
+  if (!CACHE_UIT && file.exists(f)) {
+    obj <- tryCatch(readRDS(f), error = function(e) NULL)
+    if (!is.null(obj) && identical(obj$key, key)) {
+      message(sprintf("  [cache]  %-16s hergebruikt (%s)", blok, obj$geduurd))
+      return(obj$waarde)
+    }
+  }
+  t0 <- Sys.time()
+  waarde <- force(expr)
+  geduurd <- sprintf("%.0f sec", as.numeric(difftime(Sys.time(), t0, units = "secs")))
+  saveRDS(list(key = key, waarde = waarde, geduurd = geduurd), f, compress = FALSE)
+  message(sprintf("  [nieuw]  %-16s berekend in %s", blok, geduurd))
+  waarde
+}
+
 ## Kopje in de log
 kop <- function(...) cat("\n", strrep("=", 70), "\n", sprintf(...), "\n",
                         strrep("=", 70), "\n", sep = "")

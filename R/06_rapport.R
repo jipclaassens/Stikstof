@@ -19,6 +19,14 @@
 ##   7. depositie   behandeling op depositie (EIB-matrix) i.p.v. afstand
 ##   8. uitval      cohortanalyse met vast opvolgvenster
 ##   9. homes       vertaling naar aantallen woningen
+##
+## Rekentijd. Blok 7b tot 7d (de duurmodellen) is verreweg het zwaarste en
+## zit in een cache: zie met_cache() in 00_config.R. Een wijziging in de
+## tekst of in een beschrijvende tabel kost daardoor seconden in plaats van
+## minuten. De cache vervalt vanzelf bij een nieuw extract of een nieuwe
+## vbo_analyse.rds. Verander je de SPECIFICATIE van een duurmodel, hoog dan
+## het versienummer in de met_cache-aanroep op. Alles opnieuw rekenen:
+##   Rscript 06_rapport.R --geen-cache
 ## =====================================================================
 
 .here <- local({
@@ -130,7 +138,13 @@ R$data <- list(
                "elk object dat CBS als nieuwbouw telt, met de mutatiemaand",
                "tijdlijn per pand: eerste vergunning, bouwstart, oplevering, bouwjaar")),
   projecttype = w[, .N, by = projecttype][order(-N)],
-  groep28 = s[, .(groep = groep28, N = .N), by = groep28][order(groep28)][, .(groep, N, pct = round(100 * N / nrow(s), 2))],
+  uitkomstgroep = s[, .(groep = uitkomstgroep, N = .N), by = uitkomstgroep][order(uitkomstgroep)][, .(groep, N, pct = round(100 * N / nrow(s), 2))],
+  objectgroep  = { u6 <- d[in_universum == TRUE]
+              u6[, .N, by = objectgroep][order(objectgroep)][, .(groep = objectgroep, N, pct = round(100 * N / nrow(u6), 2))] },
+  gebruik = { u6 <- d[in_universum == TRUE]
+              list(universum = nrow(u6),
+                   verg = u6[in_sample_verg == TRUE, .N, by = objectgroep][order(objectgroep)],
+                   nwb  = u6[in_sample_nwb  == TRUE, .N, by = objectgroep][order(objectgroep)]) },
   uitkomst = s[, .N, by = uitkomst][order(-N)][, .(uitkomst, N, pct = round(100 * N / nrow(s), 2))],
   vlaggen = data.table(
     vlag = c("pand_vbo_inconsistent", "later_gesloopt", "uitkomst_ambigu", "vlag_duur_negatief", "vlag_delta_grijs", "gebruiksdoel_afgeleid"),
@@ -169,7 +183,7 @@ cat("\nAansluiting CBS-nieuwbouw: totaal", nfmt(R$data$aansluiting$cbs_totaal),
 s[, pand := fifelse(is.na(last_pand_status), "(geen vergunningrecord)", last_pand_status)]
 s[, vbo  := fifelse(is.na(vbo_status), "(geen vergunningrecord)", vbo_status)]
 R$data$matrix <- s[, .(N = .N, ambigu = sum(uitkomst_ambigu), gesloopt = sum(later_gesloopt)),
-                    by = .(cbs = cbs_nieuwbouw, pand, vbo, groep = groep28)][N >= 200][order(groep, -N)]
+                    by = .(cbs = cbs_nieuwbouw, pand, vbo, groep = uitkomstgroep)][N >= 200][order(groep, -N)]
 
 ## censurering: aandeel pipeline per vergunningjaar x nabij
 sv <- s[!is.na(vergunning_jaar) & vergunning_jaar >= 2012 & vergunning_jaar <= 2025]
@@ -180,7 +194,7 @@ dur <- s[!is.na(duur_tot_oplevering) & duur_tot_oplevering > 0 & vergunning_jaar
 R$data$doorlooptijd <- list(mediaan_jr = round(median(dur$duur_tot_oplevering) / 365.25, 2),
                             p25 = round(quantile(dur$duur_tot_oplevering, .25) / 365.25, 2),
                             p75 = round(quantile(dur$duur_tot_oplevering, .75) / 365.25, 2))
-print(R$data$groep28); print(R$data$koppelgraad)
+print(R$data$uitkomstgroep); print(R$data$koppelgraad)
 
 ## ---------------------------------------------------------------------
 ## 2. PROJECT-ID: documentnummer vs. ruimtelijk-temporeel cluster
@@ -440,10 +454,19 @@ print(tab4)
 ##        Baseline hazard gestratificeerd op provincie x afstandsklasse,
 ##        cohortdummies, en behandeld x post als de DiD-term.
 ##        Uitval wordt hier als censurering behandeld (cause-specific hazard).
-kop("7b. Duur")
 suppressPackageStartupMessages(library(survival))
 
-R$duur <- list()
+## Blok 7b tot en met 7d is het rekenzware deel van het rapport: Cox op ruim
+## een miljoen objecten en een Fine-Gray op een steekproef van 150.000. Samen
+## goed voor het leeuwendeel van de looptijd. Ze zitten daarom in een cache,
+## zodat een tekstuele of beschrijvende wijziging niet de volle rekentijd
+## kost. De cache vervalt vanzelf bij een nieuw extract of een nieuwe
+## vbo_analyse.rds; hoog het versienummer hieronder op zodra je de
+## SPECIFICATIE van een van de drie blokken verandert.
+R$duur <- met_cache("duur", "1", {
+
+kop("7b. Duur")
+DU <- list()
 
 ## (i) vensters
 vensters <- rbindlist(lapply(c(3L, 4L, 5L), function(j) {
@@ -455,7 +478,7 @@ vensters <- rbindlist(lapply(c(3L, 4L, 5L), function(j) {
   data.table(venster_jr = j, cohorten = sprintf("2012-%d", 2025L - j), b = coef(m)[["D:post"]], se = se(m)[["D:post"]], n = m$nobs,
              basis_nabij_pre = round(mean(cj[D == 1 & post == 0, y]), 3), basis_ver_pre = round(mean(cj[D == 0 & post == 0, y]), 3))
 }))
-R$duur$vensters <- vensters
+DU$vensters <- vensters
 print(vensters)
 
 ## (ii) doorlooptijd onder opgeleverde objecten, cohorten 2012-2021
@@ -463,17 +486,17 @@ dd <- s[!is.na(vergunning_jaar) & vergunning_jaar >= 2012 & vergunning_jaar <= 2
           !is.na(duur_tot_oplevering) & duur_tot_oplevering > 0 & duur_tot_oplevering <= 4 * 365.25]
 dd[, `:=`(nabij = fifelse(kl2500 == 1, "nabij", "ver"),
           duur_bouwstart = as.integer(bouwstart_eerste_datum - vergunning_datum))]
-R$duur$mediaan <- dcast(dd[, .(med = as.double(median(duur_tot_oplevering)), N = .N), by = .(jaar = vergunning_jaar, nabij)],
+DU$mediaan <- dcast(dd[, .(med = as.double(median(duur_tot_oplevering)), N = .N), by = .(jaar = vergunning_jaar, nabij)],
                         jaar ~ nabij, value.var = c("med", "N"))
-R$duur$mediaan_bouwstart <- dcast(dd[!is.na(duur_bouwstart) & duur_bouwstart >= 0,
+DU$mediaan_bouwstart <- dcast(dd[!is.na(duur_bouwstart) & duur_bouwstart >= 0,
                                      .(med = as.double(median(duur_bouwstart))), by = .(jaar = vergunning_jaar, nabij)],
                                   jaar ~ nabij, value.var = "med")
 dd[, `:=`(D = kl2500, post = as.integer(vergunning_jaar >= 2019), lnd = log(duur_tot_oplevering),
           prov_jaar = paste(provinciecode, vergunning_jaar), prov_k = paste(provinciecode, afstandsklasse))]
 mld <- feols(lnd ~ D:post | prov_jaar + prov_k, data = dd, cluster = ~prov_k)
-R$duur$logduur_did <- list(b = coef(mld)[["D:post"]], se = se(mld)[["D:post"]], n = mld$nobs)
+DU$logduur_did <- list(b = coef(mld)[["D:post"]], se = se(mld)[["D:post"]], n = mld$nobs)
 cat(sprintf("log(doorlooptijd) DiD onder opgeleverd binnen 4 jr: %+.4f (%.4f)\n", coef(mld)[["D:post"]], se(mld)[["D:post"]]))
-print(R$duur$mediaan)
+print(DU$mediaan)
 
 ## (iii) Cox met censurering, cohorten 2012-2025
 cb <- s[!is.na(vergunning_jaar) & vergunning_jaar >= 2012 & vergunning_jaar <= 2025 & !is.na(opvolgtijd_dagen) & opvolgtijd_dagen > 0]
@@ -485,7 +508,7 @@ cb[, `:=`(D = kl2500, post = as.integer(vergunning_jaar >= 2019), prov_k = paste
 cat(sprintf("Cox: %s objecten, %s opleveringen, %s gecensureerd\n", nfmt(nrow(cb)), nfmt(sum(cb$event)), nfmt(sum(cb$event == 0))))
 cox_did <- coxph(Surv(tijd, event) ~ jaarf + D:post + strata(prov_k), data = cb, cluster = prov_k, ties = "efron")
 b <- coef(cox_did)[["D:post"]]; se_b <- sqrt(vcov(cox_did)["D:post", "D:post"])
-R$duur$cox_did <- list(b = b, se = se_b, hr = exp(b), lo = exp(b - 1.96 * se_b), hi = exp(b + 1.96 * se_b),
+DU$cox_did <- list(b = b, se = se_b, hr = exp(b), lo = exp(b - 1.96 * se_b), hi = exp(b + 1.96 * se_b),
                        n_obj = nrow(cb), n_events = sum(cb$event))
 cat(sprintf("Cox DiD: HR %.3f [%.3f - %.3f]\n", exp(b), exp(b - 1.96 * se_b), exp(b + 1.96 * se_b)))
 ## event study per cohort, referentie 2018
@@ -497,10 +520,10 @@ f_es <- as.formula(paste("Surv(tijd, event) ~ jaarf +", paste(paste0("Dy", jaren
 cox_es <- coxph(f_es, data = cb, cluster = prov_k, ties = "efron")
 ce <- coef(cox_es); cv <- sqrt(diag(vcov(cox_es)))
 nm <- paste0("Dy", jaren); stopifnot(all(nm %in% names(ce)))
-R$duur$cox_es <- rbind(
+DU$cox_es <- rbind(
   data.table(jaar = jaren, b = ce[nm], se = cv[nm]),
   data.table(jaar = 2018L, b = 0, se = 0))[order(jaar)][, `:=`(hr = exp(b), lo = exp(b - 1.96 * se), hi = exp(b + 1.96 * se))]
-print(R$duur$cox_es[, .(jaar, hr = round(hr, 3), lo = round(lo, 3), hi = round(hi, 3))])
+print(DU$cox_es[, .(jaar, hr = round(hr, 3), lo = round(lo, 3), hi = round(hi, 3))])
 
 ## ---------------------------------------------------------------------
 ## 7c. BOUWSTART als tussenstap: vergunning -> bouwstart -> oplevering
@@ -527,7 +550,7 @@ cbs <- cbs[tijd > 0]
 cbs[, `:=`(D = kl2500, post = as.integer(vergunning_jaar >= 2019), prov_k = paste(provinciecode, afstandsklasse), jaarf = factor(vergunning_jaar))]
 cox_bs <- coxph(Surv(tijd, event) ~ jaarf + D:post + strata(prov_k), data = cbs, cluster = prov_k, ties = "efron")
 bb <- coef(cox_bs)[["D:post"]]; sb <- sqrt(vcov(cox_bs)["D:post", "D:post"])
-R$duur$bouwstart <- list(
+DU$bouwstart <- list(
   aandeel_bekend = round(100 * mean(!is.na(bs$bouwstart_eerste_datum)), 1),
   mediaan = dcast(bs[!is.na(d1) & d1 >= 0, .(m1 = as.double(median(d1))), by = .(jaar = vergunning_jaar, nabij)], jaar ~ nabij, value.var = "m1"),
   mediaan_fase2 = dcast(bs[!is.na(d2) & d2 > 0, .(m2 = as.double(median(d2))), by = .(jaar = vergunning_jaar, nabij)], jaar ~ nabij, value.var = "m2"),
@@ -594,12 +617,15 @@ fg_uit <- tryCatch(fg_fit("uitval"),     error = function(e) { message("Fine-Gra
 if (!is.null(fg_opl)) cat(sprintf("Fine-Gray oplevering: sHR %.3f [%.3f - %.3f]\n", fg_opl$shr, fg_opl$lo, fg_opl$hi))
 if (!is.null(fg_uit)) cat(sprintf("Fine-Gray uitval    : sHR %.3f [%.3f - %.3f]\n", fg_uit$shr, fg_uit$lo, fg_uit$hi))
 
-R$duur$competing <- list(
+DU$competing <- list(
   n = list(objecten = nrow(cr), opgeleverd = sum(cr$ev == 1), gestrand = sum(cr$ev == 2), gecensureerd = sum(cr$ev == 0),
            gestrand_zonder_datum = sum(cr$uitkomst == "uitval" & cr$ev != 2)),
   cox_uitval = list(b = bu, se = su, hr = exp(bu), lo = exp(bu - 1.96 * su), hi = exp(bu + 1.96 * su)),
   cif = cif, cif4 = cif4,
   finegray_oplevering = fg_opl, finegray_uitval = fg_uit)
+
+DU
+})   ## einde cacheblok 7b tot 7d
 
 ## ---------------------------------------------------------------------
 ## 8. VERTALING NAAR WONINGEN

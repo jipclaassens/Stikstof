@@ -148,11 +148,24 @@ d[ing & later_gesloopt & !pand_opgeleverd,
 d[is.na(uitkomst), uitkomst := "onbepaald"]
 
 ## De drie categorieen uit issue #28, plus wat er buiten valt
-d[, groep28 := fcase(
+d[, uitkomstgroep := fcase(
   uitkomst == "gerealiseerd_nieuwbouw", "1_nieuwbouw",
   uitkomst == "uitval",                 "2_gestrand",
   uitkomst == "pipeline",               "3_pijplijn",
   default =                             "4_overig")]
+
+## Zes groepen voor het beschrijvende overzicht. Eerst splitsen op
+## projecttype (as 1, ex ante), dan binnen de nieuwbouwvergunningen op
+## uitkomst (as 2). Verbouwing en administratieve ruis vallen buiten de
+## analyses, maar horen wel in het overzicht: zonder die twee telt het
+## plaatje niet op tot alle woonobjecten.
+d[, objectgroep := fcase(
+  projecttype == "admin_fout", "6_admin_ruis",
+  projecttype == "verbouwing", "5_verbouwing",
+  uitkomstgroep == "1_nieuwbouw",    "1_nieuwbouw",
+  uitkomstgroep == "2_gestrand",     "2_gestrand",
+  uitkomstgroep == "3_pijplijn",     "3_pijplijn",
+  default =                    "4_overig")]
 
 ## ---------------------------------------------------------------------
 ## 3. Vlaggen -- informatie die niet in een van beide assen past
@@ -183,6 +196,13 @@ d[, in_sample := projecttype == "nieuwbouw" &
                  vbo_gebruiksdoel == "woon" &
                  !is.na(dist2n2000_m) &
                  !is.na(provinciecode)]
+
+## Universum voor het beschrijvende overzicht: alle woonobjecten met een
+## bruikbare locatie, dus ook verbouwingen en administratieve ruis. Ruimer
+## dan in_sample, dat alleen de nieuwbouwvergunningen bevat.
+d[, in_universum := vbo_gebruiksdoel == "woon" &
+                    !is.na(dist2n2000_m) &
+                    !is.na(provinciecode)]
 
 d[, in_sample_verg := in_sample & !is.na(vergunning_jaar) &
     vergunning_jaar >= PARAMS$jaar_min & vergunning_jaar <= PARAMS$jaar_max]
@@ -229,7 +249,7 @@ print(dcast(d[vbo_gebruiksdoel == "woon", .N, by = .(projecttype, uitkomst)],
 
 kop("De drie categorieen uit issue #28, binnen de ex-ante steekproef")
 s <- d[in_sample == TRUE]
-print(s[, .(N = .N, pct = round(100 * .N / nrow(s), 2)), by = groep28][order(groep28)])
+print(s[, .(N = .N, pct = round(100 * .N / nrow(s), 2)), by = uitkomstgroep][order(uitkomstgroep)])
 cat(sprintf("\ntoegewezen via de ambigue ingetrokken-regel: %s (%.2f%%)\n",
             nfmt(sum(s$uitkomst_ambigu)), 100 * mean(s$uitkomst_ambigu)))
 

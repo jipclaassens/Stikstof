@@ -2,8 +2,8 @@
 * classificatie_objecten.do
 *
 * Reproduceert in Stata de objectclassificatie uit de R-pipeline: projecttype,
-* uitkomst en de vier groepen uit issue #28. Aan het eind wordt Tabel 4 uit het
-* rapport (de beslismatrix) opnieuw opgebouwd.
+* uitkomst en de groepsindeling uit issue #28. Aan het eind wordt de
+* beslismatrix uit het rapport opnieuw opgebouwd.
 *
 * De matrix is geen lijst om over te typen: hij is het RESULTAAT van elf
 * geordende regels. Wie de regels overneemt, krijgt alle 31 combinaties er
@@ -157,14 +157,30 @@ label values uitkomst uitkomst_lbl
 *------------------------------------------------------------------------------
 * 5. De vier groepen uit issue #28
 *------------------------------------------------------------------------------
-gen byte groep28 = 4
-replace groep28 = 1 if uitkomst == 1
-replace groep28 = 2 if uitkomst == 3
-replace groep28 = 3 if uitkomst == 4
+gen byte uitkomstgroep = 4
+replace uitkomstgroep = 1 if uitkomst == 1
+replace uitkomstgroep = 2 if uitkomst == 3
+replace uitkomstgroep = 3 if uitkomst == 4
 
-label define groep28_lbl 1 "1. echte nieuwbouw" 2 "2. gestrand"                  ///
+label define uitkomstgroep_lbl 1 "1. echte nieuwbouw" 2 "2. gestrand"                  ///
     3 "3. pijplijn" 4 "4. overig"
-label values groep28 groep28_lbl
+label values uitkomstgroep uitkomstgroep_lbl
+
+*------------------------------------------------------------------------------
+* 5b. Zes groepen: het complete plaatje
+*------------------------------------------------------------------------------
+* uitkomstgroep beschrijft alleen de nieuwbouwvergunningen. Verbouwing en
+* administratieve ruis vallen buiten de analyses, maar zonder die twee telt
+* het overzicht niet op tot alle woonobjecten. Eerst splitsen op projecttype
+* (as 1, ex ante), dan binnen de nieuwbouw op uitkomst (as 2).
+
+gen byte objectgroep = uitkomstgroep
+replace objectgroep = 5 if projecttype == 2      // verbouwing
+replace objectgroep = 6 if projecttype == 1      // administratieve ruis
+
+label define objectgroep_lbl 1 "1. echte nieuwbouw" 2 "2. gestrand"                   ///
+    3 "3. pijplijn" 4 "4. overig" 5 "5. verbouwing" 6 "6. administratieve ruis"
+label values objectgroep objectgroep_lbl
 
 *------------------------------------------------------------------------------
 * 6. Vlaggen: informatie die niet in een van beide assen past
@@ -189,13 +205,29 @@ gen byte in_sample = projecttype == 3 &                                         
     last_vbo_gebruiksdoel == "woon" &                                             ///
     !missing(dist2n2000_m) & !missing(provinciecode)
 
-*------------------------------------------------------------------------------
-* 8. Controle: de vier groepen
-*------------------------------------------------------------------------------
-tab groep28 if in_sample
+* Universum voor het overzicht: alle woonobjecten met een bruikbare locatie,
+* dus ook verbouwingen en administratieve ruis. Ruimer dan in_sample.
+gen byte in_universum = last_vbo_gebruiksdoel == "woon" &                         ///
+    !missing(dist2n2000_m) & !missing(provinciecode)
 
 *------------------------------------------------------------------------------
-* 9. Tabel 4 uit het rapport: de beslismatrix
+* 8. Controle: het complete overzicht in zes groepen
+*------------------------------------------------------------------------------
+* Dit is de tabel "Alle woonobjecten in zes groepen" uit het rapport. De eerste
+* vier groepen samen zijn in_sample;
+* groep 5 en 6 vallen buiten de analyses maar staan erbij zodat het optelt.
+
+tab objectgroep if in_universum
+
+* en de vier groepen binnen de nieuwbouwvergunningen (de beslismatrix telt hierop op)
+tab uitkomstgroep if in_sample
+
+* welke groepen zitten in welke analyse?
+tab objectgroep if in_universum & in_sample     // vergunningenanalyse: groep 1 tot 4
+tab objectgroep if in_universum & cbs_nieuwbouw == 1 & projecttype != 1   // nieuwbouwanalyse
+
+*------------------------------------------------------------------------------
+* 9. De beslismatrix uit het rapport
 *------------------------------------------------------------------------------
 * Elke combinatie van pandstatus, objectstatus en CBS-nieuwbouw met minstens
 * 200 objecten, gegroepeerd per uitkomst. De regel "rest" per groep vangt de
@@ -206,21 +238,21 @@ keep if in_sample
 
 collapse (count) n = vbo_bag_nr (max) ambigu = uitkomst_ambigu                    ///
                                 (max) gesloopt = later_gesloopt,                  ///
-    by(groep28 cbs_nieuwbouw last_pand_status last_vbo_status)
+    by(uitkomstgroep cbs_nieuwbouw last_pand_status last_vbo_status)
 
 * kleine cellen samenvatten in één regel per groep
 gen byte klein = n < 200
 gen str40 pandstatus = cond(klein, "overige combinaties (< 200)", last_pand_status)
 gen str40 objectstatus = cond(klein, "", last_vbo_status)
 replace cbs_nieuwbouw = . if klein
-collapse (sum) n (max) ambigu gesloopt, by(groep28 klein cbs_nieuwbouw pandstatus objectstatus)
+collapse (sum) n (max) ambigu gesloopt, by(uitkomstgroep klein cbs_nieuwbouw pandstatus objectstatus)
 
-gsort groep28 klein -n
-list groep28 cbs_nieuwbouw pandstatus objectstatus n ambigu gesloopt,             ///
-    sepby(groep28) noobs abbreviate(14)
+gsort uitkomstgroep klein -n
+list uitkomstgroep cbs_nieuwbouw pandstatus objectstatus n ambigu gesloopt,             ///
+    sepby(uitkomstgroep) noobs abbreviate(14)
 
 * subtotalen ter controle: deze moeten gelijk zijn aan stap 8
-tabstat n, by(groep28) stats(sum) format(%12.0fc)
+tabstat n, by(uitkomstgroep) stats(sum) format(%12.0fc)
 restore
 
 *------------------------------------------------------------------------------
@@ -243,5 +275,11 @@ save "`AF'\objecten_geclassificeerd.dta", replace
 *     en 2.294 naar "pijplijn".
 *  3. "Ingetrokken" is dubbelzinnig en wordt op de pandstatus beslist, met een
 *     vlag zodat je het in een gevoeligheidsanalyse kunt omdraaien:
-*     tab groep28 if in_sample & uitkomst_ambigu == 0
+*     tab uitkomstgroep if in_sample & uitkomst_ambigu == 0
+*
+* En let op de twee assen. objectgroep mengt ze bewust voor het overzicht: groep 5
+* en 6 komen van AS 1 (wat voor project was dit, ex ante), groep 1 tot 4 van
+* AS 2 (wat is ermee gebeurd, ex post). Filteren doe je op AS 1, meten op
+* AS 2. Wie op groep 1 filtert en dat een steekproef noemt, selecteert op de
+* uitkomst, en dat is precies wat je hier niet moet doen.
 *==============================================================================

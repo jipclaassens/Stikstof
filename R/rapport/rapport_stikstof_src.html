@@ -186,18 +186,21 @@ td.fx{font-family:var(--mono);font-size:12px;white-space:pre-wrap}
 <p><strong>Project-id uit gemeente en documentnummer.</strong> De Stata-versie gebruikte <code>vbo_documentnummer_rel</code>, een sleutel die alleen in het vergunningenbestand bestaat en dus leeg is voor precies die 43.000 objecten. Dat bleek niet onschuldig: Stata's <code>collapse</code> behandelt een lege sleutel als een gewone groepswaarde, waardoor alle niet-gekoppelde objecten binnen een gemeente-jaar één pseudo-project werden en via <code>(min) afstandsklasse</code> allemaal de kleinste afstand van die hoop kregen. Omdat dat vooral in 2012 en 2013 gebeurde, ontstond kunstmatig extra nieuwbouw vlak bij natuur in de pre-periode. Hoofdstuk 7 laat zien wat dat met de coëfficiënt deed.</p>
 <p><strong>Realisatie op objectniveau, niet op pandniveau.</strong> De BAG heeft twee statusreeksen die elkaar tegenspreken. 2.950 objecten hebben pandstatus "niet gerealiseerd" en staan zelf "in gebruik"; 2.294 objecten zijn zelf "niet gerealiseerd" in een pand dat wél is opgeleverd. Dat is geen aggregatie-artefact (van de 23.972 betrokken panden zijn er maar 54 gemengd), maar een echte tegenspraak. Conform de CBS-voorraaddefinitie beslist de objectstatus over het object, de pandstatus over het gebouw, en de opleverdatum is een pandkenmerk dat nooit als objectbewijs geldt. Die laatste regel kostte een correctieronde: een eerste versie gebruikte de pand-opleverdatum wél en zette daarmee 19.014 objecten ten onrechte op "gerealiseerd".</p>
 <h3>Wat er dan staat</h3>
-<p>Na de administratieve schoning (objecten die ten onrechte zijn opgevoerd, en verbouwingen, herkend aan een bouwjaar dat minstens zes jaar vóór de vergunning ligt) blijven 1.302.465 woonobjecten over. Ze vallen in de drie categorieën uit issue #28, plus één die daar niet in past.</p>
-<div class="tbl"><div class="fig-h">De ex-ante steekproef in vier groepen</div><div class="fig-s">alle jaren, dus inclusief de halve jaargang 2026</div><div class="tw"><table id="t-groep"></table></div></div>
-<p>"Overig" zijn objecten die wél in de voorraad zijn gekomen maar die CBS geen nieuwbouw noemt: transformaties, splitsingen, toevoegingen. Ze zitten apart, zodat je ze kunt meenemen of weglaten.</p>
+<p>Alle woonobjecten met een bruikbare locatie, 1.327.622 stuks, vallen in zes groepen. De eerste splitsing is op projecttype en gebruikt uitsluitend informatie die bij de vergunning al vaststond: was dit een nieuwbouwvergunning, een verbouwing, of een administratieve correctie. Alleen binnen de nieuwbouwvergunningen splitsen we daarna op wat er is gebeurd, en dat zijn de drie categorieën uit issue #28 plus één die daar niet in past.</p>
+<div class="tbl"><div class="fig-h">Alle woonobjecten in zes groepen</div><div class="fig-s">groep 1 tot 4 zijn de nieuwbouwvergunningen, gesplitst naar uitkomst; groep 5 en 6 vallen buiten elke analyse. Alle jaren, dus inclusief de halve jaargang 2026</div><div class="tw"><table id="t-groep"></table></div></div>
+<p>Verbouwing en administratieve ruis staan erbij omdat het overzicht anders niet optelt, maar ze horen op een andere as thuis. Groep 5 en 6 komen van de vraag "wat voor project was dit", die vóór de uitspraak al beantwoord was. Groep 1 tot 4 komen van de vraag "wat is ermee gebeurd", die pas achteraf beantwoord is. Dat onderscheid is de kern van hoofdstuk 3: filteren mag op de eerste vraag, meten gebeurt op de tweede.</p>
+<p><strong>En "overig" dan?</strong> Dat zijn objecten die wél in de voorraad zijn gekomen maar die CBS geen nieuwbouw noemt: transformaties, splitsingen, toevoegingen. Ze tellen niet mee in de nieuwbouwanalyse, want die telt precies wat CBS als nieuwbouw registreert. Maar ze tellen wél mee in de vergunningenanalyse, en dat is opzet: die analyse telt verleende vergunningen, en mag dus niet selecteren op wat er later van geworden is. Hetzelfde geldt voor gestrand en pijplijn. Wie die drie groepen uit de vergunningentelling haalt, conditioneert op de uitkomst en meet precies het effect weg dat hij zoekt.</p>
+<div class="tbl"><div class="fig-h">Welke groepen in welke analyse zitten</div><div class="fig-s">de aantallen verschillen van de vorige tabel door de jaargrenzen: vergunningjaar 2012 tot 2025 respectievelijk mutatiejaar 2012 tot 2025</div><div class="tw"><table id="t-gebruik"></table></div></div>
+<p>Eén onzuiverheid die hier zichtbaar wordt en die we moeten opnemen in het conceptartikel: de nieuwbouwanalyse sluit alleen administratieve ruis uit, geen verbouwingen. Daardoor zitten er 4.184 objecten in die volgens ons eigen projecttype een verbouwing zijn, maar die CBS wel als nieuwbouw telt. Dat is 0,47% van die steekproef. Het is een tegenspraak tussen twee definities, niet tussen ons en de data: als CBS het als toevoeging aan de voorraad registreert, is het dat ook. De robuustheidstabel in hoofdstuk 7 laat zien dat filterkeuzes van deze omvang de coëfficiënt in de derde decimaal bewegen, dus het verandert niets aan de uitkomsten, maar het hoort wel expliciet te staan.</p>
 <h3>Klopt dit met StatLine?</h3>
 <p>Voor nieuwbouw: ja, tot op een half procent. Voor "overig": nee, en dat hoort ook niet. StatLine telt jaarlijks 18.000 tot 64.000 "overige toevoegingen" aan de woningvoorraad; ons bestand heeft er 600 tot 4.500 per opleverjaar. De verklaring is de afbakening. Ons universum is: objecten waarvoor een bouwvergunning is verleend op pandniveau, plus objecten die CBS als nieuwbouw telt. De meeste overige toevoegingen, zoals de splitsing van een bestaande woning of de transformatie van een kantoor, zijn mutaties op objectniveau binnen een bestaand pand, en die passeren nooit de pandstatus "bouwvergunning verleend". Ze zitten dus niet in de exports. De 71.869 die we wel hebben zijn de overige toevoegingen die toevallig met een pandvergunning gepaard gingen. Voor dit rapport is dat geen probleem: de uitkomstmaat is nieuwbouw, en die sluit aan.</p>
 <div class="tbl"><div class="fig-h">Nieuwbouw en overige toevoegingen: dit bestand tegenover StatLine 82235NED</div><div class="fig-s">alle CBS-nieuwbouw naar mutatiejaar, 2012 tot 2025, zonder steekproeffilter; "overig" naar pand-opleverjaar; StatLine per kalenderjaar</div><div class="tw"><table id="t-statline"></table></div></div>
 <p>De ruis zit in de combinaties eronder. De volledige beslismatrix, welke combinatie van pandstatus, objectstatus en CBS-nieuwbouw in welke groep valt, staat hieronder voor alle cellen met minstens tweehonderd objecten. Twee principes lossen bijna alles op: sloop is geen realisatiestatus (een object dat gebouwd is en waarvan het pand later is gesloopt, blijft gebouwd), en "ingetrokken" is dubbelzinnig en wordt beslist op de pandstatus, met een vlag zodat het omkeerbaar is.</p>
 <div class="tbl"><div class="fig-h">Beslismatrix: pandstatus &times; objectstatus &times; CBS-nieuwbouw</div><div class="fig-s">alle 31 combinaties met &ge; 200 objecten, gegroepeerd per uitkomst; vet = de combinaties die zonder regel als ruis zouden gelden</div><div class="tw"><table id="t-matrix"></table></div></div>
-<p>De matrix telt per groep op tot het totaal uit de vorige tabel. De regel "overige combinaties" vangt de cellen met minder dan tweehonderd objecten: samen 790 van de 1.302.465, verdeeld over enkele tientallen zeldzame statuscombinaties. Wie de volledige uitsplitsing wil, vindt hem in <code>_output/rapport_20260730.json</code> onder <code>data.matrix</code>.</p>
+<p>De matrix beschrijft alleen de nieuwbouwvergunningen, dus groep 1 tot 4 uit <span data-ref="t-groep"></span>; verbouwing en administratieve ruis zitten er niet in, want die worden op projecttype bepaald en niet op een statuscombinatie. Per groep telt hij op tot het totaal uit die tabel. De regel "overige combinaties" vangt de cellen met minder dan tweehonderd objecten: samen 790 van de 1.302.465, verdeeld over enkele tientallen zeldzame statuscombinaties. Wie de volledige uitsplitsing wil, vindt hem in <code>_output/rapport_20260730.json</code> onder <code>data.matrix</code>.</p>
 <p>Deze matrix is geen lijst om over te typen: hij is het resultaat van elf geordende regels, waarbij de eerste die past wint. Wie de regels overneemt krijgt alle 31 combinaties er gratis bij, ook de combinaties die in een volgend extract nieuw opduiken. De Stata-versie van die regels staat in <code>stata/classificatie_objecten.do</code> in de repository; die reproduceert deze tabel en schrijft <code>objecten_geclassificeerd.dta</code> weg.</p>
-<h3>Waarom Tabel 3 en Tabel 4 niet op hetzelfde uitkomen</h3>
-<p>Tel je in Tabel 3 de kolom "nieuwbouw, dit bestand" op, dan kom je op 895.631. In Tabel 4 staat bij echte nieuwbouw 919.337. Dat verschil is geen fout maar een verschil in afbakening, en het gaat twee kanten op tegelijk. Tabel 3 vergelijkt met CBS en gebruikt daarom álle objecten uit de CBS-nieuwbouwreeks, zonder steekproeffilter, maar wel beperkt tot de volle jaargangen 2012 tot 2025. Tabel 4 beschrijft de analysesteekproef en past dus wél het ex-ante filter toe, maar kent geen jaargrens en telt de halve jaargang 2026 mee.</p>
+<h3>Waarom <span data-ref="t-statline"></span> en <span data-ref="t-matrix"></span> niet op hetzelfde uitkomen</h3>
+<p>Tel je in <span data-ref="t-statline"></span> de kolom "nieuwbouw, dit bestand" op, dan kom je op 895.631. In <span data-ref="t-matrix"></span> staat bij echte nieuwbouw 919.337. Dat verschil is geen fout maar een verschil in afbakening, en het gaat twee kanten op tegelijk. De StatLine-tabel vergelijkt met CBS en gebruikt daarom álle objecten uit de CBS-nieuwbouwreeks, zonder steekproeffilter, maar wel beperkt tot de volle jaargangen 2012 tot 2025. De beslismatrix beschrijft de analysesteekproef en past dus wél het ex-ante filter toe, maar kent geen jaargrens en telt de halve jaargang 2026 mee.</p>
 <div class="tbl"><div class="fig-h">Aansluiting tussen de twee tabellen</div><div class="fig-s">beide beginnen bij dezelfde 927.382 objecten uit de CBS-nieuwbouwreeks</div><div class="tw"><table id="t-aansluiting"></table></div></div>
 <p>De 8.045 objecten die buiten de steekproef vallen zijn vooral verbouwingen en administratieve correcties: objecten die CBS wel als nieuwbouw telt, maar waarvan het bouwjaar minstens zes jaar vóór de vergunning ligt of waarvan het pand als ten onrechte opgevoerd is geregistreerd. Wie beide filters tegelijk toepast houdt 887.882 objecten over, en dat is het getal dat in de analyses van hoofdstuk 5 zit.</p>
 </section>
@@ -742,8 +745,30 @@ table('t-bronnen', [
   {h:'Bestand', f:r=>`<code>${r.bestand}</code>`},{h:'Eenheid', f:r=>r.eenheid},{h:'Rijen', num:true, f:r=>nl(r.rijen)},{h:'Inhoud', f:r=>r.inhoud}
 ], D.data.bronnen);
 table('t-koppel', [{h:'Mutatiejaar',f:r=>r.jaar},{h:'Nieuwbouw',num:true,f:r=>nl(r.nieuwbouw)},{h:'Zonder vergunning',num:true,f:r=>nl(r.zonder_vergunning)},{h:'%',num:true,f:r=>nl(r.pct,1)}], D.data.koppelgraad);
-const GL = {'1_nieuwbouw':'1. Echte nieuwbouw: vergund, gebouwd, door CBS als nieuwbouw geteld','2_gestrand':'2. Gestrand: vergund, uiteindelijk niet gerealiseerd','3_pijplijn':'3. Pijplijn: vergund, nog niet opgeleverd','4_overig':'4. Overig: in de voorraad, maar geen nieuwbouw'};
-table('t-groep', [{h:'Groep',f:r=>GL[r.groep]},{h:'Objecten',num:true,f:r=>nl(r.N)},{h:'%',num:true,f:r=>nl(r.pct,1)}], D.data.groep28);
+const GL = {'1_nieuwbouw':'1. Echte nieuwbouw: vergund, gebouwd, door CBS als nieuwbouw geteld','2_gestrand':'2. Gestrand: vergund, uiteindelijk niet gerealiseerd','3_pijplijn':'3. Pijplijn: vergund, nog niet opgeleverd','4_overig':'4. Overig: in de voorraad, maar geen nieuwbouw','5_verbouwing':'5. Verbouwing: het gebouw stond er al bij de vergunning','6_admin_ruis':'6. Administratieve ruis: ten onrechte opgevoerd'};
+const AS = g => (g === '5_verbouwing' || g === '6_admin_ruis') ? 'projecttype (ex ante)' : 'uitkomst (ex post)';
+(function(){
+  const bron = D.data.objectgroep || D.data.uitkomstgroep;
+  const rows = bron.slice();
+  rows.push({groep:'__tot', N: bron.reduce((s,r)=>s+r.N,0), pct: 100});
+  table('t-groep', [
+    {h:'Groep', f:r=>r.groep==='__tot' ? 'Totaal woonobjecten' : GL[r.groep]},
+    {h:'Bepaald op', f:r=>r.groep==='__tot' ? '' : AS(r.groep)},
+    {h:'Objecten', num:true, f:r=>nl(r.N)},
+    {h:'%', num:true, f:r=>nl(r.pct,1)}
+  ], rows, {cls:r=>r.groep==='__tot' ? 'sub' : ''});
+})();
+if(D.data.gebruik){
+  const g = D.data.gebruik;
+  const idx = a => Object.fromEntries((a||[]).map(r=>[r.objectgroep || r.groep, r.N]));
+  const V = idx(g.verg), N = idx(g.nwb);
+  const rows = Object.keys(GL).map(k => ({groep:k, v:V[k], n:N[k]}));
+  table('t-gebruik', [
+    {h:'Groep', f:r=>GL[r.groep]},
+    {h:'In de vergunningenanalyse', num:true, f:r=>r.v ? nl(r.v) : '·'},
+    {h:'In de nieuwbouwanalyse', num:true, f:r=>r.n ? nl(r.n) : '·'}
+  ], rows);
+}
 (function(){
   const nb = Object.fromEntries(D.data.koppelgraad.map(r=>[r.jaar, r.nieuwbouw]));
   const rows = STATLINE.map(([y,sn,so])=>({y, nb:nb[y], sn, ov:OVERIG_OPLEVERJAAR[y], so}));
@@ -754,7 +779,7 @@ const VS = s => s.replace('Verblijfsobject_','').replace('Niet_gerealiseerd_verb
 const GS = g => ({'1_nieuwbouw':'nieuwbouw','2_gestrand':'gestrand','3_pijplijn':'pijplijn','4_overig':'overig'})[g];
 const susp = r => (r.cbs && (r.pand.includes('gesloopt')||r.pand.includes('Niet_gerealiseerd')||r.vbo.includes('ingetrokken')||r.vbo.includes('Niet_gerealiseerd'))) || (!r.cbs && r.pand.includes('in_gebruik') && (r.vbo.includes('Niet_gerealiseerd')||r.vbo.includes('gevormd')));
 (function(){
-  const tot = Object.fromEntries(D.data.groep28.map(r=>[r.groep, r.N]));
+  const tot = Object.fromEntries(D.data.uitkomstgroep.map(r=>[r.groep, r.N]));
   const rows = [];
   for (const g of ['1_nieuwbouw','2_gestrand','3_pijplijn','4_overig']) {
     const rs = D.data.matrix.filter(r=>r.groep===g).slice().sort((a,b)=>b.N-a.N);
@@ -777,10 +802,10 @@ if(D.data.aansluiting){
   const rows = [
     {s:'Alle objecten in de CBS-nieuwbouwreeks', n:a.cbs_totaal},
     {s:'af: mutatiejaar 2026, een halve jaargang', n:-a.jaar_2026},
-    {s:'= Tabel 3, kolom "nieuwbouw, dit bestand", 2012 tot 2025', n:a.tabel_statline, tot:true},
+    {s:'= StatLine-tabel, kolom "nieuwbouw, dit bestand", 2012 tot 2025', n:a.tabel_statline, tot:true},
     {s:'Alle objecten in de CBS-nieuwbouwreeks', n:a.cbs_totaal, gap:true},
     {s:'af: valt buiten de ex-ante steekproef', n:-a.buiten_sample},
-    {s:'= Tabel 4, groep "echte nieuwbouw", alle jaren', n:a.tabel_groepen, tot:true},
+    {s:'= beslismatrix, groep "echte nieuwbouw", alle jaren', n:a.tabel_groepen, tot:true},
     {s:'Beide filters tegelijk: steekproef én 2012 tot 2025', n:a.beide_filters, gap:true, tot:true}
   ];
   (a.redenen || []).forEach(r => rows.push({s:'   waarvan ' + r.reden, n:-r.N, sub:true}));
@@ -933,12 +958,16 @@ const FOUTEN = [
     let sub = 0;
     sec.querySelectorAll('h3').forEach(h=>{ sub++; h.insertAdjacentHTML('afterbegin', `<span class="hn">${n.textContent.trim()}.${sub}</span>`); });
   });
-  let fig = 0, tab = 0;
+  let fig = 0, tab = 0; const nums = {};
   document.querySelectorAll('main figure > .fig-h, main .tbl > .fig-h').forEach(el=>{
     const isFig = el.parentElement.tagName === 'FIGURE';
     const n = isFig ? ++fig : ++tab;
-    el.insertAdjacentHTML('afterbegin', `<span class="cap">${isFig?'Figuur':'Tabel'} ${n}.</span>`);
+    const label = `${isFig?'Figuur':'Tabel'} ${n}`;
+    el.insertAdjacentHTML('afterbegin', `<span class="cap">${label}.</span>`);
+    el.parentElement.querySelectorAll('table[id], canvas[id]').forEach(t=>{ if(!(t.id in nums)) nums[t.id] = label; });
   });
+  /* kruisverwijzingen invullen, zodat ze meeschuiven als er een tabel bij komt */
+  document.querySelectorAll('[data-ref]').forEach(s=>{ s.textContent = nums[s.dataset.ref] || s.dataset.ref; });
 })();
 
 /* ---------- charts ---------- */
