@@ -42,6 +42,9 @@ nav.toc ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column
 nav.toc a{text-decoration:none;display:grid;grid-template-columns:24px 1fr;gap:6px}
 nav.toc a span.n{color:var(--muted);font-variant-numeric:tabular-nums}
 nav.toc a:hover{color:var(--ink)}
+nav.toc a.actief{color:var(--ink);font-weight:600}
+nav.toc a.actief span.n{color:var(--ink)}
+nav.toc a{transition:color .12s}
 nav.toc .eyebrow{letter-spacing:.08em;text-transform:uppercase;font-size:11px;color:var(--muted);margin-bottom:12px}
 main{min-width:0}
 .col{max-width:none}
@@ -949,6 +952,27 @@ const FOUTEN = [
   ];
   if (B.git) delen.push(`<span>commit <code>${B.git}</code></span>`);
   el.innerHTML = delen.join('');
+})();
+
+/* inhoudsopgave: het hoofdstuk waar je leest wordt dikgedrukt */
+(function(){
+  const links = [...document.querySelectorAll('nav.toc a[href^="#"]')];
+  const secties = links.map(a => document.getElementById(a.getAttribute('href').slice(1))).filter(Boolean);
+  if (!secties.length) return;
+  function bijwerken(){
+    /* het actieve hoofdstuk is het laatste waarvan de kop boven een derde van het scherm zit */
+    const grens = window.scrollY + Math.max(80, Math.min(window.innerHeight / 3, 220));
+    let huidig = secties[0];
+    for (const s of secties) if (s.offsetTop <= grens) huidig = s;
+    /* onderaan de pagina: laatste hoofdstuk, ook als de kop nog niet boven de grens is */
+    if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2) huidig = secties[secties.length - 1];
+    links.forEach(a => a.classList.toggle('actief', a.getAttribute('href') === '#' + huidig.id));
+  }
+  /* rechtstreeks, niet via requestAnimationFrame: vijftien vergelijkingen per
+     scrollstap kosten niets, en rAF staat stil in een verborgen tabblad */
+  addEventListener('scroll', bijwerken, { passive: true });
+  addEventListener('resize', bijwerken);
+  bijwerken();
 })();
 
 /* nummering van paragrafen, figuren en tabellen */
