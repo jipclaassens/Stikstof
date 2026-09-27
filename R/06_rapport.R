@@ -41,41 +41,7 @@ options(width = 200)
 sink(file.path(PATHS$output, sprintf("rapport_%s.txt", EXTRACT)), split = TRUE)
 t0 <- Sys.time()
 
-## ---------------------------------------------------------------------
-## Een kleine JSON-schrijver (jsonlite staat niet op deze machine)
-## ---------------------------------------------------------------------
-to_json <- function(x) {
-  esc <- function(s) {
-    s <- gsub("\\\\", "\\\\\\\\", s); s <- gsub("\"", "\\\\\"", s)
-    s <- gsub("\n", "\\\\n", s); s <- gsub("\r", "", s); s <- gsub("\t", "\\\\t", s)
-    paste0("\"", s, "\"")
-  }
-  scalar <- function(v) {
-    if (is.na(v)) return("null")
-    if (is.logical(v)) return(if (v) "true" else "false")
-    if (inherits(v, "Date")) return(esc(format(v)))
-    if (is.numeric(v)) { if (!is.finite(v)) return("null"); return(format(round(v, 5), scientific = FALSE, trim = TRUE)) }
-    esc(as.character(v))
-  }
-  if (is.null(x)) return("null")
-  if (is.data.frame(x)) {
-    x <- as.data.frame(x)
-    rows <- lapply(seq_len(nrow(x)), function(i) {
-      paste0("{", paste(sprintf("%s:%s", esc(names(x)), sapply(names(x), function(n) scalar(x[[n]][i]))), collapse = ","), "}")
-    })
-    return(paste0("[", paste(rows, collapse = ",\n"), "]"))
-  }
-  if (is.list(x)) {
-    if (!is.null(names(x)) && all(names(x) != "")) {
-      return(paste0("{", paste(sprintf("%s:%s", esc(names(x)), sapply(x, to_json)), collapse = ",\n"), "}"))
-    }
-    return(paste0("[", paste(sapply(x, to_json), collapse = ","), "]"))
-  }
-  if (length(x) == 1 && is.null(names(x))) return(scalar(x))
-  paste0("[", paste(sapply(x, scalar), collapse = ","), "]")
-}
-
-R <- list()   # het resultaatobject
+R <- list()   # het resultaatobject; weggeschreven met to_json() uit 00_config.R
 
 ## ---------------------------------------------------------------------
 ## Data, tijdindex, gebeurtenissen
@@ -92,7 +58,7 @@ kw_label <- function(q) sprintf("%dQ%d", KW_START + (q - 1L) %/% 4L, (q - 1L) %%
 EVENTS <- data.table(
   naam   = c("PAS-uitspraak", "Logtsebaan", "bouwvrijstelling", "Porthos", "Omgevingswet + Wkb", "intern salderen", "Pasgeld-West"),
   datum  = as.Date(c("2019-05-29", "2021-01-20", "2021-07-01", "2022-11-02", "2024-01-01", "2024-12-18", "2025-01-14")),
-  soort  = c("aanscherping", "versoepeling", "versoepeling", "aanscherping", "meetbreuk", "aanscherping", "aanscherping"),
+  soort  = c("aanscherping", "versoepeling", "versoepeling", "aanscherping", "procedure", "aanscherping", "aanscherping"),
   hoofd  = c(TRUE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE),
   ecli   = c("ECLI:NL:RVS:2019:1603", "ECLI:NL:RVS:2021:71", "Wsn, Stb. 2021, 140", "ECLI:NL:RVS:2022:3159", "Ow / Wkb", "ECLI:NL:RVS:2024:4923", "ECLI:NL:RVS:2025:87"),
   strekking = c(
@@ -100,7 +66,7 @@ EVENTS <- data.table(
     "intern salderen niet vergunningplichtig (terugwerkend tot 1-1-2020)",
     "bouwfase-emissies buiten de toets (Wet stikstofreductie en natuurverbetering)",
     "bouwvrijstelling in strijd met de Habitatrichtlijn",
-    "Wnb wordt Ow art. 5.1; gevolgklasse 1 krijgt bouwmelding i.p.v. vergunning",
+    "Wnb wordt Ow art. 5.1, aanhaakplicht vervalt; gevolgklasse 1 bouwmelding i.p.v. technische bouwvergunning (geen wegvallende registraties in de BAG, wel een ander registratiemoment; 13_binnenring.R)",
     "intern salderen niet meer in de voortoets; natuurvergunning weer nodig",
     "ook voor bestemmingsplannen geen intern salderen zonder passende beoordeling"))
 EVENTS[, q := kw_index(datum)]
@@ -201,7 +167,11 @@ print(R$data$uitkomstgroep); print(R$data$koppelgraad)
 ## ---------------------------------------------------------------------
 kop("2. Project-id")
 s[, pid_doc := projectid]
-s[, pid_cl  := fifelse(!is.na(cluster_rel), paste(gemeentecode, cluster_rel), paste0("__los_", vbo_bag_nr))]
+## losse objecten: het rijnummer als sleutel, niet vbo_bag_nr (integer64;
+## zonder geladen bit64 vallen zestiencijferige nummers in paste() samen,
+## zie 01_build_vbo.R). In versie 1.9 van het rapport voegde dat 11.452
+## losse objecten samen tot pseudoclusters.
+s[, pid_cl  := fifelse(!is.na(cluster_rel), paste(gemeentecode, cluster_rel), paste0("__los_", .I))]
 s[, omv_doc := .N, by = pid_doc]
 s[, omv_cl  := .N, by = pid_cl]
 s[, dep_doc := omv_doc * mol_woning]
@@ -291,7 +261,7 @@ verg <- s[!is.na(vergunning_datum) & vergunning_datum >= as.Date("2012-01-01")]
 verg[, q := kw_index(vergunning_datum)]; verg <- verg[q >= 1 & q <= Q_MAX_VERG]
 nwb <- d[cbs_nieuwbouw == TRUE & projecttype != "admin_fout" & !is.na(dist2n2000_m) & !is.na(provinciecode) & !is.na(mutatiemaand)]
 nwb[, q := kw_index(mutatiemaand)]; nwb <- nwb[q >= 1 & q <= Q_MAX_NWB]
-nwb[, pid_cl := fifelse(!is.na(cluster_rel), paste(gemeentecode, cluster_rel), paste0("__los_", vbo_bag_nr))]
+nwb[, pid_cl := fifelse(!is.na(cluster_rel), paste(gemeentecode, cluster_rel), paste0("__los_", .I))]
 nwb[, pid_doc := projectid]
 nwb[, jaar := mutatiejaar]; verg[, jaar := vergunning_jaar]
 UIT <- list(vergunningen = verg, nieuwbouw = nwb)

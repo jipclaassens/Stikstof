@@ -25,7 +25,12 @@ PATHS <- list(
   eib     = Sys.getenv("STIKSTOF_EIB",
               "D:/Radboud Universiteit/Woningbouw RU-VU - General/data/data_natuur/stikstofdepositie_eib.xlsx"),
   derived = Sys.getenv("STIKSTOF_DERIVED", "C:/ProjDir/Stikstof/R/_derived"),
-  output  = Sys.getenv("STIKSTOF_OUTPUT",  "C:/ProjDir/Stikstof/R/_output")
+  output  = Sys.getenv("STIKSTOF_OUTPUT",  "C:/ProjDir/Stikstof/R/_output"),
+  ## De datamap van het vergunningenspoor (vergunningen/CLAUDE.md): de
+  ## bekendmakingen, natuurbesluiten en rechtspraak; 09_aanvragen.R leest
+  ## er analyse/zaken.csv uit
+  verg    = Sys.getenv("VERGUNNINGEN_DATA",
+              "E:/OneDrive - Objectvision/VU/Projects/202505-StikstofPaper/vergunningen")
 )
 
 dir.create(PATHS$derived, showWarnings = FALSE, recursive = TRUE)
@@ -219,3 +224,36 @@ met_cache <- function(blok, versie, expr, invoer = "vbo_analyse") {
 ## Kopje in de log
 kop <- function(...) cat("\n", strrep("=", 70), "\n", sprintf(...), "\n",
                         strrep("=", 70), "\n", sep = "")
+
+## Een kleine JSON-schrijver voor de rapportbestanden (06_rapport.R,
+## 08_strikt.R), zonder jsonlite, dat niet op elke machine staat
+to_json <- function(x) {
+  esc <- function(s) {
+    s <- gsub("\\\\", "\\\\\\\\", s); s <- gsub("\"", "\\\\\"", s)
+    s <- gsub("\n", "\\\\n", s); s <- gsub("\r", "", s); s <- gsub("\t", "\\\\t", s)
+    paste0("\"", s, "\"")
+  }
+  scalar <- function(v) {
+    if (is.na(v)) return("null")
+    if (is.logical(v)) return(if (v) "true" else "false")
+    if (inherits(v, "Date")) return(esc(format(v)))
+    if (is.numeric(v)) { if (!is.finite(v)) return("null"); return(format(round(v, 5), scientific = FALSE, trim = TRUE)) }
+    esc(as.character(v))
+  }
+  if (is.null(x)) return("null")
+  if (is.data.frame(x)) {
+    x <- as.data.frame(x)
+    rows <- lapply(seq_len(nrow(x)), function(i) {
+      paste0("{", paste(sprintf("%s:%s", esc(names(x)), sapply(names(x), function(n) scalar(x[[n]][i]))), collapse = ","), "}")
+    })
+    return(paste0("[", paste(rows, collapse = ",\n"), "]"))
+  }
+  if (is.list(x)) {
+    if (!is.null(names(x)) && all(names(x) != "")) {
+      return(paste0("{", paste(sprintf("%s:%s", esc(names(x)), sapply(x, to_json)), collapse = ",\n"), "}"))
+    }
+    return(paste0("[", paste(sapply(x, to_json), collapse = ","), "]"))
+  }
+  if (length(x) == 1 && is.null(names(x))) return(scalar(x))
+  paste0("[", paste(sapply(x, scalar), collapse = ","), "]")
+}

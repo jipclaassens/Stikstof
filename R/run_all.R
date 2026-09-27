@@ -19,7 +19,18 @@ scripts <- c("01_build_vbo.R",
              "04_analyse_aanbod.R",
              "05_eventstudy_kwartaal.R",
              "06_rapport.R",
-             "07_plannen.R")
+             "07_plannen.R",
+             "08_strikt.R",
+             "09_aanvragen.R",   # roept zo nodig 09a_titels.py aan
+             "10_landelijk.R",
+             "11_ruimte.R",      # roept zo nodig 11a_rasters.py en 11b_contour_vroeg.py aan (Python van QGIS)
+             "12_beroep.R",
+             "13_binnenring.R",
+             "14_netcongestie.R",   # roept zo nodig 14a_pc6.py (Python van QGIS) en 14b_congestiedatum.py aan; na 11_ruimte.R
+             "15_natuurbesluiten.R", # roept 15a_natuurbesluiten.py aan
+             "16_kernen.R")         # roept zo nodig 16a_kernen.py aan (Python van QGIS); na 11_ruimte.R
+## 09 tot en met 16 lezen de datamap van het vergunningenspoor (VERGUNNINGEN_DATA, zie 00_config.R).
+## Het rapport zelf: node R/rapport/bouw_rapport.js 20260730
 
 for (s in scripts) {
   message("\n>>> ", s, " ...")

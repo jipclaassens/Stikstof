@@ -28,6 +28,32 @@ Doorlooptijd ongeveer twee minuten; het zwaarste is het inlezen van de CSV's.
 | `02_classify.R` | projecttype, uitkomst, steekproefvlaggen | `_derived/vbo_analyse.rds` |
 | `03_checks.R` | datakwaliteitscontroles (CHECK 1–9) | `_output/checks_<extract>.txt` |
 | `04_analyse_aanbod.R` | DiD en event study, vergunningen en nieuwbouw | `_output/aanbod_<extract>.txt` |
+| `05_eventstudy_kwartaal.R` | event study op kwartaalbasis, twee uitspraken | `_output/eventstudy_kw_<extract>*` |
+| `06_rapport.R` | alle schattingen voor het rapport (hoofdstuk 2 tot en met 7, 10 en 11) | `_output/rapport_<extract>.json` |
+| `07_plannen.R` | het plannenspoor (hoofdstuk 12) | `_output/plannen_<extract>.json` |
+| `08_strikt.R` | nabij en ver binnen gemeente en kwartaal, trendbreuk, ringen (hoofdstuk 8) | `_output/strikt_<extract>.json` |
+| `09_aanvragen.R` | de bekendmakingen: aanvragen, uitkomst, doorlooptijd (hoofdstuk 9) | `_output/aanvragen_<extract>.json` |
+| `09a_titels.py` | strenge typering van nieuwbouw en stallen uit de titels (`vergunningen.sqlite`) | `_derived/aanvragen_titels.csv` |
+| `10_landelijk.R` | landelijke reeksen: vergunningen, rente, kosten, belemmeringen (hoofdstuk 14) | `_output/landelijk_<extract>.json` |
+| `11_ruimte.R` | contour, netcongestie en depositie op de objecten (hoofdstuk 10, 15, 16) | `_output/ruimte_<extract>.json` |
+| `11a_rasters.py` | leest de rasters af op de BAG-objecten (Python van QGIS) | `_derived/vbo_raster.csv` |
+| `11b_contour_vroeg.py` | verstedelijkingscontour van 2010 tot en met 2014 als raster (Python van QGIS) | `_derived/stedelijk_vroeg_25m.tif` |
+| `12_beroep.R` | Raad van State en uitspraken over woningbouw (hoofdstuk 17) | `_output/beroep_<extract>.json` |
+| `13_binnenring.R` | de binnenste kilometer sinds 2024 per woningtype, de toets op een Wkb-meetbreuk en de golf aanvragen rond de Omgevingswet (hoofdstuk 13) | `_output/binnenring_<extract>.json` |
+| `14_netcongestie.R` | netcongestie in de tijd: vol op 3 maart 2024 binnen de gemeente, en een gespreide invoering per voedingsgebied (hoofdstuk 16) | `_output/netcongestie_<extract>.json` |
+| `14a_pc6.py` | postcode (PC6) per BAG-punt uit de vlakken van de capaciteitskaart (Python van QGIS) | `_derived/vbo_pc6.csv` |
+| `14b_congestiedatum.py` | eerste datum van afnamecongestie per PC6 uit ACM-register, TenneT, Enexis en kaartstanden | `_derived/pc6_congestie.csv` |
+| `15_natuurbesluiten.R` | grote BAG-projecten voor de koppeling aan natuurbesluiten (hoofdstuk 13) | `_derived/projecten_20plus.csv` |
+| `15a_natuurbesluiten.py` | provinciale natuurbesluiten over woningnieuwbouw: tellingen, koppeling met kansniveau | `_output/natuurbesluiten_<extract>.json` |
+| `16_kernen.R` | nabij tegenover ver binnen de gemeente, gemeente x kerntype en kern (hoofdstuk 15) | `_output/kernen_<extract>.json` |
+| `16a_kernen.py` | kernen uit de verstedelijkingscontour, inwoners en hoofdkern per gemeente (Python van QGIS) | `_derived/vbo_kern.csv` |
+| `rapport/bouw_rapport.js` | voegt de JSON's in de HTML-bron en schrijft het rapport | `_output/rapport_stikstof_<extract>.html` |
+
+Script 09 tot en met 12 lezen de datamap van het vergunningenspoor
+(`VERGUNNINGEN_DATA`, standaard de OneDrive-projectmap; zie `00_config.R` en
+`vergunningen/CLAUDE.md`). Voor 11a en 11b is de Python van QGIS nodig
+(`QGIS_PY`, standaard `C:\Program Files\QGIS 3.40.7\bin\python-qgis-ltr.bat`);
+`11_ruimte.R` roept ze zelf aan als hun uitvoer ontbreekt of verouderd is.
 
 `_derived/` en `_output/` staan in `.gitignore`: het zijn afgeleide bestanden.
 

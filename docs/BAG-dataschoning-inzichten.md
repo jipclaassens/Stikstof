@@ -46,6 +46,15 @@ Daardoor kan (i) het **aantal BVV-registraties** vanaf 2024 een niveaubreuk vert
 mogelijke structurele breuk** (aparte dummy / pre-post gevoeligheidsanalyse) en wees
 terughoudend met 2024–2025 vergunning-/pipelinecijfers.
 
+**Getoetst (september 2026, `R/13_binnenring.R`)**: (i) klopt niet voor het aantal. Woningen in
+gevolgklasse 1 vallen niet uit de BVV-reeks: het aandeel opleveringen zonder vergunningrecord bleef
+1,3–2,6% per halfjaar, ook voor eengezinswoningen die vanaf juli 2024 vergund werden, en het aandeel
+eengezins in de vergunningen bleef ~36–38%. (ii) klopt wel: het brondocument voor BVV werd het
+**akkoord op de bouwmelding** (gevolgklasse 1) of de **technische bouwvergunning** (2 en 3)
+(factsheet VNG/Waarderingskamer, okt. 2023), en sinds **september 2025** de vergunning voor de
+omgevingsplanactiviteit. De piek van juni 2026 (~30.000 BVV-objecten tegen ~8.000 per maand) past
+bij een inhaalslag. Behandel 2024–2026 dus als breuk in het **moment**, niet in de dekking.
+
 ## 4. BAG-statushistorie en voorraaddefinitie
 
 - **`Verbouwing pand`** is een **nieuwe status sinds BAG 2.0 (wet in werking 1-7-2018)**,

@@ -1,10 +1,11 @@
-// Voegt de JSON-uitvoer van 06_rapport.R en 07_plannen.R in de HTML-bron,
-// plus versie- en bouwinformatie, en schrijft het rapport weg.
+// Voegt de JSON-uitvoer van 06_rapport.R, 07_plannen.R, 08_strikt.R en
+// 09_aanvragen.R tot en met 16_kernen.R in de HTML-bron, plus versie- en
+// bouwinformatie, en schrijft het rapport weg.
 //   node R/rapport/bouw_rapport.js 20260730
 const fs = require("fs"), path = require("path"), cp = require("child_process");
 
 // Verhoog dit bij elke inhoudelijke wijziging van het rapport.
-const VERSIE = "1.9";
+const VERSIE = "3.1";
 
 const extract = process.argv[2] || "20260730";
 const here = __dirname;
@@ -20,6 +21,14 @@ const lees = (naam) => {
 const data = lees("rapport");
 let plannen = "null";
 try { plannen = lees("plannen"); } catch (e) { console.warn("geen plannen-JSON gevonden, plannenspoor blijft leeg"); }
+let strikt = "null";
+try { strikt = lees("strikt"); } catch (e) { console.warn("geen strikt-JSON gevonden, hoofdstuk over de strenge vergelijking blijft leeg"); }
+// 09 tot en met 14: aanvragen, landelijk tempo, ruimtelijke toetsen, beroep, binnenste ring, netcongestie, natuurbesluiten, kernen
+const extra = {};
+for (const naam of ["aanvragen", "landelijk", "ruimte", "beroep", "binnenring", "netcongestie", "natuurbesluiten", "kernen"]) {
+  extra[naam] = "null";
+  try { extra[naam] = lees(naam); } catch (e) { console.warn(`geen ${naam}-JSON gevonden, dat hoofdstuk blijft leeg`); }
+}
 
 let git = null;
 try { git = cp.execSync("git rev-parse --short HEAD", { cwd: here, stdio: ["ignore", "pipe", "ignore"] }).toString().trim(); } catch (e) {}
@@ -36,5 +45,14 @@ const build = {
 const out = path.join(here, "..", "_output", `rapport_stikstof_${extract}.html`);
 fs.writeFileSync(out, src.replace("__DATA__", () => data)
                          .replace("__PLANNEN__", () => plannen)
+                         .replace("__STRIKT__", () => strikt)
+                         .replace("__AANVRAGEN__", () => extra.aanvragen)
+                         .replace("__LANDELIJK__", () => extra.landelijk)
+                         .replace("__RUIMTE__", () => extra.ruimte)
+                         .replace("__BEROEP__", () => extra.beroep)
+                         .replace("__BINNENRING__", () => extra.binnenring)
+                         .replace("__NETCONGESTIE__", () => extra.netcongestie)
+                         .replace("__NATUURBESLUITEN__", () => extra.natuurbesluiten)
+                         .replace("__KERNEN__", () => extra.kernen)
                          .replace("__BUILD__", () => JSON.stringify(build)));
 console.log(`geschreven: ${out}  (versie ${VERSIE}${git ? ", commit " + git : ""}, ${build.gebouwd})`);

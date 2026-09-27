@@ -225,8 +225,12 @@ vbo[is.na(bron_pandduur), bron_pandduur := FALSE]
 ## Project-id. Documentnummers zijn uniek binnen een gemeente, niet
 ## landelijk -- zie ontwerpkeuze (b) bovenaan.
 vbo[, projectid := paste(gemeentecode, documentnummer)]
+## Nooit poolen op een lege sleutel. Het rijnummer, niet vbo_bag_nr: dat is
+## integer64, en zonder geladen bit64 maakt paste() er een getal in
+## e-notatie met 15 cijfers van, waardoor zestiencijferige BAG-nummers
+## (gemeentecode vanaf 1000) samenvallen.
 vbo[is.na(documentnummer) | documentnummer == "",
-    projectid := paste0("__los_", vbo_bag_nr)]   # nooit poolen op een lege sleutel
+    projectid := paste0("__los_", .I)]
 vbo[, projectomvang := .N, by = projectid]
 
 ## Vergunningjaar op VBO-niveau. bv_eerste_datum is de eerste vergunning
