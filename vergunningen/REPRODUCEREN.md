@@ -85,7 +85,7 @@ Zo'n proces krijgt de omgevingsvariabelen uit het gebruikersprofiel (dus die van
 
 ## Controlegetallen
 
-Na niveau 1 met de data van 26 september 2026 moeten deze waarden terugkomen (schattingen maal honderd, in procent of procentpunt):
+Na niveau 1 met de data van 26 september 2026 moeten deze waarden terugkomen (schattingen maal honderd, in procent of procentpunt). Ze zijn van voor het herstel van `zaak.py` op 27 september 2026 (inzichten.md, hoofdstuk 31): na een nieuwe zaakvorming heeft de database 1.465.374 zaken in plaats van 1.464.997, en verschuiven de zaken van Groningen en Utrecht een fractie.
 
 | Bestand | Grootheid | Waarde |
 |---|---|---|
