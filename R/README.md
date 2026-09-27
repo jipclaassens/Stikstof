@@ -55,6 +55,13 @@ Doorlooptijd ongeveer twee minuten; het zwaarste is het inlezen van de CSV's.
 | `19_ringen.R` | waar de ring van 2,5 tot 5 km groeide, en de ringen met en zonder de grootste steden (hoofdstuk 8 en 15) | `_output/ringen_<extract>.json` |
 | `20_plannen_nh.R` | plancapaciteit nabij natuur tegenover de eerdere bouw, Noord-Holland met Almere en Lelystad (hoofdstuk 15) | `_output/plannen_nh_<extract>.json` |
 | `20a_plannen_nh.py` | kleinste afstand van elk plan in de openbare Noord-Hollandse monitor (2023 en 2025) tot habitat (Python van QGIS) | `_derived/plannen_nh.csv` |
+| `21a_econlogic.R` | slanke afgeleide van de objectexport van het densification-paper (EconLogicPaper, 8,7 miljoen woningen met mutatietype, bouwjaar, woningtype en buurtdichtheid; pad in `ECONLOGIC_PEROBJECT`) | `_derived/econlogic_vbo.rds` |
+| `21_verdichting.R` | nabij tegenover ver binnen dezelfde buurtdichtheid en hetzelfde ontwikkeltype (hoofdstuk 15) | `_output/verdichting_<extract>.json` |
+| `22a_habitat.py` | afstand tot habitat op het raster van 25 m en depositie 2018 voor punten, planvlakken en de oppervlakte per ring (Python van QGIS); bewaart het afstandsraster | `_derived/habitat_afstand_25m.tif`, `langereeks_habitat.csv`, `plannen_nl.csv`, `ringen_oppervlakte.csv` |
+| `22_langereeks.R` | nieuwe woningen naar bouwjaar sinds 1995, nabij en ver en per depositiekwartiel, en de ringen naast elkaar (hoofdstuk 8 en 10) | `_output/langereeks_<extract>.json` |
+| `23_plannen_nl.R` | plancapaciteit nabij natuur in de nationale woningbouwkaart van VRO tegenover de eerdere bouw, met een bootstrap over gemeenten (hoofdstuk 15) | `_output/plannen_nl_<extract>.json` |
+| `24_uitgebreid.R` | waarover de uitgebreide aanvragen gingen die nabij natuur na de uitspraak wegvielen: natuur, brandveilig gebruik of afwijken van het plan, uit de vlaggen van `24a_teksten.py teksten` (pas geldig als prioriteit 1 van de tekstoogst compleet is) | `_output/uitgebreid_<extract>.json` |
+| `24a_teksten.py` | natuur en stikstof in de zaken met een uitgebreide procedure: `samenvatting` telt ze in titel en samenvatting (`vergunningen.sqlite`, alleen lezen), `teksten` maakt vlaggen per zaak uit de volledige teksten van `vergunningen/pipeline/teksten.py` | `_output/uitgebreid_samenvatting_<extract>.txt`, `_derived/teksten_vlaggen.csv` |
 | `rapport/bouw_rapport.js` | voegt de JSON's in de HTML-bron en schrijft het rapport | `_output/rapport_stikstof_<extract>.html` |
 
 Script 09 tot en met 12 lezen de datamap van het vergunningenspoor

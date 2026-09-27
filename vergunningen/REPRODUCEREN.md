@@ -81,6 +81,14 @@ Een proces dat een Claude-sessie zelf start, stopt als de sessie stopt. Start ee
 Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = 'cmd /c "<repo>\vergunningen\pipeline\verwerk.cmd"' }
 ```
 
+De gerichte tekstoogst (`pipeline/teksten.py`, inzichten hoofdstuk 33) gaat net zo: eerst `py -3.13 teksten.py wachtrij` in een venster met `VERGUNNINGEN_DATA`, dan los van de sessie
+
+```
+Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = 'cmd /c "cd /d <repo>\vergunningen\pipeline && py -3.13 -u teksten.py oogst >> C:\LocalData\Stikstof\teksten\oogst_stdout.log 2>&1"' }
+```
+
+met de voortgang in `C:\LocalData\Stikstof\teksten\oogst.log` en `py -3.13 teksten.py stand`. Een verzoek per seconde: 140.000 publicaties duren ongeveer twee dagen.
+
 Zo'n proces krijgt de omgevingsvariabelen uit het gebruikersprofiel (dus die van `setx`), niet die van het lopende venster. Volg de voortgang in `verwerk.log` of `oogst.log` in de datamap; stilstand meet je op de processortijd van het proces, niet op de logregels.
 
 ## Controlegetallen

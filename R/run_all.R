@@ -32,7 +32,11 @@ scripts <- c("01_build_vbo.R",
              "17_registratie.R",    # roept zo nodig 17a_pand_zaak.py en 17b_besluit_nabij.py aan (leest vergunningen.sqlite)
              "18_nnn.R",            # roept zo nodig 18a_nnn.py aan (Python van QGIS); na 11_ruimte.R en 16_kernen.R
              "19_ringen.R",         # maakt zo nodig gemeentenamen.csv met ogr2ogr (QGIS); na 11_ruimte.R en 16_kernen.R
-             "20_plannen_nh.R")     # roept zo nodig 20a_plannen_nh.py aan (Python van QGIS)
+             "20_plannen_nh.R",     # roept zo nodig 20a_plannen_nh.py aan (Python van QGIS)
+             "21a_econlogic.R",     # leest de objectexport van het densification-paper (OVSRV08, ECONLOGIC_PEROBJECT)
+             "21_verdichting.R",    # na 21a
+             "22_langereeks.R",     # roept 22a_habitat.py aan (Python van QGIS); na 21a en 11_ruimte.R (depositiegrenzen)
+             "23_plannen_nl.R")     # roept zo nodig 22a_habitat.py plannen aan (Python van QGIS; VRO_PROJECTEN)
 ## 09 tot en met 16 lezen de datamap van het vergunningenspoor (VERGUNNINGEN_DATA, zie 00_config.R).
 ## Het rapport zelf: node R/rapport/bouw_rapport.js 20260730
 
