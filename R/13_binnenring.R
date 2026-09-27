@@ -161,6 +161,33 @@ R$stappen[, pct := 100 * (exp(b) - 1)]
 print(R$stappen[, .(soort, ring, stap, b = round(b, 3), se = round(se, 3), p = round(p, 3), pct = round(pct, 1))])
 
 ## ---------------------------------------------------------------------
+## 4b. Robuustheid van de stappen in de binnenste ring: zonder de grootste
+##     steden (19_ringen.R laat zien dat Amsterdam een gedeelde ringterm kan
+##     vertekenen), en de binnenste ring tegenover alles verderop in plaats
+##     van tegenover verder dan 5 km
+## ---------------------------------------------------------------------
+kop("4b. Stappen in de binnenste ring zonder de grootste steden, en tegenover alles verderop")
+tien <- d[cbs_nieuwbouw == TRUE & !is.na(gemeentecode) & !is.na(mutatiemaand) & mutatiemaand <= as.Date("2026-06-30"), .N, by = gemeentecode][order(-N)][1:10, gemeentecode]
+WEG <- list("geen" = integer(0), "Amsterdam" = 363L, "de vier grote steden" = c(363L, 599L, 518L, 344L), "de tien grootste gemeenten" = tien)
+R$stappen_robuust <- rbindlist(lapply(names(SOORTEN), function(sn) rbindlist(lapply(names(WEG), function(w) rbindlist(lapply(c(FALSE, TRUE), function(binair) {
+  dt <- verg[!gemeentecode %in% WEG[[w]]][eval(SOORTEN[[sn]])]
+  p <- paneel_ring(dt)[t >= Q_PAS]
+  if (binair) {   # binnenste ring tegenover alles verderop: de ringen 0, 2 en 3 samen
+    p <- p[, .(y = sum(y)), by = .(gemeentecode, ring = as.integer(ring == 1L), t)]
+    p[, `:=`(gem_r = paste(gemeentecode, ring), gem_t = paste(gemeentecode, t), r_szn = paste(ring, (t - 1L) %% 4L))]
+  }
+  p[, `:=`(ow = as.integer(t >= Q_OW), sal = as.integer(t >= Q_SAL))]
+  m <- fepois(y ~ i(ring, ow, ref = 0) + i(ring, sal, ref = 0) | gem_r + gem_t + r_szn, data = p,
+              cluster = ~gemeentecode, notes = FALSE, glm.iter = 200)
+  ct <- coeftable(m)
+  data.table(soort = sn, zonder = w, vergelijking = fifelse(binair, "tegenover alles verderop", "tegenover verder dan 5 km"),
+             stap = c("ow", "sal"), b = ct[c("ring::1:ow", "ring::1:sal"), 1], se = ct[c("ring::1:ow", "ring::1:sal"), 2],
+             p = ct[c("ring::1:ow", "ring::1:sal"), 4])
+}))))))
+R$stappen_robuust[, pct := 100 * (exp(b) - 1)]
+print(R$stappen_robuust[, lapply(.SD, function(x) if (is.numeric(x)) round(x, 3) else x)])
+
+## ---------------------------------------------------------------------
 ## 5. In woningen: de stap bij intern salderen in de binnenste ring
 ## ---------------------------------------------------------------------
 kop("5. In woningen, binnenste ring, 2025")

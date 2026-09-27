@@ -52,6 +52,9 @@ Doorlooptijd ongeveer twee minuten; het zwaarste is het inlezen van de CSV's.
 | `17b_besluit_nabij.py` | per pand een verleend besluit binnen 100 m, recent of ouder dan een half jaar | `_derived/besluit_nabij.csv` |
 | `18_nnn.R` | het Natuurnetwerk Nederland en Natura 2000 zonder habitat als verklaring voor de achterstand nabij natuur (hoofdstuk 15) | `_output/nnn_<extract>.json` |
 | `18a_nnn.py` | afstand van elk BAG-punt tot het NNN, met en zonder Natura 2000, en tot Natura 2000 (Python van QGIS) | `_derived/vbo_nnn.csv` |
+| `19_ringen.R` | waar de ring van 2,5 tot 5 km groeide, en de ringen met en zonder de grootste steden (hoofdstuk 8 en 15) | `_output/ringen_<extract>.json` |
+| `20_plannen_nh.R` | plancapaciteit nabij natuur tegenover de eerdere bouw, Noord-Holland met Almere en Lelystad (hoofdstuk 15) | `_output/plannen_nh_<extract>.json` |
+| `20a_plannen_nh.py` | kleinste afstand van elk plan in de openbare Noord-Hollandse monitor (2023 en 2025) tot habitat (Python van QGIS) | `_derived/plannen_nh.csv` |
 | `rapport/bouw_rapport.js` | voegt de JSON's in de HTML-bron en schrijft het rapport | `_output/rapport_stikstof_<extract>.html` |
 
 Script 09 tot en met 12 lezen de datamap van het vergunningenspoor

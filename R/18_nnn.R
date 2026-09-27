@@ -183,16 +183,18 @@ g4[, aandeel := (voor + na) / sum(voor + na)]
 R$n2000_gemeenten <- head(g4, 10L)
 R$meta$n2000_gemeenten <- nrow(g4)
 print(R$n2000_gemeenten)
+nb <- copy(nwb); nb[, `:=`(G = eval(M$g), gm = as.character(gemeentecode))]
 R$n2000_zonder <- rbindlist(lapply(list("geen" = character(0), "363" = "363", "34" = "34", "363 en 34" = c("363", "34")), function(weg) {
-  rbindlist(lapply(c("alle", "20 of meer"), function(om) {
-    dt <- v[!gm %in% weg]
+  rbindlist(lapply(c("vergunningen", "nieuwbouw"), function(u) rbindlist(lapply(c("alle", "20 of meer"), function(om) {
+    if (u == "nieuwbouw" && !(length(weg) == 0L || identical(weg, "363"))) return(NULL)   # opleveringen: alleen met alle gemeenten en zonder Amsterdam
+    dt <- (if (u == "vergunningen") v else nb)[!gm %in% weg]
     if (om == "20 of meer") dt <- dt[projectomvang >= 20L]
     rbindlist(lapply(c("gm", "kern_gm"), function(e) {
-      r <- did(paneel(dt, e, M$g, M$ng), M$ng)[term %in% c("tr1", "tr4")]
-      cbind(zonder = paste(weg, collapse = " en "), projecten = om,
+      r <- did(paneel(dt, e, M$g, M$ng), M$ng)[term %in% c("tr1", "tr3", "tr4")]
+      cbind(uitkomst = u, zonder = paste(weg, collapse = " en "), projecten = om,
             vergelijking = fifelse(e == "gm", "binnen de gemeente", "binnen kern x gemeente"), r)
     }))
-  }))
+  }))))
 }))
 R$n2000_zonder[, pct := 100 * (exp(b) - 1)]
 print(R$n2000_zonder[, lapply(.SD, function(x) if (is.numeric(x)) round(x, 3) else x)])
