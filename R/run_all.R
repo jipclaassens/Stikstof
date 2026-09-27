@@ -36,7 +36,9 @@ scripts <- c("01_build_vbo.R",
              "21a_econlogic.R",     # leest de objectexport van het densification-paper (OVSRV08, ECONLOGIC_PEROBJECT)
              "21_verdichting.R",    # na 21a
              "22_langereeks.R",     # roept 22a_habitat.py aan (Python van QGIS); na 21a en 11_ruimte.R (depositiegrenzen)
-             "23_plannen_nl.R")     # roept zo nodig 22a_habitat.py plannen aan (Python van QGIS; VRO_PROJECTEN)
+             "23_plannen_nl.R",     # roept zo nodig 22a_habitat.py plannen aan (Python van QGIS; VRO_PROJECTEN)
+             "25_omvang.R",         # het tweede kanaal: de projectomvang als uitkomst
+             "26_samenstelling.R")  # roept 22a_habitat.py aan; na 11_ruimte.R en 21a_econlogic.R
 ## 09 tot en met 16 lezen de datamap van het vergunningenspoor (VERGUNNINGEN_DATA, zie 00_config.R).
 ## Het rapport zelf: node R/rapport/bouw_rapport.js 20260730
 

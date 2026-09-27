@@ -69,18 +69,31 @@ def punten(invoer, uitvoer, bron):
     a[binnen] = A[rij[binnen], kol[binnen]]
     a[a == 65535] = MAX + 1
     # de totale stikstofdepositie van 2018 op de plek (RIVM, 1 km), zoals in 11a_rasters.py; -1 buiten het raster
-    ds = gdal.Open(str(bron / "depositie" / "gdn_depositie_historische_reeks" / "ndep_historisch_2018.tif"))
-    b = ds.GetRasterBand(1); N = b.ReadAsArray().astype(np.float64); nd = b.GetNoDataValue(); gn = ds.GetGeoTransform(); ds = None
-    kn = np.floor((x - gn[0]) / gn[1]).astype(np.int64); rn = np.floor((y - gn[3]) / gn[5]).astype(np.int64)
-    bn = (kn >= 0) & (kn < N.shape[1]) & (rn >= 0) & (rn < N.shape[0])
-    n = np.full(len(ids), -1.0)
-    n[bn] = N[rn[bn], kn[bn]]
-    n[(n < 0) | ((n == nd) if nd is not None else False) | np.isnan(n)] = -1
+    n = lees(bron / "depositie" / "gdn_depositie_historische_reeks" / "ndep_historisch_2018.tif", x, y)
+    # de afstand tot het dichtstbijzijnde overbelaste hexagon van AERIUS (depositie 2023 boven de KDW, 25 m, afgekapt op
+    # 10 km; blootstelling.py van de bekendmakingen) en de vroege verstedelijkingscontour (11b_contour_vroeg.py: 1 binnen,
+    # 0 erbuiten in de vijf provincies met een contour van 2010 tot en met 2014); -1 buiten het raster of zonder waarde
+    o = lees(bron / "natuur" / "afstand_overbelast_25m.tif", x, y)
+    vroeg = HIER / "_derived" / "stedelijk_vroeg_25m.tif"
+    c = lees(vroeg, x, y) if vroeg.exists() else np.full(len(ids), -1.0)
     with open(uitvoer, "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f, delimiter=";")
-        w.writerow(["id", "afstand", "ndep_2018"])
-        w.writerows(zip(ids, a.tolist(), np.round(n, 1).tolist()))
-    print(f"{len(ids)} punten, {int((~binnen).sum())} buiten het afstandsraster, {int((n < 0).sum())} zonder depositie: {uitvoer}")
+        w.writerow(["id", "afstand", "ndep_2018", "afst_overbelast", "stedelijk_vroeg"])
+        w.writerows(zip(ids, a.tolist(), np.round(n, 1).tolist(), np.round(o).astype(np.int64).tolist(), c.astype(np.int64).tolist()))
+    print(f"{len(ids)} punten, {int((~binnen).sum())} buiten het afstandsraster, {int((n < 0).sum())} zonder depositie, "
+          f"{int((o < 0).sum())} zonder afstand tot overbelasting, {int((c >= 0).sum())} in een provincie met vroege contour: {uitvoer}")
+
+
+def lees(pad, x, y):
+    """Een raster aflezen op punten met zijn eigen geotransformatie; -1 buiten het raster, bij nodata of negatief."""
+    ds = gdal.Open(str(pad))
+    b = ds.GetRasterBand(1); R = b.ReadAsArray().astype(np.float64); nd = b.GetNoDataValue(); g = ds.GetGeoTransform(); ds = None
+    k = np.floor((x - g[0]) / g[1]).astype(np.int64); r = np.floor((y - g[3]) / g[5]).astype(np.int64)
+    ok = (k >= 0) & (k < R.shape[1]) & (r >= 0) & (r < R.shape[0])
+    v = np.full(len(x), -1.0)
+    v[ok] = R[r[ok], k[ok]]
+    v[(v < 0) | ((v == nd) if nd is not None else False) | np.isnan(v)] = -1
+    return v
 
 
 VELDEN = ["project_id", "gemeente_code", "gemeente_naam", "provincie_code", "Planstatus", "peilmoment",
