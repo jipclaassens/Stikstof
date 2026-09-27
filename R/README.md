@@ -39,7 +39,7 @@ Doorlooptijd ongeveer twee minuten; het zwaarste is het inlezen van de CSV's.
 | `11a_rasters.py` | leest de rasters af op de BAG-objecten (Python van QGIS) | `_derived/vbo_raster.csv` |
 | `11b_contour_vroeg.py` | verstedelijkingscontour van 2010 tot en met 2014 als raster (Python van QGIS) | `_derived/stedelijk_vroeg_25m.tif` |
 | `12_beroep.R` | Raad van State en uitspraken over woningbouw (hoofdstuk 17) | `_output/beroep_<extract>.json` |
-| `13_binnenring.R` | de binnenste kilometer sinds 2024 per woningtype, de toets op een Wkb-meetbreuk en de golf aanvragen rond de Omgevingswet (hoofdstuk 13) | `_output/binnenring_<extract>.json` |
+| `13_binnenring.R` | de binnenste kilometer sinds 2024 per woningtype, de toets op wegvallende registraties en de golf aanvragen rond de Omgevingswet (hoofdstuk 13) | `_output/binnenring_<extract>.json` |
 | `14_netcongestie.R` | netcongestie in de tijd: vol op 3 maart 2024 binnen de gemeente, en een gespreide invoering per voedingsgebied (hoofdstuk 16) | `_output/netcongestie_<extract>.json` |
 | `14a_pc6.py` | postcode (PC6) per BAG-punt uit de vlakken van de capaciteitskaart (Python van QGIS) | `_derived/vbo_pc6.csv` |
 | `14b_congestiedatum.py` | eerste datum van afnamecongestie per PC6 uit ACM-register, TenneT, Enexis en kaartstanden | `_derived/pc6_congestie.csv` |
@@ -47,6 +47,11 @@ Doorlooptijd ongeveer twee minuten; het zwaarste is het inlezen van de CSV's.
 | `15a_natuurbesluiten.py` | provinciale natuurbesluiten over woningnieuwbouw: tellingen, koppeling met kansniveau | `_output/natuurbesluiten_<extract>.json` |
 | `16_kernen.R` | nabij tegenover ver binnen de gemeente, gemeente x kerntype en kern (hoofdstuk 15) | `_output/kernen_<extract>.json` |
 | `16a_kernen.py` | kernen uit de verstedelijkingscontour, inwoners en hoofdkern per gemeente (Python van QGIS) | `_derived/vbo_kern.csv` |
+| `17_registratie.R` | het registratiemoment van de BAG-status Bouwvergunning verleend: tijd tot de bouwstart, datum tegenover het gepubliceerde besluit, binnenste kilometer, de piek van juni 2026 (hoofdstuk 13) | `_output/registratie_<extract>.json` |
+| `17a_pand_zaak.py` | koppeling van BAG-panden aan zaken uit `vergunningen.sqlite` (alleen lezen) | `_derived/pand_zaak.csv` |
+| `17b_besluit_nabij.py` | per pand een verleend besluit binnen 100 m, recent of ouder dan een half jaar | `_derived/besluit_nabij.csv` |
+| `18_nnn.R` | het Natuurnetwerk Nederland en Natura 2000 zonder habitat als verklaring voor de achterstand nabij natuur (hoofdstuk 15) | `_output/nnn_<extract>.json` |
+| `18a_nnn.py` | afstand van elk BAG-punt tot het NNN, met en zonder Natura 2000, en tot Natura 2000 (Python van QGIS) | `_derived/vbo_nnn.csv` |
 | `rapport/bouw_rapport.js` | voegt de JSON's in de HTML-bron en schrijft het rapport | `_output/rapport_stikstof_<extract>.html` |
 
 Script 09 tot en met 12 lezen de datamap van het vergunningenspoor

@@ -1,11 +1,11 @@
 // Voegt de JSON-uitvoer van 06_rapport.R, 07_plannen.R, 08_strikt.R en
-// 09_aanvragen.R tot en met 16_kernen.R in de HTML-bron, plus versie- en
+// 09_aanvragen.R tot en met 18_nnn.R in de HTML-bron, plus versie- en
 // bouwinformatie, en schrijft het rapport weg.
 //   node R/rapport/bouw_rapport.js 20260730
 const fs = require("fs"), path = require("path"), cp = require("child_process");
 
 // Verhoog dit bij elke inhoudelijke wijziging van het rapport.
-const VERSIE = "3.1";
+const VERSIE = "3.2";
 
 const extract = process.argv[2] || "20260730";
 const here = __dirname;
@@ -23,9 +23,9 @@ let plannen = "null";
 try { plannen = lees("plannen"); } catch (e) { console.warn("geen plannen-JSON gevonden, plannenspoor blijft leeg"); }
 let strikt = "null";
 try { strikt = lees("strikt"); } catch (e) { console.warn("geen strikt-JSON gevonden, hoofdstuk over de strenge vergelijking blijft leeg"); }
-// 09 tot en met 14: aanvragen, landelijk tempo, ruimtelijke toetsen, beroep, binnenste ring, netcongestie, natuurbesluiten, kernen
+// 09 tot en met 18: aanvragen, landelijk tempo, ruimtelijke toetsen, beroep, binnenste ring, netcongestie, natuurbesluiten, kernen, registratie, NNN
 const extra = {};
-for (const naam of ["aanvragen", "landelijk", "ruimte", "beroep", "binnenring", "netcongestie", "natuurbesluiten", "kernen"]) {
+for (const naam of ["aanvragen", "landelijk", "ruimte", "beroep", "binnenring", "netcongestie", "natuurbesluiten", "kernen", "registratie", "nnn"]) {
   extra[naam] = "null";
   try { extra[naam] = lees(naam); } catch (e) { console.warn(`geen ${naam}-JSON gevonden, dat hoofdstuk blijft leeg`); }
 }
@@ -54,5 +54,7 @@ fs.writeFileSync(out, src.replace("__DATA__", () => data)
                          .replace("__NETCONGESTIE__", () => extra.netcongestie)
                          .replace("__NATUURBESLUITEN__", () => extra.natuurbesluiten)
                          .replace("__KERNEN__", () => extra.kernen)
+                         .replace("__REGISTRATIE__", () => extra.registratie)
+                         .replace("__NNN__", () => extra.nnn)
                          .replace("__BUILD__", () => JSON.stringify(build)));
 console.log(`geschreven: ${out}  (versie ${VERSIE}${git ? ", commit " + git : ""}, ${build.gebouwd})`);

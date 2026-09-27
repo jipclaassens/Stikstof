@@ -53,7 +53,7 @@ kw_index <- function(datum) {
 }
 kw_label <- function(q) sprintf("%dQ%d", KW_START + (q - 1L) %/% 4L, (q - 1L) %% 4L + 1L)
 Q_REF <- kw_index(as.Date(c("2018-01-01", "2018-04-01", "2018-07-01", "2018-10-01")))
-Q_MAX_VERG <- kw_index(as.Date("2026-03-31"))   # 2026Q2 = batchregistratie
+Q_MAX_VERG <- kw_index(as.Date("2026-03-31"))   # 2026Q2: piek van juni 2026 (17_registratie.R)
 Q_MAX_NWB  <- kw_index(as.Date("2026-06-30"))
 Q_START_B  <- kw_index(as.Date("2016-01-01"))
 

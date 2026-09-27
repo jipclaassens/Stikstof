@@ -62,7 +62,7 @@ Q_REF <- kw_index(as.Date(c("2018-01-01", "2018-04-01", "2018-07-01", "2018-10-0
 Q_PAS <- kw_index(as.Date("2019-05-29"))
 Q_POR <- kw_index(as.Date("2022-11-02"))
 Q_SAL <- kw_index(as.Date("2024-12-18"))
-Q_MAX_VERG <- kw_index(as.Date("2026-03-31"))   # 2026Q2 = batchregistratie
+Q_MAX_VERG <- kw_index(as.Date("2026-03-31"))   # 2026Q2: piek van juni 2026 (17_registratie.R)
 Q_MAX_NWB  <- kw_index(as.Date("2026-06-30"))
 N_KL <- as.integer(PARAMS$klasse_max_m / PARAMS$klasse_breedte) + 1L
 

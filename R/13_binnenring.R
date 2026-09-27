@@ -53,7 +53,7 @@ kw_index <- function(datum) {
 Q_PAS <- kw_index(as.Date("2019-05-29"))
 Q_OW  <- kw_index(as.Date("2024-01-01"))
 Q_SAL <- kw_index(as.Date("2024-12-18"))
-Q_MAX_VERG <- kw_index(as.Date("2026-03-31"))   # 2026Q2 = batchregistratie
+Q_MAX_VERG <- kw_index(as.Date("2026-03-31"))   # 2026Q2: piek van juni 2026 (17_registratie.R)
 Q_MAX_NWB  <- kw_index(as.Date("2026-06-30"))
 
 vbo_per_pand <- d[, .(n_pand = uniqueN(vbo_bag_nr)), by = pand_bag_nr]

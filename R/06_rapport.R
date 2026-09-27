@@ -75,7 +75,7 @@ Q_REF <- kw_index(as.Date(c("2018-01-01", "2018-04-01", "2018-07-01", "2018-10-0
 Q_PAS <- EVENTS[naam == "PAS-uitspraak", q]
 Q_POR <- EVENTS[naam == "Porthos", q]
 Q_SAL <- EVENTS[naam == "intern salderen", q]
-Q_MAX_VERG <- kw_index(as.Date("2026-03-31"))   # 2026Q2 = batchregistratie
+Q_MAX_VERG <- kw_index(as.Date("2026-03-31"))   # 2026Q2: piek van juni 2026 (17_registratie.R)
 Q_MAX_NWB  <- kw_index(as.Date("2026-06-30"))
 
 R$meta <- list(extract = EXTRACT, bag_datum = "20260710", gemaakt = format(Sys.time(), "%Y-%m-%d %H:%M"),
