@@ -129,6 +129,9 @@ zuiver_sleutel <- d[, .(zuiver = all(projecttype %in% "nieuwbouw")), by = projec
 ## voor sectie 6: sleutels van 100 objecten of meer met een vergunning van voor 2005, en het pseudoproject in Den Haag
 oud_groot <- d[!is.na(vergunning_datum), .(eerste = min(vergunning_datum), n = .N), by = projectid][n >= 100L & eerste < as.Date("2005-01-01"), projectid]
 pseudo_tel <- list(objecten_totaal = d[projectid == "518 FV20101220-04", .N], panden = d[projectid == "518 FV20101220-04", uniqueN(pand_bag_nr)],
+                   eerste_vergunning = format(d[projectid == "518 FV20101220-04", min(vergunning_datum, na.rm = TRUE)]),
+                   laatste_vergunning = format(d[projectid == "518 FV20101220-04", max(vergunning_datum, na.rm = TRUE)]),
+                   kleinste_afstand = d[projectid == "518 FV20101220-04", min(dist2n2000_m, na.rm = TRUE)], mediane_afstand = d[projectid == "518 FV20101220-04", median(dist2n2000_m, na.rm = TRUE)],
                    sleutels_oud_groot = length(oud_groot), objecten_oud_groot = d[projectid %in% oud_groot, .N])
 rm(s, d); invisible(gc())
 
@@ -475,7 +478,9 @@ R$pseudo <- rbindlist(list(
   did6(nwb6[!projectid %in% oud_groot], "zonder alle sleutels van 100 of meer met een vergunning voor 2005"),
   did6(copy(nwb6)[, projectid := paste(projectid, vbo_bag_nr)], "elk object op zijn eigen afstand")))
 R$pseudo[, pct := 100 * (exp(b) - 1)]
-R$pseudo_project <- c(pseudo_tel, list(objecten_opgeleverd = nwb6[projectid == "518 FV20101220-04", .N]))
+R$pseudo_project <- c(pseudo_tel, list(objecten_opgeleverd = nwb6[projectid == "518 FV20101220-04", .N],
+                                       kleinste_afstand_opgeleverd = nwb6[projectid == "518 FV20101220-04", min(dist2n2000_m)],
+                                       mediane_afstand_opgeleverd = nwb6[projectid == "518 FV20101220-04", median(dist2n2000_m)]))
 print(R$pseudo[, lapply(.SD, function(x) if (is.numeric(x)) round(x, 4) else x)]); str(R$pseudo_project)
 
 ## ---------------------------------------------------------------------
