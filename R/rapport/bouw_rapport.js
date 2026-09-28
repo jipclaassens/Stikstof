@@ -5,7 +5,7 @@
 const fs = require("fs"), path = require("path"), cp = require("child_process");
 
 // Verhoog dit bij elke inhoudelijke wijziging van het rapport.
-const VERSIE = "3.5";
+const VERSIE = "3.6";
 
 const extract = process.argv[2] || "20260730";
 const here = __dirname;
@@ -23,9 +23,9 @@ let plannen = "null";
 try { plannen = lees("plannen"); } catch (e) { console.warn("geen plannen-JSON gevonden, plannenspoor blijft leeg"); }
 let strikt = "null";
 try { strikt = lees("strikt"); } catch (e) { console.warn("geen strikt-JSON gevonden, hoofdstuk over de strenge vergelijking blijft leeg"); }
-// 09 tot en met 23: aanvragen, landelijk tempo, ruimtelijke toetsen, beroep, binnenste ring, netcongestie, natuurbesluiten, kernen, registratie, NNN, ringen, plannen in Noord-Holland, verdichting, de lange reeks, de landelijke plannen, stad en land, de projectomvang, de uitgebreide procedure
+// 09 tot en met 23: aanvragen, landelijk tempo, ruimtelijke toetsen, beroep, binnenste ring, netcongestie, natuurbesluiten, kernen, registratie, NNN, ringen, plannen in Noord-Holland, verdichting, de lange reeks, de landelijke plannen, stad en land, de projectomvang, de uitgebreide procedure, de bestemmingsplannen in heel Nederland
 const extra = {};
-for (const naam of ["aanvragen", "landelijk", "ruimte", "beroep", "binnenring", "netcongestie", "natuurbesluiten", "kernen", "registratie", "nnn", "ringen", "plannen_nh", "verdichting", "langereeks", "plannen_nl", "samenstelling", "omvang", "uitgebreid"]) {
+for (const naam of ["aanvragen", "landelijk", "ruimte", "beroep", "binnenring", "netcongestie", "natuurbesluiten", "kernen", "registratie", "nnn", "ringen", "plannen_nh", "verdichting", "langereeks", "plannen_nl", "samenstelling", "omvang", "uitgebreid", "plannen_natuur"]) {
   extra[naam] = "null";
   try { extra[naam] = lees(naam); } catch (e) { console.warn(`geen ${naam}-JSON gevonden, dat hoofdstuk blijft leeg`); }
 }
@@ -64,5 +64,6 @@ fs.writeFileSync(out, src.replace("__DATA__", () => data)
                          .replace("__SAMENSTELLING__", () => extra.samenstelling)
                          .replace("__OMVANG__", () => extra.omvang)
                          .replace("__UITGEBREID__", () => extra.uitgebreid)
+                         .replace("__PLANNEN_NATUUR__", () => extra.plannen_natuur)
                          .replace("__BUILD__", () => JSON.stringify(build)));
 console.log(`geschreven: ${out}  (versie ${VERSIE}${git ? ", commit " + git : ""}, ${build.gebouwd})`);

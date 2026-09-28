@@ -68,6 +68,9 @@ Doorlooptijd ongeveer twee minuten; het zwaarste is het inlezen van de CSV's.
 | `27_pijplijn_sites.R` | proef voor issue 30 in de repo Redevelopment (EconLogicPaper): de gerealiseerde sites aan hun zaak (procedure, doorlooptijd, vergunning tot start en oplevering per alternatief), de route over het documentnummer, pogingen op niet-ontwikkelde sites uit de bekendmakingen, en vergunde maar niet uitgevoerde vervanging uit de BAG zelf (geplande objecten uit `vbo_base.rds` naast bestaande opstal; `vergunningen/inzichten.md`, hoofdstuk 36) | `_output/pijplijn_sites_<extract>.json` |
 | `28a_bestemming.py` | koppelt de punten van de bestaande opstal van de sites van het herontwikkelingspaper aan de vastgestelde Wro-plannen uit de PDOK-download (enkelbestemming, bouwaanduiding, maatvoering, bouwvlak; stand 1 juli 2026), met datum en status per vlak (Python van QGIS met shapely) | `_derived/bestemming/<laag>_paren.csv`, `<laag>_vlakken.csv` |
 | `28_bestemming_sites.R` | de bestemming van die sites in 2012 en nu: hoofdgroep, woningtype volgens de bouwaanduiding, bouwhoogte en wooneenheden; het gerealiseerde alternatief tegenover het toegestane type, planwijzigingen rond het project, en de bestemming van 2012 tegenover herontwikkeling daarna (issue 30 in de repo Redevelopment) | `_output/bestemming_sites_<extract>.json` |
+| `29a_plannen_dso.py` | per planversie uit de oogst van de API Ruimtelijke plannen v4 (`C:\LocalData\vergunningen\bron\dso\dso.sqlite`) de oppervlakte, de kleinste afstand van de contour tot de AERIUS relevante habitatkartering en de woonbestemmingen uit de PDOK-laag Enkelbestemming (Python van QGIS met shapely) | `_derived/plannen_dso.csv` |
+| `29b_uitspraken_dso.py` | de gepubliceerde gerechtelijke uitspraken die aan een plan hangen, uit dezelfde database (alleen lezen) | `_derived/uitspraken_dso.csv` |
+| `29_plannen_natuur.R` | bestemmingsplannen nabij natuur voor en na de PAS-uitspraak: aantal vastgesteld, tijd van ontwerp tot vaststelling en beroep met gevolgen (hoofdstuk 12) | `_output/plannen_natuur_<extract>.json` |
 | `rapport/bouw_rapport.js` | voegt de JSON's in de HTML-bron en schrijft het rapport | `_output/rapport_stikstof_<extract>.html` |
 
 Script 09 tot en met 12 lezen de datamap van het vergunningenspoor
@@ -76,6 +79,8 @@ Script 09 tot en met 12 lezen de datamap van het vergunningenspoor
 (`QGIS_PY`, standaard `C:\Program Files\QGIS 3.40.7\bin\python-qgis-ltr.bat`);
 `11_ruimte.R` roept ze zelf aan als hun uitvoer ontbreekt of verouderd is.
 
+`29_plannen_natuur.R` staat niet in `run_all.R`: het vraagt de oogst van de DSO-API en
+`29a_plannen_dso.py` (Python van QGIS) en `29b_uitspraken_dso.py` vooraf.
 `24_uitgebreid.R` (wacht op de tekstoogst), `27_pijplijn_sites.R` en `28_bestemming_sites.R` staan niet in `run_all.R`: 27 en 28 zijn
 proeven voor het herontwikkelingspaper, lezen de EconLogic-bestanden in
 `C:/LocalData/Redevelopment/R_werk` (pad in `ECONLOGIC_WERK`); 27 draait na
