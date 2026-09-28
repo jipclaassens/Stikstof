@@ -33,6 +33,12 @@
 ##    vervolg, onttrekking, onveranderd), met de vangst bij echte projecten,
 ##    de uitkomst, het vervolg in de BAG (zaak_bag) en de inclusive value
 ##    van stage 1, ruw en binnen de gemeente met de sitegrootte als controle.
+## D. Vergunde vervanging uit de BAG zelf, zonder titels of bekendmakingen:
+##    nieuwe objecten die niet in gebruik zijn (pandstatus Bouwvergunning
+##    verleend, Bouw gestart of Niet gerealiseerd pand; _derived/vbo_base.rds,
+##    vergunning vanaf 2012) binnen 5 of 10 meter van een bestaand object van
+##    een site. De vangst van die afstandsregel meet de afstand tussen de
+##    nieuwe en de gesloopte objecten van dezelfde SN-site.
 ## Lees C als verkenning: een zaak aan het dichtstbijzijnde object is niet
 ## altijd een zaak over die site, en de titels vangen niet elke nieuwbouw
 ## (vergunningen/inzichten.md, hoofdstuk 36).
@@ -339,9 +345,7 @@ R$C_bag <- sv[, .(zaken = .N, pct_bag_pand = pct(bag_pand), pct_gestart = pct(ba
                   pct_niet_gerealiseerd = pct(bag_niet_ger), pct_pand_zonder_start = pct(bag_pand & !bag_start & !bag_gebruik & !bag_niet_ger)),
               by = .(groep2, maat = fifelse(verv, "vervanging", "strikt, geen vervanging"),
                      vergund = fifelse(zym < 202401L, "vergunningzaak 2021 tot en met 2023", "vergunningzaak 2024 tot en met juni 2026"))][order(groep2, maat, vergund)]
-cat("
-Strikte pogingen met een verleende vergunning: een nieuw pand in de BAG voor de zaak, en de status daarvan:
-")
+cat("\nStrikte pogingen met een verleende vergunning: een nieuw pand in de BAG voor de zaak, en de status daarvan:\n")
 print(R$C_bag[, lapply(.SD, function(v) if (is.numeric(v)) round(v, 1) else v)])
 ## hoeveel van de echte projecten vangt de maat: de SN-sites naar opleverjaar
 R$C_vangst <- U[groep == "SN" & redev_ym >= 202107L, .(sites = .N, pct_poging = pct(poging), pct_strikt = pct(strikt), pct_vervanging = pct(verv)), by = .(jaar = redev_ym %/% 100L)][order(jaar)]
@@ -376,6 +380,68 @@ R$C_onv_jaar <- U[groep2 == "onveranderd" & strikt == TRUE, .(sites = .N, pct_ve
                                                                pct_ingetrokken = pct(s_ingetrokken)),
                   by = .(jaar = as.integer(format(s_eerste, "%Y")))][order(jaar)]
 cat("\nOnveranderde sites met een strikte poging, naar het jaar van de eerste zaak:\n"); print(R$C_onv_jaar)
+
+## ---- D. vergunde vervanging uit de BAG zelf ----------------------------
+## paren binnen een straal via een rooster met cellen van die straal
+paren <- function(p, q, straal) {
+  q <- q[, .(qid, ox, oy, cx = floor(ox / straal), cy = floor(oy / straal))]
+  setkey(q, cx, cy)
+  res <- rbindlist(lapply(-1:1, function(dx) rbindlist(lapply(-1:1, function(dy) {
+    a <- p[, .(pid, px = x, py = y, cx = floor(x / straal) + dx, cy = floor(y / straal) + dy)]
+    q[a, on = .(cx, cy), nomatch = 0L, .(pid, qid, d = sqrt((ox - px)^2 + (oy - py)^2))]
+  }))))
+  res[d <= straal]
+}
+## de vangst van de afstandsregel bij echte vervanging: ligt een nieuw object van een SN-site binnen 5 of 10 meter van een
+## gesloopt object van dezelfde site?
+sn_min  <- o[is_min == TRUE & !is.na(x) & startsWith(site_id, "SN_"), .(qid = .I, site_q = site_id, ox = x, oy = y)]
+sn_plus <- o[is_plus == TRUE & !is.na(x) & startsWith(site_id, "SN_"), .(pid = .I, site_p = site_id, x, y)]
+pr <- paren(sn_plus, sn_min, 10)
+pr[sn_plus, on = "pid", site_p := i.site_p][sn_min, on = "qid", site_q := i.site_q]
+pr <- pr[site_p == site_q, .(d = min(d)), by = .(site_id = site_p)]
+n_sn_beide <- uniqueN(intersect(sn_min$site_q, sn_plus$site_p))
+R$D_vangst <- list(sn_sites_met_sloop_en_nieuwbouw = n_sn_beide, binnen_5m = pr[d <= 5, .N], binnen_10m = pr[, .N],
+                   pct_5m = 100 * pr[d <= 5, .N] / n_sn_beide, pct_10m = 100 * pr[, .N] / n_sn_beide)
+cat(sprintf("\nD. Vangst van de afstandsregel: van %s SN-sites met gesloopte en nieuwe objecten ligt een nieuw object binnen 5 m van een gesloopt bij %.1f%%, binnen 10 m bij %.1f%%\n",
+            format(n_sn_beide, big.mark = "."), R$D_vangst$pct_5m, R$D_vangst$pct_10m))
+rm(sn_min, sn_plus, pr); invisible(gc())
+## de geplande objecten die niet in gebruik zijn, aan het dichtstbijzijnde bestaande object binnen 10 meter
+vp <- readRDS(file.path(PATHS$derived, "vbo_base.rds"))
+vp <- vp[last_pand_status %chin% c("Bouwvergunning_verleend", "Bouw_gestart", "Niet_gerealiseerd_pand") & !is.na(x) & !is.na(y) &
+         !is.na(vergunning_datum) & vergunning_datum >= as.IDate("2012-01-01"),
+         .(pid = .I, status = last_pand_status, verg = as.IDate(vergunning_datum), x = as.numeric(x), y = as.numeric(y))]
+cat(sprintf("Geplande objecten, niet in gebruik, vergunning vanaf 2012: %s (%s)\n", format(nrow(vp), big.mark = "."),
+            paste(vp[, .N, by = status][, sprintf("%s %s", status, format(N, big.mark = "."))], collapse = ", ")))
+bestaand <- o[is_incumbent == TRUE & !is.na(x), .(qid = .I, site_id, ox = x, oy = y)]
+pv <- paren(vp, bestaand, 10)
+setorder(pv, pid, d)
+pv <- pv[!duplicated(pid)]
+pv[bestaand, on = "qid", site_id := i.site_id][vp, on = "pid", `:=`(status = i.status, verg = i.verg)]
+rm(bestaand); invisible(gc())
+per_site_d <- pv[, .(n_gepland = .N, d_min = min(d), verg_eerste = min(verg),
+                     niet_gestart = any(status == "Bouwvergunning_verleend"), gestart = any(status == "Bouw_gestart"),
+                     niet_ger = any(status == "Niet_gerealiseerd_pand")), by = site_id]
+U[per_site_d, on = "site_id", `:=`(d_gepland = i.n_gepland, d_min = i.d_min, d_verg = i.verg_eerste, d_niet_gestart = i.niet_gestart,
+                                   d_gestart = i.gestart, d_niet_ger = i.niet_ger)]
+U[, `:=`(v5 = !is.na(d_min) & d_min <= 5, v10 = !is.na(d_min))]
+dmaat <- function(d) d[, .(sites = .N, pct_5m = pct(v5), pct_10m = pct(v10),
+                           bij_5m_pct_niet_gestart = pct(d_niet_gestart[v5]), bij_5m_pct_gestart = pct(d_gestart[v5]),
+                           bij_5m_pct_niet_gerealiseerd = pct(d_niet_ger[v5]),
+                           bij_5m_vergund_voor_2021 = pct(d_verg[v5] < as.IDate("2021-01-01")))]
+R$D_groep <- rbind(cbind(scope = "alle", U[, dmaat(.SD), by = groep2]), cbind(scope = "stedelijk", U[stedelijk == TRUE, dmaat(.SD), by = groep2]))
+cat("\nD. Sites met een gepland, niet gebruikt nieuw object binnen 5 of 10 meter van hun bestaande opstal:\n")
+print(R$D_groep[, lapply(.SD, function(v) if (is.numeric(v)) round(v, 2) else v)])
+## onveranderde sites met zo'n object: naar het jaar van de vergunning en de status
+R$D_onv_jaar <- U[groep2 == "onveranderd" & v5 == TRUE, .(sites = .N, pct_niet_gestart = pct(d_niet_gestart), pct_gestart = pct(d_gestart),
+                                                          pct_niet_gerealiseerd = pct(d_niet_ger)),
+                  by = .(jaar = as.integer(format(d_verg, "%Y")))][order(jaar)]
+cat("\nOnveranderde sites met een gepland object binnen 5 m, naar het jaar van de vroegste vergunning:\n"); print(R$D_onv_jaar)
+## samenhang met de inclusive value, stedelijk, binnen de gemeente met de sitegrootte als controle
+D[U, on = "site_id", y_bag := 100 * i.v5]
+R$D_iv <- D[groep2 == "onveranderd", .(sites = .N, pct_bag_5m = pct(y_bag / 100)), by = deciel][order(deciel)]
+R$D_iv_gemeente <- dec("y_bag", D[groep2 == "onveranderd"])
+cat("\nOnveranderd, stedelijk: gepland object binnen 5 m naar deciel van de inclusive value, ruw en binnen de gemeente (procentpunt):\n")
+print(merge(R$D_iv, R$D_iv_gemeente[, .(deciel, b, se, p)], by = "deciel", all.x = TRUE)[, lapply(.SD, function(v) if (is.numeric(v)) round(v, 3) else v)])
 
 R$meta <- list(export_econlogic = "perobject_Nederland_20260710", venster_bag = format(VENSTER_BAG), landelijk = format(LANDELIJK),
                eind = format(EIND), gemaakt = format(Sys.time(), "%Y-%m-%d %H:%M"))
