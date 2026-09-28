@@ -297,8 +297,8 @@ kop("8. Nieuwbouwaanvragen per kwartaal en ring, 2022 tot en met 2025")
 f_zaken <- file.path(PATHS$verg, "analyse", "zaken.csv")
 f_tit   <- file.path(PATHS$derived, "aanvragen_titels.csv")
 if (file.exists(f_zaken) && file.exists(f_tit)) {
-  z <- fread(f_zaken, sep = ";", encoding = "UTF-8", select = c("zaak_id", "kwartaal", "dist_m", "woningen", "soort"))
-  z <- merge(z, fread(f_tit), by = "zaak_id", all.x = TRUE)
+  z <- fread(f_zaken, sep = ";", encoding = "UTF-8", select = c("zaak_id", "kwartaal", "dist_m", "woningen"))
+  z <- merge(z, fread(f_tit), by = "zaak_id", all.x = TRUE)   # met de soort uit 09a_titels.py
   z <- z[soort == "nieuwbouw_woning" & streng %in% 1L & !(tijdelijk %in% 1L) & !is.na(dist_m) &
          kwartaal >= "2022K1" & kwartaal <= "2025K4"]
   z[, ring := fifelse(dist_m <= 1000, RINGEN[1], fifelse(dist_m <= 2500, RINGEN[2], fifelse(dist_m <= 5000, RINGEN[3], "verder dan 5 km")))]

@@ -44,7 +44,11 @@ Q_PAS <- kw_index(as.Date("2019-05-29")); Q_BVR <- kw_index(as.Date("2021-07-01"
 Q_A0 <- kw_index(as.Date("2016-01-01")); Q_EIND <- kw_index(as.Date("2026-06-30"))
 
 z <- fread(file.path(PATHS$verg, "analyse", "zaken.csv"), sep = ";", encoding = "UTF-8",
-           select = c("zaak_id", "gemeente", "kwartaal", "dist_m", "uitgebreid", "verleend", "geweigerd", "soort", "woningen"))
+           select = c("zaak_id", "gemeente", "kwartaal", "dist_m", "uitgebreid", "verleend", "geweigerd", "woningen"))
+## de soort uit 09a_titels.py (met de woordgrens van 28 september 2026), zoals in 09_aanvragen.R
+f_tit <- file.path(PATHS$derived, "aanvragen_titels.csv")
+if (!file.exists(f_tit) || !"soort" %in% names(fread(f_tit, nrows = 0L))) stop("Ontbreekt of verouderd: ", f_tit, "\nDraai eerst 09_aanvragen.R")
+z <- merge(z, fread(f_tit, select = c("zaak_id", "soort")), by = "zaak_id", all.x = TRUE)
 z[, `:=`(t = kw_van_label(kwartaal), jaar = as.integer(substr(kwartaal, 1, 4)))]
 z <- z[!is.na(dist_m) & t <= Q_EIND]
 z[, D := as.integer(dist_m <= 2500)]

@@ -93,7 +93,7 @@ Zo'n proces krijgt de omgevingsvariabelen uit het gebruikersprofiel (dus die van
 
 ## Controlegetallen
 
-Na niveau 1 met de data van 26 september 2026 moeten deze waarden terugkomen (schattingen maal honderd, in procent of procentpunt). Ze zijn van voor het herstel van `zaak.py` op 27 september 2026 (inzichten.md, hoofdstuk 31): na een nieuwe zaakvorming heeft de database 1.465.374 zaken in plaats van 1.464.997, en verschuiven de zaken van Groningen en Utrecht een fractie.
+Na niveau 1 met de data van 26 september 2026 moeten deze waarden terugkomen (schattingen maal honderd, in procent of procentpunt). Ze zijn van voor het herstel van `zaak.py` op 27 september 2026 (inzichten.md, hoofdstuk 31): na een nieuwe zaakvorming heeft de database 1.465.374 zaken in plaats van 1.464.997, en verschuiven de zaken van Groningen en Utrecht een fractie. Ook de soortregel in `analyse_export.py` is daarna hersteld (28 september 2026, hoofdstuk 37): na de herbouw heeft `zaken.csv` 53.550 in plaats van 59.824 zaken met de soort nieuwbouw_woning, en verschuiven de tellingen van `projecten.py`.
 
 | Bestand | Grootheid | Waarde |
 |---|---|---|

@@ -103,8 +103,12 @@ zk <- fread(file.path(PL, "pijplijn_zaak.csv"), sep = ";", encoding = "UTF-8",
             colClasses = list(character = c("creator", "sleutelsoort", "sleutel", "uitkomst", "locatietype", "eerste_identifier", "titels")))
 for (v in c("eerste_datum", "datum_aanvraag", "datum_uitkomst")) set(zk, j = v, value = datum(zk[[v]]))
 za <- fread(file.path(PATHS$verg, "analyse", "zaken.csv"), sep = ";", encoding = "UTF-8",
-            select = c("zaak_id", "gemeente", "datum_aanvraag", "uitgebreid", "soort", "woningen"))
+            select = c("zaak_id", "gemeente", "datum_aanvraag", "uitgebreid", "woningen"))
 za[, datum_aanvraag := datum(datum_aanvraag)]
+## de soort uit 09a_titels.py (analyse_export.projectsoort met de woordgrens van 28 september 2026), niet uit zaken.csv
+f_tit <- file.path(PATHS$derived, "aanvragen_titels.csv")
+if (!file.exists(f_tit) || !"soort" %in% names(fread(f_tit, nrows = 0L))) stop("Ontbreekt of verouderd: ", f_tit, "\nDraai eerst 09_aanvragen.R")
+za <- merge(za, fread(f_tit, select = c("zaak_id", "soort")), by = "zaak_id", all.x = TRUE)
 ## controle: zaken.csv hoort bij dezelfde zaakvorming als de database
 chk <- merge(zk[, .(zaak_id, a1 = datum_aanvraag, g1 = creator)], za[, .(zaak_id, a2 = datum_aanvraag, g2 = gemeente)], by = "zaak_id")
 gelijk <- chk[, mean(a1 == a2 & g1 == g2, na.rm = TRUE)]
@@ -113,14 +117,13 @@ kop("zaken.csv: %s zaken, %s in de zaaktabel, %.3f%% met dezelfde gemeente en aa
 stopifnot(gelijk > 0.999)
 zk[za, on = "zaak_id", `:=`(uitgebreid = i.uitgebreid, soort = i.soort, woningen = i.woningen)]
 rm(za, chk); invisible(gc())
-## nieuwbouw van woningen: de soort uit zaken.csv (analyse_export.py, over alle titels van de zaak); voor zaken zonder
-## aanvraag, die daar niet in staan, dezelfde regel op de bewaarde titels. Die regel heeft geen woordgrens, zodat ook
-## "verbouwen van een schuur tot woning" meetelt; daarom daarnaast nieuwbouw_echt: bouwen, oprichten of nieuwbouw als
-## los woord, zonder realiseren (vaak in een bestaand gebouw), zonder verbouw, splitsing of transformatie, en zonder
-## mantelzorgwoning of tijdelijke woning. Vervanging: slopen en nieuwbouw_echt in de titels van dezelfde zaak, of
+## nieuwbouw van woningen: de soort uit 09a_titels.py (analyse_export.projectsoort over alle titels van de zaak); voor
+## zaken zonder aanvraag, die daar niet in staan, dezelfde regel op de bewaarde titels. Daarnaast nieuwbouw_echt: zonder
+## realiseren (vaak in een bestaand gebouw), zonder verbouw, splitsing of transformatie, en zonder mantelzorgwoning of
+## tijdelijke woning. Vervanging: slopen en nieuwbouw_echt in de titels van dezelfde zaak, of
 ## vervangende nieuwbouw of herbouw. Sloop van een woning: een strengere regel dan alleen het woord slopen, want slopen van
 ## een schuur of aanbouw bij een woning telt niet.
-RX_NIEUWBOUW <- paste0("(bouwen|oprichten|realiseren|nieuwbouw) (van )?(een |[0-9]+ |twee |drie |vier |vijf |zes |acht |tien )?",
+RX_NIEUWBOUW <- paste0("\\b(?:her|nieuw|terug|af|wederop)?(?:bouwen|oprichten|realiseren|nieuwbouw) (van )?(een |[0-9]+ |twee |drie |vier |vijf |zes |acht |tien )?",
                        "(nieuwe |vrijstaande |levensloopbestendige |sociale |tijdelijke )?(woning|woningen|woonhuis|appartement|appartementen|",
                        "studentenwoning|wooneenhe|woonzorg|woongebouw|woontoren|woonblok|villa|bungalow|twee-onder-een-kap|rijwoning|",
                        "eengezinswoning|meergezins|flexwoning|mantelzorgwoning)|nieuwbouwwoning|woningbouw|nieuwbouw van|nieuwbouwproject|",
@@ -128,9 +131,9 @@ RX_NIEUWBOUW <- paste0("(bouwen|oprichten|realiseren|nieuwbouw) (van )?(een |[0-
 RX_SLOOPWONING <- paste0("(slopen|sloop) (van )?(een |de |het |twee |drie |[0-9]+ )?(bestaande |voormalige |vrijstaande |oude )?",
                          "(woning|woningen|woonhuis|woonhuizen|appartement|appartementen|flat|flats|bedrijfswoning|boerderij|",
                          "woonboerderij|woongebouw|woonblok|portiekflat|galerijflat|rijtjeswoning|eengezinswoning|bungalow|villa)")
-zk[, nieuwbouw := fifelse(!is.na(soort), soort == "nieuwbouw_woning", grepl(RX_NIEUWBOUW, titels, ignore.case = TRUE))]
+zk[, nieuwbouw := fifelse(!is.na(soort), soort == "nieuwbouw_woning", grepl(RX_NIEUWBOUW, titels, ignore.case = TRUE, perl = TRUE))]
 zk[, sloop_woning := grepl(RX_SLOOPWONING, titels, ignore.case = TRUE)]
-RX_ECHT <- paste0("(^|[^a-z])(bouwen|oprichten|nieuwbouw) (van )?(een |de |het |[0-9]+ |twee |drie |vier |vijf |zes |acht |tien )?",
+RX_ECHT <- paste0("(^|[^a-z])(her|nieuw|terug|af|wederop)?(bouwen|oprichten|nieuwbouw) (van )?(een |de |het |[0-9]+ |twee |drie |vier |vijf |zes |acht |tien )?",
                   "(nieuwe |vrijstaande |levensloopbestendige |sociale |grondgebonden )?(woning|woningen|woonhuis|appartement|appartementen|",
                   "woongebouw|woontoren|woonblok|villa|bungalow|twee-onder-een-kap|rijwoning|rijwoningen|eengezinswoning|meergezins)|",
                   "nieuwbouwwoning|nieuwbouw van|vervangende nieuwbouw|herbouw")

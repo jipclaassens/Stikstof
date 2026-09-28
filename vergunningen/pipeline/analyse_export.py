@@ -25,14 +25,18 @@ from config import DATA_DIR, DB_PAD
 NABIJ_M = 2500
 _BOUW = re.compile(r"bouw|woning|appartement|dakkapel|uitbouw|aanbouw|bijgebouw|schuur|garage|carport|loods|stal\b|stallen|bedrijfspand|bedrijfshal", re.I)
 
-# projecttype uit de titels van de zaak, in volgorde van voorrang; nieuwbouw van woningen is de doelgroep, klein werk de placebo
+# projecttype uit de titels van de zaak, in volgorde van voorrang; nieuwbouw van woningen is de doelgroep, klein werk de placebo.
+# Het bouwwoord staat na een woordgrens (28 september 2026, inzichten.md hoofdstuk 36 en 37): zonder die grens telden verbouwen,
+# uitbouwen, aanbouwen, opbouwen en ombouwen van een woning als nieuwbouw. Herbouwen, nieuwbouwen, terugbouwen, afbouwen en
+# wederopbouwen blijven nieuwbouw.
+BOUWWOORD = r"\b(?:her|nieuw|terug|af|wederop)?(?:bouwen|oprichten|realiseren|nieuwbouw)"
 SOORTEN = [
-    ("nieuwbouw_woning", re.compile(r"(bouwen|oprichten|realiseren|nieuwbouw) (van )?(een |[0-9]+ |twee |drie |vier |vijf |zes |acht |tien )?"
+    ("nieuwbouw_woning", re.compile(BOUWWOORD + r" (van )?(een |[0-9]+ |twee |drie |vier |vijf |zes |acht |tien )?"
                                     r"(nieuwe |vrijstaande |levensloopbestendige |sociale |tijdelijke )?(woning|woningen|woonhuis|appartement|appartementen|"
                                     r"studentenwoning|wooneenhe|woonzorg|woongebouw|woontoren|woonblok|villa|bungalow|twee-onder-een-kap|rijwoning|"
                                     r"eengezinswoning|meergezins|flexwoning|mantelzorgwoning)|nieuwbouwwoning|woningbouw|nieuwbouw van|nieuwbouwproject|"
                                     r"[0-9]+ (woningen|appartementen|studentenwoningen|wooneenheden|studio's)", re.I)),
-    ("nieuwbouw_overig", re.compile(r"(bouwen|oprichten|realiseren|nieuwbouw) (van )?(een |[0-9]+ )?(bedrijfs|kantoor|loods|stal|hal\b|school|winkel|hotel|"
+    ("nieuwbouw_overig", re.compile(BOUWWOORD + r" (van )?(een |[0-9]+ )?(bedrijfs|kantoor|loods|stal|hal\b|school|winkel|hotel|"
                                     r"supermarkt|zorg|sporthal|kerk|distributiecentrum|fabriek|bedrijfsgebouw|bedrijfspand|bedrijfshal|kas\b|kassen|"
                                     r"melkveestal|pluimveestal|varkensstal|rundveestal|werktuigenberging|zonnepark|windturbine|windmolen)", re.I)),
     ("klein_verbouw", re.compile(r"dakkapel|aanbouw|uitbouw|dakopbouw|opbouw|bijgebouw|schuur|berging|garage|carport|kozijn|gevel|erfafscheiding|"

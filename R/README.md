@@ -33,7 +33,7 @@ Doorlooptijd ongeveer twee minuten; het zwaarste is het inlezen van de CSV's.
 | `07_plannen.R` | het plannenspoor (hoofdstuk 12) | `_output/plannen_<extract>.json` |
 | `08_strikt.R` | nabij en ver binnen gemeente en kwartaal, trendbreuk, ringen (hoofdstuk 8) | `_output/strikt_<extract>.json` |
 | `09_aanvragen.R` | de bekendmakingen: aanvragen, uitkomst, doorlooptijd (hoofdstuk 9) | `_output/aanvragen_<extract>.json` |
-| `09a_titels.py` | strenge typering van nieuwbouw en stallen uit de titels (`vergunningen.sqlite`) | `_derived/aanvragen_titels.csv` |
+| `09a_titels.py` | strenge typering van nieuwbouw en stallen uit de titels, en de projectsoort volgens `analyse_export.projectsoort` (met de woordgrens van 28 september 2026) voor 09, 13, 24 en 27 (`vergunningen.sqlite`) | `_derived/aanvragen_titels.csv` |
 | `10_landelijk.R` | landelijke reeksen: vergunningen, rente, kosten, belemmeringen (hoofdstuk 14) | `_output/landelijk_<extract>.json` |
 | `11_ruimte.R` | contour, netcongestie en depositie op de objecten (hoofdstuk 10, 15, 16) | `_output/ruimte_<extract>.json` |
 | `11a_rasters.py` | leest de rasters af op de BAG-objecten (Python van QGIS) | `_derived/vbo_raster.csv` |

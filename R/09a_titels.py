@@ -3,7 +3,15 @@
 Gebruik: py -3.13 R/09a_titels.py [datamap vergunningen] [uitvoerbestand]
          standaard VERGUNNINGEN_DATA en R/_derived/aanvragen_titels.csv
 
-Twee vlaggen per zaak, uit alle titels van de publicaties van die zaak:
+Per zaak, uit alle titels van de publicaties van die zaak:
+
+soort      de projectsoort volgens analyse_export.projectsoort (vergunningen/
+           pipeline), hier opnieuw berekend in plaats van gelezen uit
+           zaken.csv: sinds 28 september 2026 staat het bouwwoord daar na een
+           woordgrens, zodat verbouwen, uitbouwen, aanbouwen en ombouwen van
+           een woning geen nieuwbouw meer zijn. Tot de volgende herbouw van
+           de database heeft zaken.csv nog de oude soort; de R-scripts nemen
+           de soort uit dit bestand.
 
 streng     alleen voor soort nieuwbouw_woning. Die soort
            (vergunningen/pipeline/analyse_export.py) neemt elke titel met
@@ -21,8 +29,9 @@ veestal    een stal of ander gebouw van een veehouderij (stal, ligboxenstal,
            Natura 2000-toets het eerst geraakt wordt, de positieve controle.
 
 Leest vergunningen.sqlite alleen (immutable), dus ook vanaf de OneDrive-map
-zonder journaalbestanden. Schrijft zaak_id;streng;tijdelijk;veestal voor elke
-zaak in zaken.csv; 09_aanvragen.R leest dat bestand.
+zonder journaalbestanden. Schrijft zaak_id;streng;tijdelijk;veestal;soort voor
+elke zaak in zaken.csv; 09_aanvragen.R, 13_binnenring.R, 24_uitgebreid.R en
+27_pijplijn_sites.R lezen dat bestand.
 """
 import csv
 import os
@@ -37,9 +46,12 @@ hier = Path(__file__).resolve().parent
 data = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(os.environ.get(
     "VERGUNNINGEN_DATA", r"E:\OneDrive - Objectvision\VU\Projects\202505-StikstofPaper\vergunningen"))
 uit = Path(sys.argv[2]) if len(sys.argv) > 2 else hier / "_derived" / "aanvragen_titels.csv"
+## de soortregel van de pijplijn zelf, zodat er één regel is
+sys.path.insert(0, str(hier.parent / "vergunningen" / "pipeline"))
+from analyse_export import BOUWWOORD, projectsoort  # noqa: E402
 
 NIEUWBOUW = re.compile(
-    r"(bouwen|oprichten|realiseren|nieuwbouw) (van )?(een |[0-9]+ |twee |drie |vier |vijf |zes |acht |tien )?"
+    BOUWWOORD + r" (van )?(een |[0-9]+ |twee |drie |vier |vijf |zes |acht |tien )?"
     r"(nieuwe |vrijstaande |levensloopbestendige |sociale |tijdelijke )?(woning|woningen|woonhuis|appartement|appartementen|"
     r"studentenwoning|wooneenhe|woonzorg|woongebouw|woontoren|woonblok|villa|bungalow|twee-onder-een-kap|rijwoning|"
     r"eengezinswoning|meergezins|flexwoning|mantelzorgwoning)|nieuwbouwwoning|woningbouw|nieuwbouw van|nieuwbouwproject", re.I)
@@ -52,34 +64,36 @@ VEESTAL = re.compile(r"(?<![a-z])(stal|stallen)(?![a-z])|ligboxenstal|melkveesta
 
 
 def main():
-    soort = {}
+    soort_oud = {}
     with open(data / "analyse" / "zaken.csv", encoding="utf-8") as f:
         for rij in csv.DictReader(f, delimiter=";"):
-            soort[int(rij["zaak_id"])] = rij["soort"]
+            soort_oud[int(rij["zaak_id"])] = rij["soort"]
     db = "file:" + (data / "vergunningen.sqlite").as_posix() + "?immutable=1"
     con = sqlite3.connect(db, uri=True)
     t0 = time.time()
     titels = defaultdict(list)
     for zid, titel in con.execute("SELECT pz.zaak_id, p.titel FROM publicatie_zaak pz "
                                   "JOIN publicatie p ON p.identifier = pz.identifier"):
-        if zid in soort:
+        if zid in soort_oud:
             titels[zid].append(titel or "")
     uit.parent.mkdir(parents=True, exist_ok=True)
-    n = {"zaken": 0, "streng": 0, "tijdelijk": 0, "veestal": 0, "zonder_titel": 0}
+    n = {"zaken": 0, "streng": 0, "tijdelijk": 0, "veestal": 0, "zonder_titel": 0, "soort_anders": 0}
     with open(uit, "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f, delimiter=";")
-        w.writerow(["zaak_id", "streng", "tijdelijk", "veestal"])
-        for zid, s in soort.items():
+        w.writerow(["zaak_id", "streng", "tijdelijk", "veestal", "soort"])
+        for zid, s_oud in soort_oud.items():
             t = " | ".join(titels.get(zid, []))
             if not t:
                 n["zonder_titel"] += 1
+            s = projectsoort(t)
+            n["soort_anders"] += s != s_oud
             st = int(s == "nieuwbouw_woning" and bool(NIEUWBOUW.search(t)) and not NIET.search(t))
             tj = int(s == "nieuwbouw_woning" and bool(TIJDELIJK.search(t)))
             vs = int(bool(VEESTAL.search(t)))
             n["zaken"] += 1; n["streng"] += st; n["tijdelijk"] += tj; n["veestal"] += vs
-            w.writerow([zid, st, tj, vs])
+            w.writerow([zid, st, tj, vs, s])
     print(f"{n['zaken']} zaken in {time.time() - t0:.0f} s; nieuwbouw streng {n['streng']}, tijdelijk {n['tijdelijk']}, "
-          f"veestal {n['veestal']}, zonder titel {n['zonder_titel']}; geschreven: {uit}")
+          f"veestal {n['veestal']}, zonder titel {n['zonder_titel']}, soort anders dan in zaken.csv {n['soort_anders']}; geschreven: {uit}")
 
 
 if __name__ == "__main__":

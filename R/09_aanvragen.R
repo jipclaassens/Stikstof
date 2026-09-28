@@ -79,9 +79,9 @@ if (!file.exists(f_zaken)) stop("Ontbreekt: ", f_zaken, "\nZet VERGUNNINGEN_DATA
 z <- fread(f_zaken, sep = ";", encoding = "UTF-8",
            select = c("zaak_id", "gemeente", "datum_aanvraag", "kwartaal", "dist_m", "nabij", "verleend", "geweigerd",
                       "ingetrokken", "vergunningvrij", "besluit_onbekend", "geen", "doorlooptijd", "verlengingen",
-                      "bouw", "uitgebreid", "woningen", "soort"))
+                      "bouw", "uitgebreid", "woningen"))
 z[, `:=`(t = kw_van_label(kwartaal), jaar = as.integer(substr(kwartaal, 1, 4)))]
-z_ruw <- copy(z)   # voor de brug: precies wat analyse_vastpanel.R ziet
+z_ruw <- copy(z)   # voor de brug: precies wat analyse_vastpanel.R ziet (alle aanvragen, zonder soort)
 R$meta <- list(extract = EXTRACT, gemaakt = format(Sys.time(), "%Y-%m-%d %H:%M"),
                zaken = nrow(z), zonder_locatie = sum(is.na(z$dist_m)),
                eerste_aanvraag = min(z$datum_aanvraag), laatste_aanvraag = max(z$datum_aanvraag),
@@ -97,8 +97,10 @@ z[, D := as.integer(dist_m <= 2500)]
 z[, n_zelfde := .N, by = .(gemeente, dist_m)]
 z[, stdpunt := dist_m > 100 & dist_m < 9999 & n_zelfde >= 25 & n_zelfde >= 0.005 * .N, by = gemeente]
 
+## de soort komt uit 09a_titels.py (analyse_export.projectsoort, met de woordgrens van 28 september 2026), niet uit
+## zaken.csv, dat tot de volgende herbouw van de database de oude soort heeft (vergunningen/inzichten.md, hoofdstuk 36)
 f_tit <- file.path(PATHS$derived, "aanvragen_titels.csv")
-if (!file.exists(f_tit) || file.mtime(f_tit) < file.mtime(f_zaken)) {
+if (!file.exists(f_tit) || file.mtime(f_tit) < file.mtime(f_zaken) || !"soort" %in% names(fread(f_tit, nrows = 0L))) {
   ## de typering uit de titels (09a_titels.py) leest vergunningen.sqlite; standaard-Python volstaat
   py <- Sys.getenv("PYTHON", "py")
   args <- c(if (py == "py") "-3.13", shQuote(file.path(.here, "09a_titels.py")), shQuote(PATHS$verg), shQuote(f_tit))
