@@ -4,7 +4,7 @@ Instructies voor Claude Code bij het werk aan de vergunningendatabase en de stik
 
 ## Waar staat wat
 
-- In deze map alleen code en documentatie. `inzichten.md` is het logboek van wat gemeten, besloten en geleerd is (hoofdstukken 1 tot en met 39); `pipeline/README.md` beschrijft elk script; `REPRODUCEREN.md` de installatie, de volgorde en de controlegetallen; `PROMPT.md` de openingsprompt voor een nieuwe sessie.
+- In deze map alleen code en documentatie. `inzichten.md` is het logboek van wat gemeten, besloten en geleerd is (hoofdstukken 1 tot en met 41); `pipeline/README.md` beschrijft elk script; `REPRODUCEREN.md` de installatie, de volgorde en de controlegetallen; `PROMPT.md` de openingsprompt voor een nieuwe sessie.
 - De data staat buiten de repo, in de OneDrive-projectmap `202505-StikstofPaper\vergunningen\` (op de onderzoeksmachine ook in `C:\LocalData\vergunningen`). Zet de omgevingsvariabele `VERGUNNINGEN_DATA` op die map; `config.py` en `verwerk.cmd` lezen hem.
 - In de datamap: `vergunningen.sqlite` (bekendmakingen, zaken, koppelingen), `natuur\natuurvergunningen.sqlite` (natuurbesluiten van provincies en Rijk), `ruw\` (de ruwe SRU-antwoorden, herlaadbaar), `bron\` (21 themamappen met open data, elk met een `BRONNEN.md`; de index is `bron\CATALOGUS.md`), `analyse\` (analysebestanden, modeluitkomsten als json en csv, `teksten.md` en `rapport.html`), `onderzoek\` (bronrapporten en het ontwerp van 25 september 2026).
 - Grote originelen staan alleen op de onderzoeksmachine onder `D:\LocalData_bron\` (zips van de Klimaateffectatlas, de ruwe FTM-stallenbestanden, de landelijke kadastrale kaart, verordeningen); wat eruit nodig was, staat afgeleid in `bron\`.

@@ -71,6 +71,8 @@ Doorlooptijd ongeveer twee minuten; het zwaarste is het inlezen van de CSV's.
 | `29a_plannen_dso.py` | per planversie uit de oogst van de API Ruimtelijke plannen v4 (`C:\LocalData\vergunningen\bron\dso\dso.sqlite`) de oppervlakte, de kleinste afstand van de contour tot de AERIUS relevante habitatkartering en de woonbestemmingen uit de PDOK-laag Enkelbestemming (Python van QGIS met shapely) | `_derived/plannen_dso.csv` |
 | `29b_uitspraken_dso.py` | de gepubliceerde gerechtelijke uitspraken die aan een plan hangen, uit dezelfde database (alleen lezen) | `_derived/uitspraken_dso.csv` |
 | `29_plannen_natuur.R` | bestemmingsplannen nabij natuur voor en na de PAS-uitspraak: aantal vastgesteld, tijd van ontwerp tot vaststelling en beroep met gevolgen (hoofdstuk 12) | `_output/plannen_natuur_<extract>.json` |
+| `30a_wijzigingen_lv.py` | per ontwerp en besluit tot wijziging van een gemeentelijk omgevingsplan in de nieuwe standaard (oogst van de DSO-LV, `C:\LocalData\vergunningen\bron\dso\dso_lv.sqlite`) de vereniging van de gewijzigde locaties uit de renvooi, de oppervlakte en de kleinste afstand tot de AERIUS relevante habitatkartering (Python van QGIS met shapely) | `_derived/wijzigingen_lv.csv` |
+| `30_planwijzigingen_natuur.R` | planwijzigingen nabij natuur rond de uitspraken over intern salderen: doorstroom van de bestemmingsplannen onder overgangsrecht en van de TAM-omgevingsplannen, en het aantal ontwerpen en vaststellingen langs de drie wegen (bestemmingsplan, TAM-omgevingsplan, nieuwe standaard) | `_output/planwijzigingen_natuur_<extract>.json` |
 | `rapport/bouw_rapport.js` | voegt de JSON's in de HTML-bron en schrijft het rapport | `_output/rapport_stikstof_<extract>.html` |
 
 Script 09 tot en met 12 lezen de datamap van het vergunningenspoor
@@ -79,6 +81,8 @@ Script 09 tot en met 12 lezen de datamap van het vergunningenspoor
 (`QGIS_PY`, standaard `C:\Program Files\QGIS 3.40.7\bin\python-qgis-ltr.bat`);
 `11_ruimte.R` roept ze zelf aan als hun uitvoer ontbreekt of verouderd is.
 
+`30_planwijzigingen_natuur.R` staat niet in `run_all.R`: het vraagt `29a_plannen_dso.py` en, voor de wijzigingen in de
+nieuwe standaard, de oogst van de DSO-LV (`bron\dso\werk\dso_lv_omgevingsplan.py`) en `30a_wijzigingen_lv.py` vooraf.
 `29_plannen_natuur.R` staat niet in `run_all.R`: het vraagt de oogst van de DSO-API en
 `29a_plannen_dso.py` (Python van QGIS) en `29b_uitspraken_dso.py` vooraf.
 `24_uitgebreid.R` (wacht op de tekstoogst), `27_pijplijn_sites.R` en `28_bestemming_sites.R` staan niet in `run_all.R`: 27 en 28 zijn
