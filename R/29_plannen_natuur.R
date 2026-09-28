@@ -74,6 +74,14 @@ RX_WONEN <- "woning|wonen|woon|appartement|woningbouw|nieuwbouw"
 ds[, wonen := fifelse(!is.na(in_pdok), wonen_pdok %in% TRUE, grepl(RX_WONEN, naam, ignore.case = TRUE))]
 ont <- p[planstatus == "ontwerp" & !is.na(datum), .(ontwerp = min(datum)), by = dossier]
 ds[ont, on = "dossier", ontwerp := i.ontwerp]
+## de ontwerpdatum uit de kennisgeving in de officiele bekendmakingen (31a_kennisgevingen.py) gaat voor: de historie van de API kent
+## het ontwerp maar bij 9 tot 30 procent van de plannen van 2014 tot en met 2022, met de kennisgevingen 61 tot 87 procent
+## (inzichten.md, hoofdstuk 42 en 43); een datum na de vaststelling of meer dan 2.000 dagen ervoor telt niet
+kg <- fread(file.path(PATHS$derived, "kennisgeving_dossier.csv"), sep = ";", encoding = "UTF-8", colClasses = list(character = "dossier"))
+kg[, ontwerp_kg := as.IDate(ontwerp_kg)]
+ds[kg, on = "dossier", ontwerp_kg := i.ontwerp_kg]
+ds[!is.na(ontwerp) & (ontwerp >= vaststelling | as.integer(vaststelling - ontwerp) >= 2000L), ontwerp := NA]
+ds[!is.na(ontwerp_kg) & ontwerp_kg < vaststelling & as.integer(vaststelling - ontwerp_kg) < 2000L, ontwerp := ontwerp_kg]
 ds[!is.na(ontwerp) & ontwerp < vaststelling, dagen := as.integer(vaststelling - ontwerp)]
 ds[, `:=`(D = as.integer(!is.na(afstand_m) & afstand_m <= 2500), t = kw(vaststelling), jaar = year(vaststelling),
           klein = !is.na(opp_ha) & opp_ha <= 10, middel = !is.na(opp_ha) & opp_ha <= 50)]
@@ -136,12 +144,15 @@ cat("\nRuw, plannen per kwartaal:\n"); print(ROND(R$A_ruw, 2))
 b <- ds[type == "bestemmingsplan" & !is.na(dagen) & dagen > 0 & dagen < 2000]
 b[, `:=`(log_d = log(dagen), jaar_o = year(ontwerp), na_o = as.integer(ontwerp >= PAS), na_v = as.integer(vaststelling >= PAS))]
 R$B_dekking <- ds[type == "bestemmingsplan" & jaar %between% c(2014L, 2023L), .(pct_met_ontwerp = pct(!is.na(ontwerp))), by = .(jaar, D)][order(jaar, D)]
-cat("\nB. Aandeel vastgestelde bestemmingsplannen met een ontwerp in de historie, per jaar en kant:\n")
+cat("\nB. Aandeel vastgestelde bestemmingsplannen met een ontwerpdatum (kennisgeving of historie), per jaar en kant:\n")
 print(dcast(ROND(R$B_dekking, 1), jaar ~ D, value.var = "pct_met_ontwerp"))
 dur <- function(d, na, naam) {
   d <- copy(d)[, na_x := D * get(na)]
-  m1 <- feols(log_d ~ na_x | gemeente + jaar_o + D, data = d, cluster = ~gemeente, notes = FALSE)
-  m2 <- feols(log_d ~ na_x | gemeente^D + jaar_o, data = d, cluster = ~gemeente, notes = FALSE)
+  ## naar vaststellingsdatum met het jaar van vaststelling als vast effect: met het jaar van het ontwerp selecteert de indeling op
+  ## de duur zelf (die schatting gaf op elke nepdatum van 2015 tot en met 2022 plus 14 tot plus 25 procent, hoofdstuk 43)
+  d[, jr := if (na == "na_v") jaar else jaar_o]
+  m1 <- feols(log_d ~ na_x | gemeente + jr + D, data = d, cluster = ~gemeente, notes = FALSE)
+  m2 <- feols(log_d ~ na_x | gemeente^D + jr, data = d, cluster = ~gemeente, notes = FALSE)
   rbind(cbind(ct(m1, "na_x", naam), fe = "gemeente, jaar, nabij"), cbind(ct(m2, "na_x", naam), fe = "gemeente x nabij, jaar"))
 }
 B1 <- b[jaar_o %between% c(2014L, 2021L)]
@@ -159,7 +170,13 @@ R$B_cohort <- B1[, .(plannen = .N, mediaan_dagen = as.numeric(median(dagen))), b
 R$B_mediaan <- B1[, .(plannen = .N, mediaan_dagen = as.numeric(median(dagen))), by = .(D, na = na_o)][order(D, na)]
 cat("\nTijd van ontwerp tot vaststelling, nabij tegenover ver na de uitspraak (log dagen):\n"); print(ROND(R$B_duur)); print(R$B_mediaan); print(R$B_cohort)
 ## ontwerpen die nooit werden vastgesteld (tot september 2026), naar de datum van het ontwerp
-o <- p[planstatus == "ontwerp" & type == "bestemmingsplan" & !is.na(datum)][order(dossier, datum)][!duplicated(dossier)]
+## heelal: dossiers van bestemmingsplannen met een ontwerpversie in de historie of een kennisgeving van een ontwerp
+o <- p[type == "bestemmingsplan" & !is.na(afstand_m)][order(dossier, datum, identificatie)][!duplicated(dossier),
+                                                                                           .(dossier, overheidscode, afstand_m, opp_ha)]
+o <- merge(o, ont, by = "dossier", all.x = TRUE)
+o[kg, on = "dossier", ontwerp_kg := i.ontwerp_kg]
+o[, datum := pmin(ontwerp, ontwerp_kg, na.rm = TRUE)]
+o <- o[!is.na(datum)]
 o[, vastgesteld := dossier %chin% v$dossier]
 o[, `:=`(D = as.integer(!is.na(afstand_m) & afstand_m <= 2500), na = as.integer(datum >= PAS), jaar_o = year(datum), gemeente = overheidscode,
          klein = !is.na(opp_ha) & opp_ha <= 10, gestrand = 100 * (!vastgesteld))]
