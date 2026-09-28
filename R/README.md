@@ -64,6 +64,8 @@ Doorlooptijd ongeveer twee minuten; het zwaarste is het inlezen van de CSV's.
 | `24a_teksten.py` | natuur en stikstof in de zaken met een uitgebreide procedure: `samenvatting` telt ze in titel en samenvatting (`vergunningen.sqlite`, alleen lezen), `teksten` maakt vlaggen per zaak uit de volledige teksten van `vergunningen/pipeline/teksten.py` | `_output/uitgebreid_samenvatting_<extract>.txt`, `_derived/teksten_vlaggen.csv` |
 | `25_omvang.R` | het tweede kanaal: werden projecten nabij natuur na 2019 kleiner in plaats van minder? Omvang per project (log-OLS en Poisson), aantal projecten en woningen, verdeling over omvangsklassen, en het pseudoproject in Den Haag in de telling van hoofdstuk 8 | `_output/omvang_<extract>.json` |
 | `26_samenstelling.R` | zijn de depositiedaling (hoofdstuk 10) en de stap bij de appartementen in de binnenste kilometer (hoofdstuk 13) een verschil tussen stad en land? Dezelfde vergelijkingen binnen gemeente en buurtdichtheid, binnen de vroege contour en naar afstand tot overbelaste natuur; roept `22a_habitat.py` aan | `_output/samenstelling_<extract>.json` |
+| `27a_pijplijn_export.py` | export uit `vergunningen.sqlite` (alleen lezen) voor de koppeling van zaken aan de sites van het herontwikkelingspaper: de BAG-koppeling met alle statusdatums, en per gemeentelijke zaak sleutel, datums, uitkomst, plek, activiteiten, titels bij sloop of nieuwbouw en beroep | `_derived/pijplijn/pijplijn_pand_zaak.csv`, `pijplijn_zaak.csv` |
+| `27_pijplijn_sites.R` | proef voor issue 30 in de repo Redevelopment (EconLogicPaper): de gerealiseerde sites aan hun zaak (procedure, doorlooptijd, vergunning tot start en oplevering per alternatief), de route over het documentnummer, en pogingen op niet-ontwikkelde sites (`vergunningen/inzichten.md`, hoofdstuk 36) | `_output/pijplijn_sites_<extract>.json` |
 | `rapport/bouw_rapport.js` | voegt de JSON's in de HTML-bron en schrijft het rapport | `_output/rapport_stikstof_<extract>.html` |
 
 Script 09 tot en met 12 lezen de datamap van het vergunningenspoor
@@ -71,6 +73,11 @@ Script 09 tot en met 12 lezen de datamap van het vergunningenspoor
 `vergunningen/CLAUDE.md`). Voor 11a en 11b is de Python van QGIS nodig
 (`QGIS_PY`, standaard `C:\Program Files\QGIS 3.40.7\bin\python-qgis-ltr.bat`);
 `11_ruimte.R` roept ze zelf aan als hun uitvoer ontbreekt of verouderd is.
+
+`24_uitgebreid.R` (wacht op de tekstoogst) en `27_pijplijn_sites.R` staan niet in `run_all.R`: 27 is
+een proef voor het herontwikkelingspaper, leest de EconLogic-bestanden in
+`C:/LocalData/Redevelopment/R_werk` (pad in `ECONLOGIC_WERK`) en draait na
+`27a_pijplijn_export.py _derived/pijplijn`.
 
 `_derived/` en `_output/` staan in `.gitignore`: het zijn afgeleide bestanden.
 
