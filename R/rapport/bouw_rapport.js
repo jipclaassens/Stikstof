@@ -23,9 +23,9 @@ let plannen = "null";
 try { plannen = lees("plannen"); } catch (e) { console.warn("geen plannen-JSON gevonden, plannenspoor blijft leeg"); }
 let strikt = "null";
 try { strikt = lees("strikt"); } catch (e) { console.warn("geen strikt-JSON gevonden, hoofdstuk over de strenge vergelijking blijft leeg"); }
-// 09 tot en met 23: aanvragen, landelijk tempo, ruimtelijke toetsen, beroep, binnenste ring, netcongestie, natuurbesluiten, kernen, registratie, NNN, ringen, plannen in Noord-Holland, verdichting, de lange reeks, de landelijke plannen, stad en land, de projectomvang
+// 09 tot en met 23: aanvragen, landelijk tempo, ruimtelijke toetsen, beroep, binnenste ring, netcongestie, natuurbesluiten, kernen, registratie, NNN, ringen, plannen in Noord-Holland, verdichting, de lange reeks, de landelijke plannen, stad en land, de projectomvang, de uitgebreide procedure
 const extra = {};
-for (const naam of ["aanvragen", "landelijk", "ruimte", "beroep", "binnenring", "netcongestie", "natuurbesluiten", "kernen", "registratie", "nnn", "ringen", "plannen_nh", "verdichting", "langereeks", "plannen_nl", "samenstelling", "omvang"]) {
+for (const naam of ["aanvragen", "landelijk", "ruimte", "beroep", "binnenring", "netcongestie", "natuurbesluiten", "kernen", "registratie", "nnn", "ringen", "plannen_nh", "verdichting", "langereeks", "plannen_nl", "samenstelling", "omvang", "uitgebreid"]) {
   extra[naam] = "null";
   try { extra[naam] = lees(naam); } catch (e) { console.warn(`geen ${naam}-JSON gevonden, dat hoofdstuk blijft leeg`); }
 }
@@ -63,5 +63,6 @@ fs.writeFileSync(out, src.replace("__DATA__", () => data)
                          .replace("__PLANNEN_NL__", () => extra.plannen_nl)
                          .replace("__SAMENSTELLING__", () => extra.samenstelling)
                          .replace("__OMVANG__", () => extra.omvang)
+                         .replace("__UITGEBREID__", () => extra.uitgebreid)
                          .replace("__BUILD__", () => JSON.stringify(build)));
 console.log(`geschreven: ${out}  (versie ${VERSIE}${git ? ", commit " + git : ""}, ${build.gebouwd})`);
