@@ -66,6 +66,8 @@ Doorlooptijd ongeveer twee minuten; het zwaarste is het inlezen van de CSV's.
 | `26_samenstelling.R` | zijn de depositiedaling (hoofdstuk 10) en de stap bij de appartementen in de binnenste kilometer (hoofdstuk 13) een verschil tussen stad en land? Dezelfde vergelijkingen binnen gemeente en buurtdichtheid, binnen de vroege contour en naar afstand tot overbelaste natuur; roept `22a_habitat.py` aan | `_output/samenstelling_<extract>.json` |
 | `27a_pijplijn_export.py` | export uit `vergunningen.sqlite` (alleen lezen) voor de koppeling van zaken aan de sites van het herontwikkelingspaper: de BAG-koppeling met alle statusdatums, en per gemeentelijke zaak sleutel, datums, uitkomst, plek, activiteiten, titels bij sloop of nieuwbouw en beroep | `_derived/pijplijn/pijplijn_pand_zaak.csv`, `pijplijn_zaak.csv` |
 | `27_pijplijn_sites.R` | proef voor issue 30 in de repo Redevelopment (EconLogicPaper): de gerealiseerde sites aan hun zaak (procedure, doorlooptijd, vergunning tot start en oplevering per alternatief), de route over het documentnummer, pogingen op niet-ontwikkelde sites uit de bekendmakingen, en vergunde maar niet uitgevoerde vervanging uit de BAG zelf (geplande objecten uit `vbo_base.rds` naast bestaande opstal; `vergunningen/inzichten.md`, hoofdstuk 36) | `_output/pijplijn_sites_<extract>.json` |
+| `28a_bestemming.py` | koppelt de punten van de bestaande opstal van de sites van het herontwikkelingspaper aan de vastgestelde Wro-plannen uit de PDOK-download (enkelbestemming, bouwaanduiding, maatvoering, bouwvlak; stand 1 juli 2026), met datum en status per vlak (Python van QGIS met shapely) | `_derived/bestemming/<laag>_paren.csv`, `<laag>_vlakken.csv` |
+| `28_bestemming_sites.R` | de bestemming van die sites in 2012 en nu: hoofdgroep, woningtype volgens de bouwaanduiding, bouwhoogte en wooneenheden; het gerealiseerde alternatief tegenover het toegestane type, planwijzigingen rond het project, en de bestemming van 2012 tegenover herontwikkeling daarna (issue 30 in de repo Redevelopment) | `_output/bestemming_sites_<extract>.json` |
 | `rapport/bouw_rapport.js` | voegt de JSON's in de HTML-bron en schrijft het rapport | `_output/rapport_stikstof_<extract>.html` |
 
 Script 09 tot en met 12 lezen de datamap van het vergunningenspoor
@@ -74,10 +76,10 @@ Script 09 tot en met 12 lezen de datamap van het vergunningenspoor
 (`QGIS_PY`, standaard `C:\Program Files\QGIS 3.40.7\bin\python-qgis-ltr.bat`);
 `11_ruimte.R` roept ze zelf aan als hun uitvoer ontbreekt of verouderd is.
 
-`24_uitgebreid.R` (wacht op de tekstoogst) en `27_pijplijn_sites.R` staan niet in `run_all.R`: 27 is
-een proef voor het herontwikkelingspaper, leest de EconLogic-bestanden in
-`C:/LocalData/Redevelopment/R_werk` (pad in `ECONLOGIC_WERK`) en draait na
-`27a_pijplijn_export.py _derived/pijplijn`.
+`24_uitgebreid.R` (wacht op de tekstoogst), `27_pijplijn_sites.R` en `28_bestemming_sites.R` staan niet in `run_all.R`: 27 en 28 zijn
+proeven voor het herontwikkelingspaper, lezen de EconLogic-bestanden in
+`C:/LocalData/Redevelopment/R_werk` (pad in `ECONLOGIC_WERK`); 27 draait na
+`27a_pijplijn_export.py _derived/pijplijn`, 28 na `28a_bestemming.py` (Python van QGIS).
 
 `_derived/` en `_output/` staan in `.gitignore`: het zijn afgeleide bestanden.
 

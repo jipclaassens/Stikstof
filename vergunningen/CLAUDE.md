@@ -4,7 +4,7 @@ Instructies voor Claude Code bij het werk aan de vergunningendatabase en de stik
 
 ## Waar staat wat
 
-- In deze map alleen code en documentatie. `inzichten.md` is het logboek van wat gemeten, besloten en geleerd is (hoofdstukken 1 tot en met 37); `pipeline/README.md` beschrijft elk script; `REPRODUCEREN.md` de installatie, de volgorde en de controlegetallen; `PROMPT.md` de openingsprompt voor een nieuwe sessie.
+- In deze map alleen code en documentatie. `inzichten.md` is het logboek van wat gemeten, besloten en geleerd is (hoofdstukken 1 tot en met 38); `pipeline/README.md` beschrijft elk script; `REPRODUCEREN.md` de installatie, de volgorde en de controlegetallen; `PROMPT.md` de openingsprompt voor een nieuwe sessie.
 - De data staat buiten de repo, in de OneDrive-projectmap `202505-StikstofPaper\vergunningen\` (op de onderzoeksmachine ook in `C:\LocalData\vergunningen`). Zet de omgevingsvariabele `VERGUNNINGEN_DATA` op die map; `config.py` en `verwerk.cmd` lezen hem.
 - In de datamap: `vergunningen.sqlite` (bekendmakingen, zaken, koppelingen), `natuur\natuurvergunningen.sqlite` (natuurbesluiten van provincies en Rijk), `ruw\` (de ruwe SRU-antwoorden, herlaadbaar), `bron\` (21 themamappen met open data, elk met een `BRONNEN.md`; de index is `bron\CATALOGUS.md`), `analyse\` (analysebestanden, modeluitkomsten als json en csv, `teksten.md` en `rapport.html`), `onderzoek\` (bronrapporten en het ontwerp van 25 september 2026).
 - Grote originelen staan alleen op de onderzoeksmachine onder `D:\LocalData_bron\` (zips van de Klimaateffectatlas, de ruwe FTM-stallenbestanden, de landelijke kadastrale kaart, verordeningen); wat eruit nodig was, staat afgeleid in `bron\`.
@@ -17,7 +17,7 @@ Instructies voor Claude Code bij het werk aan de vergunningendatabase en de stik
 - Het werk is verkennend: de vraag is of er iets in zit, niet een paper. Een bevinding telt pas als ze de strenge vergelijking binnen gemeente en kwartaal, een event study met vlakke voorperiode, een trendbreuktoets en de placebo (klein werk) overleeft. Draai eerdere conclusies eerlijk terug als een strengere toets ze weghaalt, en schrijf dat op in `inzichten.md`.
 - Bouw eerst de beste lezing en leg haar voor; stel geen vragen over routinekeuzes.
 - Vertrouwelijk: `bron\rs_plancapaciteit\priv` is een levering van Zuid-Holland uitsluitend voor het PBL-project, met uitkomsten alleen per regio; gebruik die niet in analyses zonder akkoord van de eigenaar. De ruwe FTM-stallenbestanden bevatten adressen en UBN-nummers; de afgeleide kilometercellen in `bron\ftm_stallen` zijn niet publiceerbaar, extern alleen op gemeenteniveau of in cellen met minstens drie bedrijven. Adressen in de bekendmakingen zijn openbaar en hoeven niet gemaskeerd.
-- De sleutel voor de DSO-API staat in `dso_apikey.txt` in de datamap en komt nooit in chat, code, logbestand of repo.
+- De sleutels voor de DSO-API's staan lokaal, buiten OneDrive, in `C:\LocalData\vergunningen`: `dso_apikey.txt` (Ruimtelijke plannen v4, voor `bron\dso\werk\dso_plannen.py`) en `dso_lv_apikey.txt` (de overige DSO-LV-diensten, productie). Ze komen nooit in chat, code, logbestand of repo.
 - Verwijderen van data alleen na expliciete bevestiging van de eigenaar.
 - Lange ketens (oogst, `verwerk.cmd`) buiten de Claude-sessie starten, zie `REPRODUCEREN.md`: processen die de sessie zelf start, sterven met de sessie.
 
