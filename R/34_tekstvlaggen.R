@@ -132,6 +132,79 @@ print(dcast(ROND(R$afwijken_ruw, 1), half ~ D, value.var = c("zaken", "afwijken"
 print(ROND(R$afwijken_es, 2)); print(ROND(R$afwijken_trendbreuk, 2)); print(ROND(R$afwijken_2025, 2))
 print(ROND(R$afwijken_binnen_ow, 2)); print(ROND(R$afwijken_weglaten, 2))
 
+## ---- D. afwijken naar contour en buurtdichtheid -------------------------------
+## Nabij natuur ligt vaker buiten de stad. Is de extra vermelding van afwijken nabij natuur een verschil tussen stad en land, of
+## schoven de aanvragen nabij natuur naar buiten de contour? Binnen of buiten de huidige verstedelijkingscontour op de plek van de
+## zaak (34a_contour_zaken.py; in Gelderland de bebouwde kom als vervanger) en de dichtheid van de buurt (OAD van de CBS-buurt van
+## 2012 in drie klassen, zoals 21_verdichting.R en 26_samenstelling.R: de mediaan van de VBO's in de cel van 100, 500 of 2000 meter
+## rond de zaak). Alleen zaken met een precieze plek, dus niet met een woonplaats, buurt, wijk of gemeente als locatie.
+cz <- fread(file.path(PATHS$derived, "contour_zaken.csv"), sep = ";")
+setnames(cz, c("x", "y"), c("x_rd", "y_rd"))
+nb[cz, on = "zaak_id", `:=`(x_rd = i.x_rd, y_rd = i.y_rd, lt = i.locatietype, binnen = i.binnen_contour, gld = i.contourbron == 125L)]
+nb[lt %in% c("Woonplaats", "Buurt", "Wijk", "Gemeente", "GeometrieRef"), binnen := NA_integer_]
+klasse <- function(oad) fifelse(is.na(oad), NA_character_, fifelse(oad >= 1500, "hoog", fifelse(oad >= 500, "midden", "laag")))
+vbo <- readRDS(file.path(PATHS$derived, "econlogic_vbo.rds"))[!is.na(oad) & !is.na(x), .(x_rd = x, y_rd = y, oad)]
+sleutel <- function(x, y, m) (x %/% m) * 1e5 + (y %/% m)
+for (m in c(100, 500, 2000)) {
+  cel <- vbo[, .(oad_cel = as.numeric(median(oad))), by = .(k = sleutel(x_rd, y_rd, m))]
+  nb[, k := sleutel(x_rd, y_rd, m)]
+  nb[cel, on = "k", (paste0("oad_", m)) := i.oad_cel]
+}
+nb[, dichtheid := fifelse(is.na(binnen), NA_character_, klasse(fcoalesce(oad_100, oad_500, oad_2000)))]
+nb[, c("k", "oad_100", "oad_500", "oad_2000") := NULL]
+rm(vbo, cel); invisible(gc())
+nb[, `:=`(buiten = 100 * (1L - binnen), periode = fcase(t >= Q_SAL, "3 na intern salderen", t >= Q_OW, "2 Omgevingswet", default = "1 2021Q3-2023Q4"))]
+R$contour_dekking <- nb[, .(zaken = .N, met_contour = sum(!is.na(binnen)), met_dichtheid = sum(!is.na(dichtheid)), gelderland = sum(gld %in% TRUE))]
+R$contour_ruw <- nb[!is.na(binnen), .(zaken = .N, afwijken = mean(afwijken)), by = .(periode, D, binnen)][order(periode, binnen, D)]
+R$dichtheid_ruw <- nb[!is.na(dichtheid), .(zaken = .N, afwijken = mean(afwijken)), by = .(periode, D, dichtheid)][order(periode, dichtheid, D)]
+R$samenstelling_ruw <- nb[!is.na(binnen), .(zaken = .N, buiten = mean(buiten), laag = 100 * mean(dichtheid %in% "laag")), by = .(periode, D)][order(periode, D)]
+kop("D. Afwijken bij nieuwbouw van woningen naar contour en buurtdichtheid (%s zaken, %s met een precieze plek)",
+    nfmt(R$contour_dekking$zaken), nfmt(R$contour_dekking$met_contour))
+print(R$contour_dekking); print(ROND(R$samenstelling_ruw, 1)); print(ROND(R$contour_ruw, 1)); print(ROND(R$dichtheid_ruw, 1))
+## samenstelling: lagen de aanvragen nabij natuur na intern salderen vaker buiten de contour of in een dunne buurt?
+nc <- nb[!is.na(binnen)]
+nc[, laag := 100 * (dichtheid %in% "laag")]
+did_d <- list()
+for (v in c("buiten", "laag")) {
+  m <- feols(as.formula(sprintf("%s ~ ow + sal | gemeente^D + gemeente^t", v)), data = nc, cluster = ~gemeente, notes = FALSE)
+  did_d[[v]] <- cbind(ct(m, c("ow", "sal"), "samenstelling, 2021Q3 tot en met 2026Q2"), uitkomst = v)
+}
+## afwijken per contour en dichtheid, en binnen gemeente x contour (of dichtheid) x kwartaal
+nc[, `:=`(ow_b = ow * (binnen == 0L), sal_b = sal * (binnen == 0L))]
+nc[, `:=`(ow_l = ow * (dichtheid %in% "laag"), sal_l = sal * (dichtheid %in% "laag"))]
+spec <- list(
+  list("alleen binnen de contour", nc[binnen == 1L], "afwijken ~ ow + sal | gemeente^D + gemeente^t", c("ow", "sal")),
+  list("alleen buiten de contour", nc[binnen == 0L], "afwijken ~ ow + sal | gemeente^D + gemeente^t", c("ow", "sal")),
+  list("binnen gemeente, contour en kwartaal", nc, "afwijken ~ ow + sal | gemeente^D^binnen + gemeente^t^binnen", c("ow", "sal")),
+  list("idem, verschil buiten tegenover binnen", nc, "afwijken ~ ow + sal + ow_b + sal_b | gemeente^D^binnen + gemeente^t^binnen", c("ow", "sal", "ow_b", "sal_b")),
+  list("idem, zonder Gelderland", nc[gld %in% FALSE], "afwijken ~ ow + sal | gemeente^D^binnen + gemeente^t^binnen", c("ow", "sal")),
+  list("alleen buurten met lage dichtheid", nc[dichtheid %in% "laag"], "afwijken ~ ow + sal | gemeente^D + gemeente^t", c("ow", "sal")),
+  list("alleen buurten met middelhoge of hoge dichtheid", nc[dichtheid %in% c("midden", "hoog")], "afwijken ~ ow + sal | gemeente^D + gemeente^t", c("ow", "sal")),
+  list("binnen gemeente, dichtheid en kwartaal", nc[!is.na(dichtheid)], "afwijken ~ ow + sal | gemeente^D^dichtheid + gemeente^t^dichtheid", c("ow", "sal")),
+  list("idem, verschil lage tegenover hogere dichtheid", nc[!is.na(dichtheid)],
+       "afwijken ~ ow + sal + ow_l + sal_l | gemeente^D^dichtheid + gemeente^t^dichtheid", c("ow", "sal", "ow_l", "sal_l")),
+  list("binnen gemeente, contour, dichtheid en kwartaal", nc[!is.na(dichtheid)],
+       "afwijken ~ ow + sal | gemeente^D^binnen^dichtheid + gemeente^t^binnen^dichtheid", c("ow", "sal")),
+  list("binnen gemeente, contour en kwartaal, alleen 2024Q1 tot en met 2026Q2", nc[t >= Q_OW], "afwijken ~ sal | gemeente^D^binnen + gemeente^t^binnen", "sal"),
+  list("idem, alleen buiten de contour", nc[t >= Q_OW & binnen == 0L], "afwijken ~ sal | gemeente^D + gemeente^t", "sal"),
+  list("idem, alleen binnen de contour", nc[t >= Q_OW & binnen == 1L], "afwijken ~ sal | gemeente^D + gemeente^t", "sal"))
+for (s in spec) {
+  m <- tryCatch(feols(as.formula(s[[3]]), data = s[[2]], cluster = ~gemeente, notes = FALSE), error = function(e) NULL)
+  if (!is.null(m)) did_d[[s[[1]]]] <- cbind(ct(m, s[[4]], s[[1]]), uitkomst = "afwijken")
+}
+R$contour_did <- rbindlist(did_d)
+print(ROND(R$contour_did, 2))
+## event study per halfjaar (tegenover 2024H1) binnen gemeente, contour en kwartaal, en alleen binnen de contour
+es_d <- list(list("binnen gemeente, contour en kwartaal", nc, "gemeente^D^binnen + gemeente^t^binnen"),
+             list("alleen binnen de contour", nc[binnen == 1L], "gemeente^D + gemeente^t"),
+             list("alleen buiten de contour", nc[binnen == 0L], "gemeente^D + gemeente^t"))
+R$contour_es <- rbindlist(lapply(es_d, function(s) {
+  m <- feols(as.formula(sprintf('afwijken ~ i(half, D, ref = "2024H1") | %s', s[[3]])), data = s[[2]], cluster = ~gemeente, notes = FALSE)
+  x <- coeftable(m)
+  data.table(groep = s[[1]], half = sub("^half::([0-9H]+):D$", "\\1", rownames(x)), b = x[, 1], se = x[, 2], p = x[, 4])
+}))
+print(dcast(ROND(R$contour_es, 2), half ~ groep, value.var = c("b", "p")))
+
 R$meta <- list(extract = EXTRACT, gemaakt = format(Sys.time(), "%Y-%m-%d %H:%M"), zaken = nrow(u), gemeenten_A = length(GEM_A))
 writeLines(to_json(R), file.path(PATHS$output, sprintf("tekstvlaggen_%s.json", EXTRACT)), useBytes = TRUE)
 kop("Klaar in %.0f sec", as.numeric(difftime(Sys.time(), t0, units = "secs")))
