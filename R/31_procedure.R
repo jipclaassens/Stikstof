@@ -191,6 +191,25 @@ kop("Aantal ontwerpen nabij tegenover ver na de PAS-uitspraak, 2014Q1 tot en met
 print(ROND(R$ontwerpen_did)); print(ROND(R$ontwerpen_trendbreuk)); print(ROND(R$ontwerpen_ruw, 2))
 cat("\nPer jaar tegenover 2018 (procent):\n"); print(dcast(ROND(R$ontwerpen_jaren, 1), jaar ~ groep, value.var = "pct"))
 
+## ---- beroep uit de kennisgevingen van onherroepelijk worden ------------------
+## Sommige gemeenten (139, vooral Apeldoorn, Nijmegen en Den Haag) publiceren ook dat een plan onherroepelijk werd. Zonder beroep is
+## dat twee tot drie maanden na de vaststelling; een kennisgeving na meer dan 150 dagen wijst op een beroep (of een late melding).
+## Klein en niet representatief voor het land, wel binnen de gemeente te vergelijken.
+kg[, onherroepelijk_kg := as.IDate(onherroepelijk_kg)]
+bo <- merge(ds[, .(dossier, gemeente, vaststelling, D, klein)], kg[!is.na(onherroepelijk_kg), .(dossier, onherroepelijk_kg)], by = "dossier")
+bo <- bo[onherroepelijk_kg >= vaststelling & year(vaststelling) %between% c(2013L, 2023L)]
+bo[, `:=`(dagen = as.integer(onherroepelijk_kg - vaststelling), na = as.integer(vaststelling >= PAS), jaar = year(vaststelling))]
+bo[, `:=`(beroep = 100 * as.integer(dagen > 150), log_d = log(pmax(dagen, 1L)))]
+mb1 <- feols(beroep ~ I(D * na) | gemeente + jaar + D, data = bo, cluster = ~gemeente, notes = FALSE)
+mb2 <- feols(log_d ~ I(D * na) | gemeente + jaar + D, data = bo[dagen > 150], cluster = ~gemeente, notes = FALSE)
+R$beroep_kg <- rbind(ct(mb1, "I(D * na)", "onherroepelijk na meer dan 150 dagen, procentpunt"),
+                     ct(mb2, "I(D * na)", "duur bij meer dan 150 dagen, log dagen"))
+R$beroep_kg_ruw <- bo[, .(plannen = .N, gemeenten = uniqueN(gemeente), pct_boven_150 = pct(dagen > 150), mediaan_dagen = as.numeric(median(dagen)),
+                          mediaan_bij_beroep = as.numeric(median(dagen[dagen > 150]))), by = .(D, na)][order(D, na)]
+kop("Beroep uit de kennisgevingen van onherroepelijk worden (%s plannen in %s gemeenten, vastgesteld 2013 tot en met 2023)",
+    nfmt(nrow(bo)), nfmt(uniqueN(bo$gemeente)))
+print(ROND(R$beroep_kg)); print(ROND(R$beroep_kg_ruw, 1))
+
 R$meta <- list(bron = "API Ruimtelijke plannen v4 (oogst 28 september 2026) en de kennisgevingen van ruimtelijke plannen (SRU, 2013 tot en met 27 september 2026)",
                pas = format(PAS), nabij_m = 2500, gemaakt = format(Sys.time(), "%Y-%m-%d %H:%M"))
 writeLines(to_json(R), file.path(PATHS$output, sprintf("procedure_natuur_%s.json", EXTRACT)), useBytes = TRUE)
