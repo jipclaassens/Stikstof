@@ -150,6 +150,47 @@ R$gestrand <- cbind(ct(mo, "I(D * na)", "ontwerp nooit vastgesteld, procentpunt"
 kop("Ontwerpen van 2014 tot en met 2021 die nooit werden vastgesteld (tot september 2026)")
 print(ROND(R$gestrand, 2))
 
+## ---- het aantal ontwerpen nabij en ver ---------------------------------------
+## Een stap eerder dan de vaststelling (hoofdstuk 12, deel A van 29): kwamen er nabij natuur na de uitspraak minder ontwerpen van
+## bestemmingsplannen dan verderop in dezelfde gemeente? Met de kennisgevingen is de ontwerpdatum bekend voor het grootste deel van
+## de plannen, ook de plannen die nooit werden vastgesteld. Zelfde specificatie als deel A van 29: Poisson per gemeente, kant en
+## kwartaal met gemeente x nabij, gemeente x kwartaal en nabij x seizoen, 2014Q1 tot en met 2021Q2.
+KW_START <- 2012L
+kw <- function(d) (as.integer(format(d, "%Y")) - KW_START) * 4L + (as.integer(format(d, "%m")) - 1L) %/% 3L + 1L
+Q_PAS <- kw(PAS); Q0 <- kw(as.IDate("2014-01-01")); Q1 <- kw(as.IDate("2021-06-30")); Q2 <- kw(as.IDate("2023-12-31"))
+o1[, `:=`(t = kw(ontwerp), klein = !is.na(opp_ha) & opp_ha <= 10)]
+paneel <- function(sub, van, tot) {
+  cel <- sub[t >= van & t <= tot, .(y = .N), by = .(gemeente, D, t)]
+  pa <- merge(CJ(gemeente = unique(o1[t >= van & t <= tot, gemeente]), D = 0:1, t = van:tot), cel, by = c("gemeente", "D", "t"), all.x = TRUE)
+  pa[is.na(y), y := 0L]
+  pa[, `:=`(gem_D = paste(gemeente, D), gem_t = paste(gemeente, t), D_szn = paste(D, (t - 1L) %% 4L),
+            na = D * as.integer(t >= Q_PAS), jaar = KW_START + (t - 1L) %/% 4L)]
+  pa[]
+}
+A <- list(); Tb <- list(); J <- list(); Ruw <- list()
+for (g in c("ontwerpen tot 10 ha", "alle ontwerpen")) {
+  sub <- if (g == "ontwerpen tot 10 ha") o1[klein == TRUE] else o1
+  pa <- paneel(sub, Q0, Q1)
+  m <- fepois(y ~ na | gem_D + gem_t + D_szn, data = pa, cluster = ~gemeente, notes = FALSE)
+  A[[g]] <- ct(m, "na", g)
+  pa[, `:=`(tj = (t - Q_PAS) / 4, post = as.integer(t >= Q_PAS))]
+  pa[, `:=`(voortrend = D * tj, sprong = D * post, natrend = D * post * tj)]
+  mt <- fepois(y ~ voortrend + sprong + natrend | gem_D + gem_t + D_szn, data = pa, cluster = ~gemeente, notes = FALSE)
+  Tb[[g]] <- ct(mt, c("voortrend", "sprong", "natrend"), g)
+  pj <- paneel(sub, Q0, Q2)
+  mj <- fepois(y ~ i(jaar, D, ref = 2018) | gem_D + gem_t + D_szn, data = pj, cluster = ~gemeente, notes = FALSE)
+  x <- coeftable(mj)
+  J[[g]] <- data.table(groep = g, jaar = as.integer(sub(".*::([0-9]{4}):D", "\\1", rownames(x))), b = x[, 1], se = x[, 2], p = x[, 4])
+  Ruw[[g]] <- pa[, .(per_kwartaal = sum(y) / uniqueN(t)), by = .(D, na_periode = t >= Q_PAS)][, groep := g]
+}
+R$ontwerpen_did <- rbindlist(A)[, pct := 100 * (exp(b) - 1)]
+R$ontwerpen_trendbreuk <- rbindlist(Tb)
+R$ontwerpen_jaren <- rbindlist(J)[, pct := 100 * (exp(b) - 1)]
+R$ontwerpen_ruw <- rbindlist(Ruw)
+kop("Aantal ontwerpen nabij tegenover ver na de PAS-uitspraak, 2014Q1 tot en met 2021Q2 (Poisson, D-specificatie)")
+print(ROND(R$ontwerpen_did)); print(ROND(R$ontwerpen_trendbreuk)); print(ROND(R$ontwerpen_ruw, 2))
+cat("\nPer jaar tegenover 2018 (procent):\n"); print(dcast(ROND(R$ontwerpen_jaren, 1), jaar ~ groep, value.var = "pct"))
+
 R$meta <- list(bron = "API Ruimtelijke plannen v4 (oogst 28 september 2026) en de kennisgevingen van ruimtelijke plannen (SRU, 2013 tot en met 27 september 2026)",
                pas = format(PAS), nabij_m = 2500, gemaakt = format(Sys.time(), "%Y-%m-%d %H:%M"))
 writeLines(to_json(R), file.path(PATHS$output, sprintf("procedure_natuur_%s.json", EXTRACT)), useBytes = TRUE)
