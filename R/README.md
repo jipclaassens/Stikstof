@@ -78,6 +78,7 @@ Doorlooptijd ongeveer twee minuten; het zwaarste is het inlezen van de CSV's.
 | `32a_vergunningen_lv.py` | per omgevingsvergunning in de DSO-LV (tabel `vergunning` in `dso_lv.sqlite`) de afstand van het vergunningsgebied tot het habitat en de projectsoort uit de titel (Python van QGIS met shapely) | `_derived/vergunningen_lv.csv` |
 | `32_vergunningen_lv.R` | vergunningen voor een buitenplanse activiteit nabij natuur rond de uitspraken over intern salderen, met klein verbouw als placebo (hoofdstuk 13) | `_output/vergunningen_lv_<extract>.json` |
 | `34_tekstvlaggen.R` | natuur, stikstof, soortenbescherming en afwijken van het plan in de volledige tekst van aanvragen voor nieuwe panden (reguliere procedure), nabij tegenover ver rond de PAS-uitspraak en intern salderen, met event study, trendbreuk en weglaten per gemeente (hoofdstuk 13) | `_output/tekstvlaggen_<extract>.json` |
+| `35a_verordeningen.py` | stedelijk en landelijk gebied in de provinciale omgevingsverordeningen op 1 januari 2024, 2025 en 2026 en actueel, uit de zips van de DSO-LV (`bron\dso\lv_download`): oppervlakte per aanwijzing, aandeel nabij natuur en wat er tussen twee peildatums bij kwam of af ging (Python van QGIS met shapely; hoofdstuk 15) | `_derived/verordening_aanwijzingen.csv`, `_derived/verordening_wijzigingen.csv`, `_derived/verordening_wijzigingen.gpkg` |
 | `rapport/bouw_rapport.js` | voegt de JSON's in de HTML-bron en schrijft het rapport | `_output/rapport_stikstof_<extract>.html` |
 
 Script 09 tot en met 12 lezen de datamap van het vergunningenspoor
