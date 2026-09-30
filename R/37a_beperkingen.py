@@ -23,9 +23,16 @@ Groepen, een bit per groep:
   6 geluid en luchtvaart  Schiphol: de vijf zones van het Luchthavenindelingbesluit (2018) en de LIB 5-zone (2024); regionale
                           luchthavens vanaf 48 dB(A) Lden of 35 Ke; de geluidzones van kleine luchthavens (provincies)
   7 infrastructuur        beperkingengebieden van hoofdspoorwegen en rijkswegen, reserveringen voor autowegen, locaties voor
-                          hoogspanning van 220 kV en meer, grootschalige elektriciteitsopwekking en kernenergie, en de zone
-                          rond alle bovengrondse hoogspanningslijnen (de rekenafstand van de netkaart 2024 als buffer)
+                          hoogspanning van 220 kV en meer, grootschalige elektriciteitsopwekking en kernenergie, de zone
+                          rond alle bovengrondse hoogspanningslijnen (de rekenafstand van de netkaart 2024 als buffer) en de
+                          reserveringsgebieden voor buisleidingen van nationaal belang (Omgevingsregeling in de DSO-LV,
+                          bron\\dso\\dso_lv_rijk.sqlite; de bredere zoekgebieden niet)
   8 erfgoed               beschermde stads- en dorpsgezichten en werelderfgoed
+  9 hoogte                gebieden met een hoogtegrens of hoogtetoets voor bouwwerken: radarverstoringsgebieden (militair en
+                          civiel), zend- en ontvangstinstallaties, militaire laagvliegroutes, maximale hoogte en apparatuur rond
+                          luchthavens (Omgevingsregeling, de groep bebouwingscontour), en de toetshoogtes van het
+                          Luchthavenindelingbesluit Schiphol (2021). Een hoogtegrens verbiedt bouwen niet; 37_beperkingen.R
+                          telt deze groep daarom niet mee in de samengestelde maten
 
 Een punt valt in een groep als het in of op de rand van een vlak ligt (exact, met shapely). Voor de oppervlakte valt een cel
 in een groep als haar middelpunt in een vlak ligt (ALL_TOUCHED=FALSE), op het grid van 25 meter van dit project; voor de
@@ -44,7 +51,7 @@ from pathlib import Path
 
 import numpy as np
 import shapely
-from osgeo import gdal, ogr
+from osgeo import gdal, ogr, osr
 
 gdal.UseExceptions()
 ogr.UseExceptions()
@@ -60,8 +67,13 @@ def log(tekst):
     print(f"[{time.time() - t0:6.0f} s] {tekst}", flush=True)
 
 
-def ev(pad, laag=None, filter=None, buffer=None):
-    return {"pad": pad, "laag": laag, "filter": filter, "buffer": buffer}
+def ev(pad, laag=None, filter=None, buffer=None, wkt_sql=None):
+    return {"pad": pad, "laag": laag, "filter": filter, "buffer": buffer, "wkt_sql": wkt_sql}
+
+
+DSO_RIJK = data / "bron" / "dso" / "dso_lv_rijk.sqlite"
+WKT_GA = ("SELECT g.wkt FROM gebiedsaanwijzing a JOIN locatie l ON l.regeling = a.regeling AND l.locatie_id = a.locatie_id "
+          "JOIN geometrie g ON g.geometrie_id = l.geometrie_id WHERE a.naam = '{}' AND g.wkt IS NOT NULL")
 
 
 def namen(*n):
@@ -98,8 +110,16 @@ GROEPEN = [
                                           "Reserveringsgebieden voor de uitbreiding van een autoweg of autosnelweg",
                                           "Locaties voor grootschalige elektriciteitsopwekking", "Locaties voor een kernenergiecentrale")),
                         ev(RWS, "wegen_beperkingengebied_rijk"),
-                        ev(RS / "hoogspanning_2023_2024.gpkg", "netkaart_2024_v5_20240311", None, "rekenafstand_m")]),
+                        ev(RS / "hoogspanning_2023_2024.gpkg", "netkaart_2024_v5_20240311", None, "rekenafstand_m"),
+                        ev(DSO_RIJK, wkt_sql=WKT_GA.format("Reserveringsgebieden buisleidingen van nationaal belang EV"))]),
     ("erfgoed", [ev(R / "rce_stads_dorpsgezichten.gpkg", "stads_dorpsgezichten"), ev(R / "rce_werelderfgoed.gpkg")]),
+    ("hoogte", [ev(OR, ORL, namen("Gebieden waar bouwwerken het militaire radarbeeld kunnen verstoren",
+                                  "Gebieden waar bouwwerken het civiele radarbeeld kunnen verstoren",
+                                  "Gebieden waar bouwwerken een militaire zend- en ontvangstinstallatie kunnen verstoren",
+                                  "Gebieden waar zich een militaire laagvliegroute bevindt",
+                                  "Maximaal toelaatbare hoogte voor bouwwerken buiten beperkingengebieden luchthavens",
+                                  "Gebieden waar bouwwerken apparatuur van luchthavens kunnen verstoren")),
+                ev(OR, "lib_schiphol_2021_geconsolideerd_imro_20230303", "naam LIKE '%Toetshoogte%'")]),
 ]
 assert len(GROEPEN) <= 16
 
@@ -108,17 +128,34 @@ gt = ref.GetGeoTransform()
 NX, NY = ref.RasterXSize, ref.RasterYSize
 
 
-def naar_mem(pad, laag, filter, buffer):
+def wkt_features(pad, sql):
+    """Vlakken als WKT uit een SQLite-database zonder geometriekolom (de DSO-LV-oogst), in RD."""
+    import sqlite3
+    con = sqlite3.connect(f"file:{Path(pad).as_posix()}?mode=ro", uri=True)
+    uit = [ogr.CreateGeometryFromWkt(r[0]) for r in con.execute(sql)]
+    con.close()
+    return uit
+
+
+def naar_mem(pad, laag, filter, buffer, wkt_sql=None):
     """Kopie van de laag met rechte, geldige vlakken; lijnen alleen met een buffer uit het veld buffer."""
-    ds = ogr.Open(str(pad))
-    lyr = ds.GetLayerByName(laag) if laag else ds.GetLayer(0)
-    if filter:
-        lyr.SetAttributeFilter(filter)
     mem = ogr.GetDriverByName("Memory").CreateDataSource("")
-    ml = mem.CreateLayer("x", lyr.GetSpatialRef(), ogr.wkbUnknown)
+    if wkt_sql:
+        ds = None
+        rd = osr.SpatialReference()
+        rd.ImportFromEPSG(28992)
+        ml = mem.CreateLayer("x", rd, ogr.wkbUnknown)
+        bron = [(None, g) for g in wkt_features(pad, wkt_sql)]
+        assert bron, f"geen vlakken voor {wkt_sql}"
+    else:
+        ds = ogr.Open(str(pad))
+        lyr = ds.GetLayerByName(laag) if laag else ds.GetLayer(0)
+        if filter:
+            lyr.SetAttributeFilter(filter)
+        ml = mem.CreateLayer("x", lyr.GetSpatialRef(), ogr.wkbUnknown)
+        bron = ((f, f.GetGeometryRef()) for f in lyr)
     n = overgeslagen = 0
-    for f in lyr:
-        g = f.GetGeometryRef()
+    for f, g in bron:
         if g is None:
             continue
         g = g.GetLinearGeometry()

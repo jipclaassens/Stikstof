@@ -14,10 +14,11 @@
 ## uitspraak. Nabij natuur gelden ook andere beperkingen voor bouwen: het
 ## Natuurnetwerk, stiltegebieden en grondwaterbescherming, landschap, de
 ## rijksregels voor water en kust, externe veiligheid, Defensie, geluid
-## van luchthavens, infrastructuur en erfgoed (de negen groepen van
-## 37a_beperkingen.py). Komt de achterstand daaruit, dan moet ze in de
-## gebieden met zo'n beperking zitten en op plekken zonder beperking
-## kleiner zijn of verdwijnen.
+## van luchthavens, infrastructuur en erfgoed (negen groepen van
+## 37a_beperkingen.py), en hoogtegrenzen rond radars, luchthavens en
+## laagvliegroutes (de tiende groep). Komt de achterstand daaruit, dan
+## moet ze in de gebieden met zo'n beperking zitten en op plekken zonder
+## beperking kleiner zijn of verdwijnen.
 ##   1. oppervlakte: welk deel van het land nabij en ver onder elke groep
 ##      valt, binnen en buiten de verstedelijkingscontour;
 ##   2. objecten: welk deel van de opleveringen en vergunningen in elke
@@ -26,10 +27,14 @@
 ##      x kwartaal, vaste effecten eenheid x nabij, eenheid x kwartaal en
 ##      nabij x seizoen, standaardfouten geclusterd op de eenheid): alle
 ##      objecten, alleen plekken zonder beperking, alleen plekken met een
-##      beperking, binnen gemeente x beperkt, en zonder elke groep apart.
-## De beperkingen zijn de huidige stand (2018 tot 2026, per laag in de
-## BRONNEN.md van bron\restricties en bron\rs_restricties): een vaste
-## eigenschap van de plek, geen behandeling in de tijd.
+##      beperking, binnen gemeente x beperkt, en zonder elke groep apart;
+##      met een term na x beperkt (of na x hoogte) voor het verschil.
+## De samengestelde maten ("een of meer", "strenger") tellen de hoogte-
+## groep niet mee: een hoogtegrens verbiedt bouwen niet, ze begrenst het.
+## De hoogtegroep heeft haar eigen vergelijking, vooral voor grote
+## projecten. De beperkingen zijn de huidige stand (2018 tot 2026, per
+## laag in de BRONNEN.md van bron\restricties en bron\rs_restricties):
+## een vaste eigenschap van de plek, geen behandeling in de tijd.
 ## =====================================================================
 
 .here <- local({
@@ -46,12 +51,16 @@ sink(file.path(PATHS$output, sprintf("beperkingen_%s.txt", EXTRACT)), split = TR
 t0 <- Sys.time()
 R <- list()
 GROEPEN <- c("natuurnetwerk", "stilte en grondwater", "landschap", "water en kust", "externe veiligheid", "defensie",
-             "geluid en luchtvaart", "infrastructuur", "erfgoed")
+             "geluid en luchtvaart", "infrastructuur", "erfgoed", "hoogte")
 in_groep <- function(b, g) !is.na(b) & b > 0L & bitwAnd(b, bitwShiftL(1L, g - 1L)) > 0L
-## de twee brede groepen, landschap en erfgoed, zijn kwaliteitsregimes waarin bouwen met voorwaarden kan; de andere zeven
-## verbieden bouwen of binden het aan een vergunning of afweging. "Streng" = een van die zeven.
-STRENG <- setdiff(seq_along(GROEPEN), match(c("landschap", "erfgoed"), GROEPEN))
-streng <- function(b) Reduce(`|`, lapply(STRENG, function(g) in_groep(b, g)))
+of_groep <- function(b, gg) Reduce(`|`, lapply(gg, function(g) in_groep(b, g)))
+H <- match("hoogte", GROEPEN)
+## "een of meer": de negen groepen zonder de hoogte. "Strenger": ook zonder landschap en erfgoed, twee kwaliteitsregimes
+## waarin bouwen met voorwaarden kan; de overige zeven verbieden bouwen of binden het aan een vergunning of afweging.
+ALLE <- setdiff(seq_along(GROEPEN), H)
+STRENG <- setdiff(ALLE, match(c("landschap", "erfgoed"), GROEPEN))
+een <- function(b) of_groep(b, ALLE)
+streng <- function(b) of_groep(b, STRENG)
 
 KW_START <- 2012L
 kw_index <- function(datum) {
@@ -69,7 +78,7 @@ o <- fread(file.path(PATHS$derived, "beperking_oppervlakte.csv"), sep = ";")
 o <- rbind(o, copy(o)[, contour := 2L])            # 2 = binnen en buiten samen
 opp_groep <- function(sel, naam) o[, .(groep = naam, ha = sum(ha), ha_groep = sum(ha[sel(beperking)])), by = .(kant, contour)]
 R$oppervlakte <- rbindlist(c(lapply(seq_along(GROEPEN), function(g) opp_groep(function(b) in_groep(b, g), GROEPEN[g])),
-                             list(opp_groep(function(b) b > 0L, "een of meer"), opp_groep(streng, "een of meer, zonder landschap en erfgoed"))))
+                             list(opp_groep(een, "een of meer"), opp_groep(streng, "een of meer, zonder landschap en erfgoed"))))
 R$oppervlakte[, `:=`(contour = c("buiten de contour", "binnen de contour", "alle land")[contour + 1L], aandeel = 100 * ha_groep / ha)]
 kop("1. Aandeel van het land onder elke groep (procent), nabij (tot 2.500 m) en ver van habitat, en in het habitat zelf")
 print(dcast(R$oppervlakte, groep ~ contour + kant, value.var = "aandeel")[, lapply(.SD, function(x) if (is.numeric(x)) round(x, 1) else x)])
@@ -96,7 +105,7 @@ R$objecten <- rbindlist(lapply(names(UIT), function(u) {
   x[, `:=`(kant = fifelse(dist2n2000_m <= 2500, "nabij", "ver"), periode = fifelse(q >= Q_PAS, "na", "voor"))]
   rbindlist(c(lapply(seq_along(GROEPEN), function(g) x[, .(uitkomst = u, groep = GROEPEN[g], objecten = .N, aandeel = 100 * mean(in_groep(beperking, g))),
                                                      by = .(kant, periode)]),
-              list(x[, .(uitkomst = u, groep = "een of meer", objecten = .N, aandeel = 100 * mean(beperking > 0L)), by = .(kant, periode)],
+              list(x[, .(uitkomst = u, groep = "een of meer", objecten = .N, aandeel = 100 * mean(een(beperking))), by = .(kant, periode)],
                    x[, .(uitkomst = u, groep = "een of meer, zonder landschap en erfgoed", objecten = .N, aandeel = 100 * mean(streng(beperking))),
                      by = .(kant, periode)])))
 }))
@@ -124,12 +133,14 @@ did <- function(p) {
 maak <- function(dt, om) {
   dt <- dt[!is.na(beperking) & beperking >= 0L]
   if (om == "20 of meer") dt <- dt[projectomvang >= 20L]
-  copy(dt)[, `:=`(gm = as.character(gemeentecode), gm_b = paste(gemeentecode, beperking > 0L))]
+  copy(dt)[, `:=`(gm = as.character(gemeentecode), gm_b = paste(gemeentecode, een(beperking)),
+                  gm_h = paste(gemeentecode, in_groep(beperking, H)))]
 }
-DELEN <- c(list("alle objecten" = quote(TRUE), "zonder beperking" = quote(beperking == 0L), "met een beperking" = quote(beperking > 0L),
-                "zonder strenge beperking" = quote(!streng(beperking)), "met een strenge beperking" = quote(streng(beperking))),
+DELEN <- c(list("alle objecten" = quote(TRUE), "zonder beperking" = quote(!een(beperking)), "met een beperking" = quote(een(beperking)),
+                "zonder strenge beperking" = quote(!streng(beperking)), "met een strenge beperking" = quote(streng(beperking)),
+                "met een hoogtegrens" = bquote(in_groep(beperking, .(H)))),
            setNames(lapply(seq_along(GROEPEN), function(g) bquote(!in_groep(beperking, .(g)))), paste("zonder", GROEPEN)))
-kop("3. Nabij tegenover ver na 2019Q2 binnen de gemeente, per deel, en binnen gemeente x beperkt")
+kop("3. Nabij tegenover ver na 2019Q2 binnen de gemeente, per deel, en binnen gemeente x beperkt of x hoogte")
 R$did <- rbindlist(lapply(names(UIT), function(u) rbindlist(lapply(c("alle", "20 of meer"), function(om) {
   dt <- maak(UIT[[u]], om)
   a <- rbindlist(lapply(names(DELEN), function(dn) {
@@ -137,24 +148,25 @@ R$did <- rbindlist(lapply(names(UIT), function(u) rbindlist(lapply(c("alle", "20
     cbind(uitkomst = u, projecten = om, deel = dn, vergelijking = "binnen de gemeente",
           objecten_nabij = x[dist2n2000_m <= 2500, .N], objecten = nrow(x), did(paneel(x, "gm")))
   }))
-  b <- cbind(uitkomst = u, projecten = om, deel = "alle objecten", vergelijking = "binnen gemeente x beperkt",
-             objecten_nabij = dt[dist2n2000_m <= 2500, .N], objecten = nrow(dt), did(paneel(dt, "gm_b")))
-  rbind(a, b)
+  b <- rbindlist(lapply(c("binnen gemeente x beperkt" = "gm_b", "binnen gemeente x hoogte" = "gm_h"), function(e)
+    cbind(uitkomst = u, projecten = om, deel = "alle objecten", objecten_nabij = dt[dist2n2000_m <= 2500, .N], objecten = nrow(dt),
+          did(paneel(dt, e)))), idcol = "vergelijking")
+  rbind(a, b, use.names = TRUE)
 }))))
 R$did[, `:=`(pct = 100 * (exp(b) - 1), pct_laag = 100 * (exp(b - 1.96 * se) - 1), pct_hoog = 100 * (exp(b + 1.96 * se) - 1))]
 print(R$did[, lapply(.SD, function(x) if (is.numeric(x)) round(x, 3) else x)], nrows = 200)
 
-## verschilt de achterstand tussen plekken met en zonder beperking? Een term tr x beperkt in het model binnen gemeente x beperkt
-kop("3b. Verschil in de achterstand tussen plekken met en zonder beperking (binnen gemeente x beperkt, term na x beperkt)")
-R$verschil <- rbindlist(lapply(names(UIT), function(u) rbindlist(lapply(c("alle", "20 of meer"), function(om) {
-  dt <- maak(UIT[[u]], om)
-  p <- paneel(dt, "gm_b")
-  p[, tr_b := tr * as.integer(grepl("TRUE$", E))]
-  m <- fepois(y ~ tr + tr_b | E_G + E_t + G_szn, data = p, cluster = ~E, notes = FALSE, glm.iter = 200)
-  ct <- coeftable(m)
-  data.table(uitkomst = u, projecten = om, term = c("zonder beperking", "met beperking min zonder"),
-             b = ct[c("tr", "tr_b"), 1], se = ct[c("tr", "tr_b"), 2], p = ct[c("tr", "tr_b"), 4], n = nobs(m))
-}))))
+## verschilt de achterstand tussen plekken met en zonder beperking, of met en zonder hoogtegrens? Een term na x beperkt
+kop("3b. Verschil in de achterstand tussen plekken met en zonder beperking of hoogtegrens (term na x beperkt of na x hoogte)")
+R$verschil <- rbindlist(lapply(c(beperking = "gm_b", hoogtegrens = "gm_h"), function(e) rbindlist(lapply(names(UIT), function(u)
+  rbindlist(lapply(c("alle", "20 of meer"), function(om) {
+    p <- paneel(maak(UIT[[u]], om), e)
+    p[, tr_b := tr * as.integer(grepl("TRUE$", E))]
+    m <- fepois(y ~ tr + tr_b | E_G + E_t + G_szn, data = p, cluster = ~E, notes = FALSE, glm.iter = 200)
+    ct <- coeftable(m)
+    data.table(uitkomst = u, projecten = om, term = c("zonder", "met min zonder"),
+               b = ct[c("tr", "tr_b"), 1], se = ct[c("tr", "tr_b"), 2], p = ct[c("tr", "tr_b"), 4], n = nobs(m))
+  }))))), idcol = "split")
 print(R$verschil[, lapply(.SD, function(x) if (is.numeric(x)) round(x, 3) else x)])
 
 json <- to_json(R)
