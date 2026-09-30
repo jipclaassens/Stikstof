@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "rapport",
+      "runtimeExecutable": "py",
+      "runtimeArgs": ["-3.13", "-m", "http.server", "8765", "--bind", "127.0.0.1", "--directory", "R/_output"],
+      "port": 8765
+    }
+  ]
+}
