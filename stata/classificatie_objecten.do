@@ -232,21 +232,21 @@ gen byte in_universum = last_vbo_gebruiksdoel == "woon" &                       
 * vier groepen samen zijn in_sample;
 * groep 5 en 6 vallen buiten de analyses maar staan erbij zodat het optelt.
 *
-* De toevoeging "if in_universum" hoort erbij. Zonder dat deel tel je er 28.794 objecten
-* bij die geen woonobject zijn (27.384 winkels, kantoren, bijeenkomst- en
-* zorgpanden) of geen bruikbare locatie hebben (1.410). Die komen vooral in
+* De toevoeging "if in_universum" hoort erbij. Zonder dat deel tel je er 28.770
+* objecten bij die geen woonobject zijn (27.384 winkels, kantoren, bijeenkomst-
+* en zorgpanden) of geen bruikbare locatie hebben (1.386). Die komen vooral in
 * groep 4 terecht: overig loopt dan op van 71.869 naar 89.828.
 
 tab objectgroep if in_universum
 
 * Verwacht, extract 20260730:
-*   1. echte nieuwbouw        919.337
+*   1. echte nieuwbouw        919.359
 *   2. gestrand                54.590
-*   3. pijplijn               256.669
+*   3. pijplijn               256.671
 *   4. overig                  71.869
 *   5. verbouwing              19.729
 *   6. administratieve ruis     5.428
-*   totaal                  1.327.622
+*   totaal                  1.327.646
 * Komt er 1.313.416 uit, dan deed de merge in stap 1 een keep(master match), zodat
 * de objecten zonder vergunningrecord wegvielen, en stond er "tab objectgroep"
 * zonder "if in_universum".
