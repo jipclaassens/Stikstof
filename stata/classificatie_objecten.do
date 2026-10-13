@@ -21,35 +21,50 @@ cd "C:\Users\u657113\OneDrive - Radboud Universiteit\projects\planrealisatie\"
 local AF ".\analyses\analysis_stikstof\analysis_files"
 
 *------------------------------------------------------------------------------
-* 0. Vlag voor CBS-nieuwbouw op OBJECTniveau
+* 0. Het CBS-nieuwbouwbestand, met de vlag op OBJECTniveau
 *------------------------------------------------------------------------------
 * Niet isnieuwbouw gebruiken: dat is een pandkenmerk uit Pand_VergunningDuur.
 * Wat we nodig hebben is: staat dit verblijfsobject in het CBS-nieuwbouwbestand?
 
+* Het vlagbestand draagt ook de locatie- en projectkenmerken mee. Dat is nodig
+* voor de 43.000 objecten die WEL in het CBS-nieuwbouwbestand staan maar geen
+* vergunningrecord hebben: 24,5% van de nieuwbouw in 2012, ongeveer 1,5% vanaf
+* 2015, omdat de BAG-vergunninghistorie niet ver genoeg terugloopt. Die objecten
+* komen bij de merge hieronder binnen, en zonder afstand en provinciecode zouden
+* ze meteen weer uit het universum vallen. Ze weglaten maakt van de koppelgraad
+* een verborgen selectiecriterium dat sterk met het jaar samenhangt, en het
+* scheelt 42.996 objecten in groep 1. Zie hoofdstuk 2 van het rapport.
+
 use "`AF'\afstand_n2000_nieuwbouw.dta", clear
-keep vbo_bag_nr
-duplicates drop
+keep vbo_bag_nr pand_bag_nr dist2n2000_m n2000_afstandsklasse_250              ///
+     projectid_doc projectomvang_doc projectid_cluster projectomvang_cluster   ///
+     gemeentecode provinciecode pand_bouwjaar mutatiemaand
+duplicates drop vbo_bag_nr, force    // in extract 20260730 verandert dit niets
 gen byte cbs_nieuwbouw = 1
-tempfile nieuwbouwvlag
-save `nieuwbouwvlag'
+tempfile nieuwbouw
+save `nieuwbouw'
 
 *------------------------------------------------------------------------------
-* 1. Basisbestand: een rij per verblijfsobject met een bouwvergunning
+* 1. Basisbestand: alle verblijfsobjecten, met of zonder vergunningrecord
 *------------------------------------------------------------------------------
+* Geen keep() op de merge: de objecten die alleen in het nieuwbouwbestand staan
+* horen erbij. Voor de gematchte objecten wint het vergunningenbestand, zoals
+* het hoort; alleen de using-rijen brengen hun eigen afstand en provinciecode
+* mee. Verwacht: 884.382 gematcht, 429.034 alleen vergunning, 43.000 alleen
+* nieuwbouw, samen 1.356.416 rijen.
+
 use "`AF'\afstand_n2000_vergunningen.dta", clear
 
-merge 1:1 vbo_bag_nr using `nieuwbouwvlag', keep(master match) nogenerate
+merge 1:1 vbo_bag_nr using `nieuwbouw', nogenerate
 replace cbs_nieuwbouw = 0 if missing(cbs_nieuwbouw)
 
-* LET OP. Dit bestand mist de circa 43.000 objecten die WEL in het
-* CBS-nieuwbouwbestand staan maar geen vergunningrecord hebben (24,5% van de
-* nieuwbouw in 2012, ~1,5% vanaf 2015). Die horen er voor tellingen bij; zie
-* hoofdstuk 2 van het rapport. Wil je ze meenemen, append ze dan hier met
-* append using "`AF'\afstand_n2000_nieuwbouw.dta", keep(vbo_bag_nr pand_bag_nr ///
-*     dist2n2000_m gemeentecode provinciecode mutatiemaand)
-* en zet cbs_nieuwbouw = 1 voor de toegevoegde rijen. De regels hieronder
-* werken dan gewoon door; die objecten hebben geen last_vbo_status en belanden
-* via regel (a) meteen in gerealiseerde nieuwbouw.
+* De objecten zonder vergunningrecord hebben geen last_vbo_status en geen
+* last_vbo_gebruiksdoel; die staan nu leeg. Het gebruiksdoel zetten we op woon,
+* net als de R-pipeline doet (van de gekoppelde objecten heeft 99,6% woon).
+* Zonder vbo-status lopen ze door naar projecttype = nieuwbouw en belanden ze
+* via regel (a) in gerealiseerde nieuwbouw.
+replace last_vbo_gebruiksdoel = "woon" if missing(last_vbo_gebruiksdoel) &      ///
+                                          cbs_nieuwbouw == 1
 
 *------------------------------------------------------------------------------
 * 2. Hulpvariabelen: de statusgroepen uit de BAG
@@ -216,8 +231,25 @@ gen byte in_universum = last_vbo_gebruiksdoel == "woon" &                       
 * Dit is de tabel "Alle woonobjecten in zes groepen" uit het rapport. De eerste
 * vier groepen samen zijn in_sample;
 * groep 5 en 6 vallen buiten de analyses maar staan erbij zodat het optelt.
+*
+* De toevoeging "if in_universum" hoort erbij. Zonder dat deel tel je er 28.794 objecten
+* bij die geen woonobject zijn (27.384 winkels, kantoren, bijeenkomst- en
+* zorgpanden) of geen bruikbare locatie hebben (1.410). Die komen vooral in
+* groep 4 terecht: overig loopt dan op van 71.869 naar 89.828.
 
 tab objectgroep if in_universum
+
+* Verwacht, extract 20260730:
+*   1. echte nieuwbouw        919.337
+*   2. gestrand                54.590
+*   3. pijplijn               256.669
+*   4. overig                  71.869
+*   5. verbouwing              19.729
+*   6. administratieve ruis     5.428
+*   totaal                  1.327.622
+* Komt er 1.313.416 uit, dan deed de merge in stap 1 een keep(master match), zodat
+* de objecten zonder vergunningrecord wegvielen, en stond er "tab objectgroep"
+* zonder "if in_universum".
 
 * en de vier groepen binnen de nieuwbouwvergunningen (de beslismatrix telt hierop op)
 tab uitkomstgroep if in_sample
