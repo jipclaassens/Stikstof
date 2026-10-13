@@ -166,7 +166,9 @@ cat(sprintf("\ntegenspraak: %s panden (%.2f%%)\n",
 cat("\nlaatste pandstatus van die panden:\n")
 print(conflict[, .N, by = last_pand_status][order(-N)])
 
-cv <- d[pand_bag_nr %in% conflict$pand_bag_nr]
+## join in plaats van %in%: dat laatste haalt de sleutel uit de data.table en
+## verliest daarmee de integer64-klasse
+cv <- d[conflict[, .(pand_bag_nr)], on = "pand_bag_nr", nomatch = NULL]
 cat(sprintf("\nhun VBO's: %s, waarvan %.1f%% in de CBS-voorraaddefinitie\n",
             nfmt(nrow(cv)), 100 * mean(cv$vbo_in_voorraad)))
 cat("  -> de OBJECTEN zijn opgeleverd; alleen de PANDstatus zegt van niet.\n")

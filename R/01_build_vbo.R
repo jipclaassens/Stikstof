@@ -219,6 +219,35 @@ vbo <- merge(vbo, pand, by = "pand_bag_nr", all.x = TRUE)
 vbo[is.na(bron_pandduur), bron_pandduur := FALSE]
 
 ## ---------------------------------------------------------------------
+## 6b. Provincie aanvullen vanuit de gemeentecode
+## ---------------------------------------------------------------------
+## De export zet prv_code op "null" voor een handvol objecten die wel een
+## gemeentecode hebben. Dat is een gat in de ruimtelijke koppeling en geen
+## eigenschap van het object: die gemeente ligt gewoon in een provincie.
+## Zonder deze stap vallen ze uit elke analyse, want in_universum en in_sample
+## eisen een provinciecode. Het gaat om 24 objecten in extract 20260730
+## (22 nieuwbouw, 2 pijplijn). De Stata-pipeline leidt de provincie wel af uit
+## de gemeente en kwam daardoor 24 objecten hoger uit in het zesgroepenoverzicht.
+##
+## De vertaaltabel komt uit de data zelf, zodat er geen losse gemeentelijst
+## naast het model gaat zwerven. Gemeenten waarvan ALLE objecten een lege
+## provincie hebben zijn zo niet te repareren; die blijven leeg.
+
+prov_tab <- vbo[!is.na(gemeentecode) & !is.na(provinciecode),
+                .N, by = .(gemeentecode, provinciecode, provincienaam)]
+setorder(prov_tab, gemeentecode, -N)
+prov_tab <- unique(prov_tab, by = "gemeentecode")[, N := NULL]
+
+n_voor <- sum(is.na(vbo$provinciecode))
+vbo[prov_tab, on = "gemeentecode",
+    `:=`(provinciecode = fifelse(is.na(provinciecode), i.provinciecode, provinciecode),
+         provincienaam = fifelse(is.na(provincienaam), i.provincienaam, provincienaam))]
+message(sprintf("Provincie afgeleid uit gemeentecode: %s objecten (nog %s zonder provincie, waarvan %s ook zonder gemeentecode)",
+                nfmt(n_voor - sum(is.na(vbo$provinciecode))),
+                nfmt(sum(is.na(vbo$provinciecode))),
+                nfmt(sum(is.na(vbo$provinciecode) & is.na(vbo$gemeentecode)))))
+
+## ---------------------------------------------------------------------
 ## 7. Afgeleide sleutels en variabelen
 ## ---------------------------------------------------------------------
 

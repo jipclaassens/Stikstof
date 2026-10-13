@@ -5,8 +5,14 @@
 ## Wordt door elk script ge-source't. Bevat geen analyse.
 ## =====================================================================
 
+## bit64 hoort bij data.table zodra er integer64-kolommen in het spel zijn, en
+## dat is hier zo: vbo_bag_nr en pand_bag_nr zijn 16-cijferige BAG-sleutels.
+## Zonder bit64 verliest een vector zijn integer64-klasse zodra hij uit de
+## data.table wordt gehaald, en dan klapt een join erop ("i.pand_bag_nr is type
+## double"), of levert as.character() wetenschappelijke notatie op.
 suppressPackageStartupMessages({
   library(data.table)
+  library(bit64)
 })
 
 ## ---------------------------------------------------------------------
