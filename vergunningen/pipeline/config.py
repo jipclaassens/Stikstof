@@ -42,4 +42,9 @@ STROMEN = {
               'dt.title any "natuurvergunning" or dt.title any "stikstof" or dt.title any "faunawet" or '
               'dt.title any "fauna-activiteit")) or (w.publicatienaam=="Provinciaal blad" and dt.type==omgevingsvergunning)) '
               'or dt.title any "Natura")',
+    # Kennisgevingen van ruimtelijke plannen en omgevingsdocumenten (ontwerp, vaststelling, inwerkingtreding van
+    # bestemmingsplannen en wijzigingen van omgevingsplannen) in alle bladen: tot medio 2021 meldden gemeenten
+    # bestemmingsplannen ook in de Staatscourant (7.000 tot 8.300 per jaar), sindsdien in het Gemeenteblad. Draait
+    # in een eigen datamap, zoals de natuurstroom (REPRODUCEREN.md).
+    "ruimtelijk": 'dt.type=="ruimtelijk plan of omgevingsdocument"',
 }

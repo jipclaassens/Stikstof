@@ -69,6 +69,17 @@ py -3.13 laad.py
 py -3.13 natuur_meet.py
 ```
 
+Zo ook de stroom ruimtelijk (kennisgevingen van ruimtelijke plannen, voor de tijd van ontwerp tot vaststelling van elk bestemmingsplan), met anderhalve seconde tussen de verzoeken als de tekstoogst tegelijk loopt; op 28 september 2026 los van de sessie gestart met `C:\LocalData\vergunningen\plannen_sru_oogst.cmd`:
+
+```
+set "VERGUNNINGEN_DATA=C:\LocalData\vergunningen\plannen_sru"
+set "VERGUNNINGEN_RUW=C:\LocalData\vergunningen\plannen_sru\ruw"
+set "VERGUNNINGEN_DB=C:\LocalData\vergunningen\plannen_sru\plannen_sru.sqlite"
+set "VERGUNNINGEN_INTERVAL=1.5"
+py -3.13 oogst.py 2013-01-01 2026-09-27 --stroom ruimtelijk
+py -3.13 laad.py
+```
+
 De bronlagen staan per thema in `bron\<thema>\` met een `BRONNEN.md` (herkomst, licentie, datum, grootte) en de scripts waarmee ze zijn opgehaald en afgeleid in `bron\<thema>\werk\`; `bron\CATALOGUS.md` is de index. Voor de keten zijn nodig: de AERIUS relevante habitatkartering (WFS `base_geometries:relevant_habitats` van `connect.aerius.nl/opendata/wfs`, met ogr2ogr naar `bron\aerius_relevant_habitats.gpkg`), de AERIUS-hexagonen met overbelasting (`bron\natuur`), de BAG-historie uit het LV BAG-extract van PDOK (`bron\gebouwen\scripts`), de RIVM-depositie (`bron\depositie\werk`), de verrijkingsrasters (`bron\afgeleid\werk`, stap 1 tot 5), de verdiepte rechtspraak (`bron\rechtspraak_verdieping\werk\verdiep.py` en `tabellen.py`, uit de lokaal bewaarde uitspraken) en de natuurbesluiten. Daarna niveau 2.
 
 Niet opnieuw op te halen: de FTM-stallenbestanden (Woo-documenten die Follow the Money kreeg; de afgeleide lagen zonder adressen staan in `bron\ftm_stallen`, de ruwe bestanden alleen op de onderzoeksmachine), de vertrouwelijke plancapaciteit in `bron\rs_plancapaciteit\priv` en de Datawonen-gegevens (inlog vereist). De DSO-oogster voor Ruimtelijke plannen (`bron\dso`) wacht op een API-sleutel in `dso_apikey.txt` in de datamap. CBS OData was vanaf de onderzoeksmachine op 26 september 2026 niet bereikbaar; op een andere pc haalt `py -3.13 bron\uitvoering\werk\cbs_rechtspraak.py` de rechtspraaktabellen 70764ned en 70229ned (2000 tot 2016) alsnog op.
@@ -81,11 +92,19 @@ Een proces dat een Claude-sessie zelf start, stopt als de sessie stopt. Start ee
 Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = 'cmd /c "<repo>\vergunningen\pipeline\verwerk.cmd"' }
 ```
 
+De gerichte tekstoogst (`pipeline/teksten.py`, inzichten hoofdstuk 33) gaat net zo: eerst `py -3.13 teksten.py wachtrij` in een venster met `VERGUNNINGEN_DATA`, dan los van de sessie
+
+```
+Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = 'cmd /c "cd /d <repo>\vergunningen\pipeline && py -3.13 -u teksten.py oogst >> C:\LocalData\Stikstof\teksten\oogst_stdout.log 2>&1"' }
+```
+
+met de voortgang in `C:\LocalData\Stikstof\teksten\oogst.log` en `py -3.13 teksten.py stand`. Een verzoek per seconde: 140.000 publicaties duren ongeveer twee dagen.
+
 Zo'n proces krijgt de omgevingsvariabelen uit het gebruikersprofiel (dus die van `setx`), niet die van het lopende venster. Volg de voortgang in `verwerk.log` of `oogst.log` in de datamap; stilstand meet je op de processortijd van het proces, niet op de logregels.
 
 ## Controlegetallen
 
-Na niveau 1 met de data van 26 september 2026 moeten deze waarden terugkomen (schattingen maal honderd, in procent of procentpunt):
+Na niveau 1 met de data van 26 september 2026 moeten deze waarden terugkomen (schattingen maal honderd, in procent of procentpunt). Ze zijn van voor het herstel van `zaak.py` op 27 september 2026 (inzichten.md, hoofdstuk 31): na een nieuwe zaakvorming heeft de database 1.465.374 zaken in plaats van 1.464.997, en verschuiven de zaken van Groningen en Utrecht een fractie. Ook de soortregel in `analyse_export.py` is daarna hersteld (28 september 2026, hoofdstuk 37): na de herbouw heeft `zaken.csv` 53.550 in plaats van 59.824 zaken met de soort nieuwbouw_woning, en verschuiven de tellingen van `projecten.py`.
 
 | Bestand | Grootheid | Waarde |
 |---|---|---|

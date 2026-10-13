@@ -46,6 +46,15 @@ Daardoor kan (i) het **aantal BVV-registraties** vanaf 2024 een niveaubreuk vert
 mogelijke structurele breuk** (aparte dummy / pre-post gevoeligheidsanalyse) en wees
 terughoudend met 2024–2025 vergunning-/pipelinecijfers.
 
+**Getoetst (september 2026, `R/13_binnenring.R`)**: (i) klopt niet voor het aantal. Woningen in
+gevolgklasse 1 vallen niet uit de BVV-reeks: het aandeel opleveringen zonder vergunningrecord bleef
+1,3–2,6% per halfjaar, ook voor eengezinswoningen die vanaf juli 2024 vergund werden, en het aandeel
+eengezins in de vergunningen bleef ~36–38%. (ii) klopt wel: het brondocument voor BVV werd het
+**akkoord op de bouwmelding** (gevolgklasse 1) of de **technische bouwvergunning** (2 en 3)
+(factsheet VNG/Waarderingskamer, okt. 2023), en sinds **september 2025** de vergunning voor de
+omgevingsplanactiviteit. De piek van juni 2026 (~30.000 BVV-objecten tegen ~8.000 per maand) past
+bij een inhaalslag. Behandel 2024–2026 dus als breuk in het **moment**, niet in de dekking.
+
 ## 4. BAG-statushistorie en voorraaddefinitie
 
 - **`Verbouwing pand`** is een **nieuwe status sinds BAG 2.0 (wet in werking 1-7-2018)**,
@@ -132,6 +141,21 @@ Wél artefacten:
 **Les**: BAG-BVV-instroom is klonterig op gemeenteniveau; één gemeente kan een maand
 kapen. Niet "laatste maand afknippen" als vaste regel, maar **aggregeren naar
 kwartaal/jaar** (zoals het paper) en/of **gemeente-maand-uitschieters markeren/winsorizen**.
+
+Getoetst (september 2026, `R/17_registratie.R`). Met de koppeling van BAG-panden
+aan zaken uit de gemeentelijke bekendmakingen (vergunningenspoor, binnen 100 meter):
+de 2.104 panden van Meierijstad en Bernheze in juni 2026 zijn voor 30 procent aan een
+zaak gekoppeld, en bij driekwart van de rest ligt binnen 100 meter geen verleend besluit
+uit de drie jaar ervoor; wat die batch is, blijft open. De rest van juni (26.850
+objecten in 7.717 panden, 277 gemeenten) is ruim drie keer een gewone maand. Van die
+objecten zit 84 procent in gekoppelde panden (87 procent van september 2025 tot en met
+mei 2026), met besluiten die mediaan op 18 juni 2026 werden gepubliceerd, en
+ongekoppelde panden liggen niet vaker bij een ouder besluit dan in andere maanden (31
+tegen 37 procent). Dus vooral een batch in twee gemeenten en daarnaast een maand met
+veel nieuwe besluiten; maar er waren ook ruim vier keer zoveel ongekoppelde panden als
+in een gewone maand, dus een kleinere inhaalslag daarbinnen is niet uit te sluiten. Let op: een bouwstart voor
+de vergunningdatum komt in de BAG vrijwel niet voor, omdat de statussen van een pand
+in volgorde worden geregistreerd; met die toets is een inhaalslag dus niet te zien.
 
 ## 8. Waarom de bouwjaar-delta op −6 staat (issue #26)
 

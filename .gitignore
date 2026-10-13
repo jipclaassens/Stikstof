@@ -10,3 +10,7 @@
 
 # Python
 __pycache__/
+
+# Claude Code: lokale rechten en worktrees (launch.json met de preview van het rapport wel)
+/.claude/settings.local.json
+/.claude/worktrees/

@@ -11,6 +11,9 @@ Lochem). Een record met zaaknummer op de plek van een lopende zaak zonder nummer
 (Midden-Groningen zet een nummer alleen in de besluittitel). Standaardpunten (een punt dat bij een gemeente in meer dan
 een procent van de records of meer dan vijftig keer voorkomt, vaak het gemeentehuis) tellen niet als locatie.
 
+Een zaak hoort bij een uitgever: de naam (creator) samen met het organisatietype. Provincie en gemeente Groningen en
+provincie en gemeente Utrecht hebben dezelfde naam; op de naam alleen belandden hun publicaties in dezelfde zaken.
+
 Records uit de rubrieken andere vergunning en andere beschikking (stroom "andere") tellen alleen mee als de titel
 over een omgevingsvergunning of bouwwerk gaat, of als ze op zaaknummer of locatie aan een bestaande zaak hangen en de
 titel niet duidelijk over iets anders gaat (evenement, horeca, standplaats).
@@ -100,17 +103,22 @@ def laad_publicaties(conn):
         WHERE p.available IS NOT NULL ORDER BY p.creator, p.available, p.identifier""").fetchall()
 
 
+def uitgever(rij):
+    """De uitgever van een publicatie: naam en organisatietype, want provincie en gemeente kunnen dezelfde naam hebben."""
+    return (rij[1], rij[2])
+
+
 def standaardpunten(rijen):
-    """Per creator de rasterpunten die zo vaak voorkomen dat ze geen locatie van een werk kunnen zijn."""
+    """Per uitgever de rasterpunten die zo vaak voorkomen dat ze geen locatie van een werk kunnen zijn."""
     per = collections.defaultdict(collections.Counter)
     n = collections.Counter()
     for rij in rijen:
-        creator, x, y = rij[1], rij[8], rij[9]
-        n[creator] += 1
+        bron, x, y = uitgever(rij), rij[8], rij[9]
+        n[bron] += 1
         if x is not None:
-            per[creator][(round(x / RASTER_M), round(y / RASTER_M))] += 1
-    return {creator: {k for k, v in cnt.items() if v >= max(STANDAARDPUNT_MINIMUM, STANDAARDPUNT_AANDEEL * n[creator])}
-            for creator, cnt in per.items()}
+            per[bron][(round(x / RASTER_M), round(y / RASTER_M))] += 1
+    return {bron: {k for k, v in cnt.items() if v >= max(STANDAARDPUNT_MINIMUM, STANDAARDPUNT_AANDEEL * n[bron])}
+            for bron, cnt in per.items()}
 
 
 class Zaak:
@@ -188,43 +196,44 @@ def relevantie(rij):
 def vorm_zaken(rijen):
     sp = standaardpunten(rijen)
     zaken, toewijzing = [], {}
-    token_index = {}                              # (creator, token) -> zaak_id
-    cellen = collections.defaultdict(list)        # (creator, cx, cy) -> [zaak_id]
+    token_index = {}                              # (uitgever, token) -> zaak_id
+    cellen = collections.defaultdict(list)        # (uitgever, cx, cy) -> [zaak_id]
     overgeslagen = 0
 
     def cel(x, y):
         return (int(x // CEL_M), int(y // CEL_M))
 
     def registreer(z, rij, token):
+        bron = uitgever(rij)
         if token:
-            token_index[(z.creator, token)] = z.zaak_id
+            token_index[(bron, token)] = z.zaak_id
         x, y = rij[8], rij[9]
         if x is not None:
             cx, cy = cel(x, y)
-            lijst = cellen[(z.creator, cx, cy)]
+            lijst = cellen[(bron, cx, cy)]
             if not lijst or lijst[-1] != z.zaak_id:
                 lijst.append(z.zaak_id)
 
     for rij in rijen:
-        ident, creator, titel, x, y = rij[0], rij[1], rij[5], rij[8], rij[9]
+        ident, bron, titel, x, y = rij[0], uitgever(rij), rij[5], rij[8], rij[9]
         rel = relevantie(rij)
         if rel == "nee":
             overgeslagen += 1
             continue
         token = zaaknummer(titel)
         z, route = None, None
-        if token and (creator, token) in token_index:
-            kandidaat = zaken[token_index[(creator, token)] - 1]
+        if token and (bron, token) in token_index:
+            kandidaat = zaken[token_index[(bron, token)] - 1]
             if kandidaat.past(rij):
                 z, route = kandidaat, "zaaknummer"
-        loc_ok = x is not None and (round(x / RASTER_M), round(y / RASTER_M)) not in sp.get(creator, ())
+        loc_ok = x is not None and (round(x / RASTER_M), round(y / RASTER_M)) not in sp.get(bron, ())
         if z is None and loc_ok:
             cx, cy = cel(x, y)
             beste = None
             gezien = set()
             for dx in (-1, 0, 1):
                 for dy in (-1, 0, 1):
-                    for zid in reversed(cellen.get((creator, cx + dx, cy + dy), ())):
+                    for zid in reversed(cellen.get((bron, cx + dx, cy + dy), ())):
                         if zid in gezien:
                             continue
                         gezien.add(zid)
@@ -288,7 +297,7 @@ def meet(conn, jaar="2024", tot_maand="06"):
                 WHERE organisatietype='gemeente' AND datum_aanvraag >= ? AND datum_aanvraag < ? GROUP BY 1 HAVING n >= 200 ORDER BY 1.0*mu/n DESC""", van, tot)
 
     def med(cr):
-        d = [r[0] for r in q("SELECT doorlooptijd_dagen FROM zaak WHERE creator=? AND uitkomst='verleend' AND doorlooptijd_dagen IS NOT NULL AND datum_aanvraag >= ? AND datum_aanvraag < ? ORDER BY 1", cr, van, tot)]
+        d = [r[0] for r in q("SELECT doorlooptijd_dagen FROM zaak WHERE creator=? AND organisatietype='gemeente' AND uitkomst='verleend' AND doorlooptijd_dagen IS NOT NULL AND datum_aanvraag >= ? AND datum_aanvraag < ? ORDER BY 1", cr, van, tot)]
         return d[len(d) // 2] if d else None
     for cr, n, mu, v in rows[:8] + [("...", 0, 0, 0)] + rows[-8:]:
         if cr == "...":

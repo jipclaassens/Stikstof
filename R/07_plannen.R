@@ -156,13 +156,13 @@ analyse_duur <- function(naam, dt) {
 ## ---------------------------------------------------------------------
 ## (a) ZACHT -> HARD
 ## ---------------------------------------------------------------------
-a <- p[provinciecode %in% c(26, 27, 31)]
+a <- p[provinciecode %in% c(26, 27, 31)]   # CBS-provinciecodes: 26 Utrecht, 27 Noord-Holland, 31 Limburg
 a[, hard := as.integer(planstatus_binair_impute == 1)]
 a[is.na(hard), hard := 0L]
 a[, sample_analysis := fifelse(sample == 1, fifelse(contour, 2L, 1L), 0L)]
 a <- a[sample_analysis %in% 1:2]
 ra <- risicoset(a, "jaar_eerst_plan", "hard")
-R$zacht_hard <- analyse_duur("(a) zacht -> hard, NH + Gelderland + Limburg", ra)
+R$zacht_hard <- analyse_duur("(a) zacht -> hard, NH + Utrecht + Limburg", ra)
 
 ## ---------------------------------------------------------------------
 ## (b) HARD -> REALISATIE
