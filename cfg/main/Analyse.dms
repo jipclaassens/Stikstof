@@ -2,6 +2,7 @@ container Analyse : using = "units;classifications;geography;classifications/bag
 {  
 	#include<redev_obv_hele_bag.dms>
 	#include<N2000_Analyse.dms>
+	#include<Vinex.dms>
 	// #include<DetermineUrbanisationK.dms>
 	// #include <RedevelopmentOptionValue.dms>
 	// #include <sloop_nieuwbouw_snapshots_kwartalen.dms>

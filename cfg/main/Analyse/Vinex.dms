@@ -1,0 +1,58 @@
+container Vinex : using = "units;classifications;geography;classifications/bag"
+{
+	parameter<string> BagMap         := '%Redev_DataDir%/Vastgoed/VolledigeTabel_' + Parameters/BAG_file_date, Descr = "De volledige BAG-tabel, met alle historische versies van elk object.";
+	parameter<string> Uitvoermap     := '%LocalDataProjDir%/Vinex',                                         Descr = "Hier komt de export; de map moet bestaan.";
+	parameter<string> GebiedenRaster := Uitvoermap + '/vinex_gebieden_100m.tif',                            Descr = "Nummer per aaneengesloten Vinex-gebied, 0 is geen Vinex. Afgeleid uit VinexPlans.tif, dat een masker van 0 en 1 is, op hetzelfde grid van 100 meter als deze configuratie.";
+	parameter<string> ExportDatum    := Parameters/BAG_file_date,                                           Descr = "De BAG-jaargang, in de bestandsnaam van de export.";
+
+	attribute<int32> gebied (rdc_100m)
+	:	StorageName     = "= GebiedenRaster"
+	,	StorageType     = "gdal.grid"
+	,	StorageReadOnly = "True"
+	,	Source          = "VinexPlans.tif, Overig/Beleid in de gedeelde SourceData";
+
+	container Bron
+	:	Descr = "De mmd's van de volledige BAG, alleen geopend; de items komen uit het woordenboek van elke mmd. Sinds GeoDMS 20.15 mag een alleen-lezen mmd zijn items niet zelf declareren, vandaar deze eigen lezer naast SourceData/BAG/VolledigeBAG."
+	{
+		unit<uint32> vbo              : StorageName = "= BagMap + '/vbo.mmd'",              StorageReadOnly = "True";
+		unit<uint32> pand             : StorageName = "= BagMap + '/pand.mmd'",             StorageReadOnly = "True";
+		unit<uint32> nummeraanduiding : StorageName = "= BagMap + '/nummeraanduiding.mmd'", StorageReadOnly = "True";
+	}
+
+	container Impl
+	{
+		attribute<rdc>        geometry     (Bron/vbo) := Bron/vbo/geometry_mm[rdc];
+		attribute<rdc_100m>   cel_rel      (Bron/vbo) := geometry[rdc_100m];
+		attribute<int32>      gebied_rel   (Bron/vbo) := gebied[cel_rel];
+		attribute<vbo_status> status_rel   (Bron/vbo) := rlookup(Bron/vbo/meta/Status, vbo_status/label);
+		attribute<bool>       is_eindstand (Bron/vbo) := Bron/vbo/meta/Einddatum == 0i, Descr = "De geldende versie van het object; afgesloten versies hebben een einddatum.";
+		attribute<bool>       selectie     (Bron/vbo) := is_eindstand && vbo_status/IsVoorraad[status_rel] && Bron/vbo/gebruiksdoelen/woon && gebied_rel > 0i;
+
+		unit<uint32> pand_eindstand := select_with_org_rel(Bron/pand/meta/Einddatum == 0i)
+		{
+			attribute<string> identificatie := org_rel -> identificatie;
+			attribute<uint16> bouwjaar      := org_rel -> Bouwjaar;
+		}
+	}
+
+	unit<uint32> Woonobjecten := select_with_org_rel(Impl/selectie)
+	,	StorageName = "= Uitvoermap + '/vinex_woonobjecten_' + ExportDatum + '.csv'"
+	,	StorageType = "gdalwrite.vect"
+	,	Descr       = "Alle verblijfsobjecten met een woonfunctie die in de voorraad staan en binnen een Vinex-gebied vallen, met het bouwjaar van hun pand."
+	{
+		attribute<rdc>    geometry            := Impl/geometry[org_rel], DisableStorage = "TRUE";
+		attribute<string> nummeraanduiding_id := org_rel -> nummeraanduiding_id, DisableStorage = "TRUE";
+
+		attribute<string> vbo_id              := org_rel -> identificatie;
+		attribute<string> pand_id             := rjoin(vbo_id, Bron/vbo/gerelateerdPand/identificatie, Bron/vbo/gerelateerdPand/pand_id);
+		attribute<int32>  vinex_gebied        := Impl/gebied_rel[org_rel];
+		attribute<uint16> pand_bouwjaar       := rjoin(pand_id, Impl/pand_eindstand/identificatie, Impl/pand_eindstand/bouwjaar);
+		attribute<int32>  vbo_oppervlakte     := org_rel -> oppervlakte;
+		attribute<string> vbo_status          := org_rel -> meta/Status;
+		attribute<string> postcode            := rjoin(nummeraanduiding_id, Bron/nummeraanduiding/identificatie, Bron/nummeraanduiding/postcode);
+		attribute<string> woonplaats          := rjoin(nummeraanduiding_id, Bron/nummeraanduiding/identificatie, Bron/nummeraanduiding/woonplaats);
+		attribute<string> straatnaam          := rjoin(nummeraanduiding_id, Bron/nummeraanduiding/identificatie, Bron/nummeraanduiding/straatnaam);
+		attribute<float64> x                  := PointCol(geometry);
+		attribute<float64> y                  := PointRow(geometry);
+	}
+}
