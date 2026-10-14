@@ -47,6 +47,11 @@ UITKOMSTEN = ("verleend", "geweigerd", "ingetrokken", "vergunningvrij", "besluit
 
 _TOKEN = re.compile(r"(?<![\w.])(?=[A-Za-z0-9./_-]*\d{4})[A-Za-z]{0,8}[-_/.]?(?:\d{2,4}[-_/.])?\d{3,}(?:[-_/.]\d{2,})*(?![\w])")
 _DATUM8 = re.compile(r"^(19|20)\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])$")
+## Een datum met scheidingstekens in de titel moet weg voordat _TOKEN zoekt.
+## Anders eet die de dag op ("05-03-2026" wordt "03-2026"), houdt zes cijfers
+## over en gaat daarmee langs _DATUM8, dat alleen naar acht cijfers kijkt.
+## Twee publicaties van dezelfde gemeente uit dezelfde maand werden zo een zaak.
+_DATUM_TEKST = re.compile(r"(?<![\w-])(?:\d{1,2}[-/.]\d{1,2}[-/.](?:19|20)\d{2}|(?:19|20)\d{2}[-/.]\d{1,2}[-/.]\d{1,2}|\d{1,2}[-/.](?:19|20)\d{2})(?![\w-])")
 _HUISNR = re.compile(r"(?<![\w-])(\d{1,4}[a-zA-Z]?)(?![\w-])")
 _OMG = re.compile(r"omgevingsvergunning|omgevingsplan|omgevingswet|wabo|\bbopa\b|bouw|sloop|slopen|\bkap\b|kappen|uitrit|inrit|"
                   r"dakkapel|woning|aanbouw|uitbouw|dakopbouw|bijgebouw|schuur|garage|carport|gevel|monument|erfafscheiding|"
@@ -71,7 +76,7 @@ CREATE INDEX ix_pz_zaak ON publicatie_zaak (zaak_id);
 
 def zaaknummer(titel: str):
     """Het eerste zaaknummerachtige token in de titel, genormaliseerd; datums en jaartallen tellen niet."""
-    for m in _TOKEN.finditer(titel or ""):
+    for m in _TOKEN.finditer(_DATUM_TEKST.sub(" ", titel or "")):
         t = m.group(0)
         if sum(ch.isdigit() for ch in t) < 6:
             continue
