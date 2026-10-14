@@ -49,9 +49,14 @@ d <- read_derived("vbo_analyse")
 R <- list()
 EINDE <- as.Date(EXTRACT, "%Y%m%d")   # datum van het BAG-extract
 
+## Zoals in 09_aanvragen.R: met PYTHON=python draait dit ook op een machine
+## zonder 3.13. Beide scripts hieronder gebruiken alleen de standaardbibliotheek.
+PY     <- Sys.getenv("PYTHON", "py")
+PY_VER <- if (PY == "py") "-3.13" else character(0)
+
 f_pz <- file.path(PATHS$derived, "pand_zaak.csv")
 if (!file.exists(f_pz)) {
-  if (system2("py", c("-3.13", shQuote(normalizePath(file.path(.here, "17a_pand_zaak.py"))),
+  if (system2(PY, c(PY_VER, shQuote(normalizePath(file.path(.here, "17a_pand_zaak.py"))),
                       shQuote(normalizePath(f_pz, mustWork = FALSE)), shQuote(normalizePath(PATHS$verg)))) != 0)
     stop("17a_pand_zaak.py faalde")
 }
@@ -177,7 +182,7 @@ BATCH <- c(1948L, 1721L)
 f_pr <- file.path(PATHS$derived, "panden_recent.csv"); f_bn <- file.path(PATHS$derived, "besluit_nabij.csv")
 if (!file.exists(f_bn)) {
   fwrite(p[bvv >= as.Date("2025-06-01") & bvv <= as.Date("2026-06-30"), .(pand_id, bvv, x, y)], f_pr, sep = ";")
-  if (system2("py", c("-3.13", shQuote(normalizePath(file.path(.here, "17b_besluit_nabij.py"))), shQuote(normalizePath(f_pr)),
+  if (system2(PY, c(PY_VER, shQuote(normalizePath(file.path(.here, "17b_besluit_nabij.py"))), shQuote(normalizePath(f_pr)),
                       shQuote(normalizePath(f_bn, mustWork = FALSE)), shQuote(normalizePath(PATHS$verg)))) != 0)
     stop("17b_besluit_nabij.py faalde")
 }
