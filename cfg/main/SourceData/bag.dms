@@ -22,7 +22,6 @@ container BAG : using = "classifications;units"
 	parameter<string> vbo_voorraad_status_str  := 'status_rel == vbo_status/v/verblijfsobject_in_gebruik || status_rel == vbo_status/v/verblijfsobject_in_gebruik_niet_ingemeten || status_rel == vbo_status/v/verblijfsobject_buiten_gebruik || status_rel == vbo_status/v/verbouwing_verblijfsobject';
 	parameter<string> pand_voorraad_status_str := 'status_rel == pand_status/V/pand_in_gebruik || status_rel == pand_status/V/pand_in_gebruik_niet_ingemeten || status_rel == pand_status/V/pand_buiten_gebruik || status_rel == pand_status/V/verbouwing_pand';
 	
-	#include<MaakVolledigeBAG.dms>
 	#include<VolledigeBAG.dms>
 }
 

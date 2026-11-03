@@ -2,7 +2,6 @@ container Stikstof
 { 
 	container MaakOntkoppeldeData
 	{
-		parameter<string> MaakVolledigeBAGTabel                := 'Ready', ExplicitSuppliers = "/SourceData/BAG/MaakVolledigeBAG/MaakVolledigeBAGTabel";
 		parameter<string> Write_Relevant_Tiles_x_WegSpoor      := 'Ready', ExplicitSuppliers = "/SourceData/BRT/Write_Relevant_Tiles_x_WegSpoor/TiledNonWegSpoor";
 		parameter<string> Write_IsMogelijkWoningCorporatiePand := 'Ready', ExplicitSuppliers = "/SourceData/BAG/VolledigeBAG/panden/Src/Write_IsMogelijkWoningCorporatiePand";
 		parameter<string> Write_FinalMutationTable             := 'Ready', ExplicitSuppliers = "/Analyse/Redev_obv_hele_bag/PrepBAG/Write_FinalMutationTable";
@@ -22,7 +21,7 @@ container Stikstof
 		parameter<int32>     VBO_opp_truncation_lower        := 10i;
 		
 		parameter<string> BRT_file_date  := '20250318';
-		parameter<string> BAG_file_date  := '20260710'; //'20240708'; 20250115 20251009 20260108
+		parameter<string> BAG_file_date  := '20261008'; //'20240708'; 20250115 20251009 20260108 20260710; vanaf 20261008 de store van BAG-Tools (#31)
 		parameter<yr>     BAG_year          := left(BAG_file_date, 4)[yr];
 	}
 	

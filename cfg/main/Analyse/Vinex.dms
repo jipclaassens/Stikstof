@@ -1,9 +1,10 @@
 container Vinex : using = "units;classifications;geography;classifications/bag"
 {
-	parameter<string> BagMap         := '%Redev_DataDir%/Vastgoed/VolledigeTabel_' + Parameters/BAG_file_date, Descr = "De volledige BAG-tabel, met alle historische versies van elk object.";
+	parameter<string> BAGDatum       := '20260710',                                                         Descr = "De BAG-levering van deze analyse. Vast op juli 2026: de lezer hieronder leest het formaat van VolledigeTabel, dat voor latere leveringen niet meer bestaat (#31).";
+	parameter<string> BagMap         := '%Redev_DataDir%/Vastgoed/VolledigeTabel_' + BAGDatum,              Descr = "De volledige BAG-tabel, met alle historische versies van elk object.";
 	parameter<string> Uitvoermap     := '%LocalDataProjDir%/Vinex',                                         Descr = "Hier komt de export; de map moet bestaan.";
 	parameter<string> GebiedenRaster := Uitvoermap + '/vinex_gebieden_100m.tif',                            Descr = "Nummer per aaneengesloten Vinex-gebied, 0 is geen Vinex. Afgeleid uit VinexPlans.tif, dat een masker van 0 en 1 is, op hetzelfde grid van 100 meter als deze configuratie.";
-	parameter<string> ExportDatum    := Parameters/BAG_file_date,                                           Descr = "De BAG-jaargang, in de bestandsnaam van de export.";
+	parameter<string> ExportDatum    := BAGDatum,                                                           Descr = "De BAG-jaargang, in de bestandsnaam van de export.";
 	parameter<uint16> VanafBouwjaar  := 1995w,                                                              Descr = "Het eerste bouwjaar van de Vinex-periode; de landelijke export bevat de woningen in panden vanaf dit bouwjaar.";
 
 	attribute<int32> gebied (rdc_100m)

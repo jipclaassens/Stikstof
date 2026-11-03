@@ -467,7 +467,7 @@ container PrepBAG : using = "AdditionalClassifications"
 			parameter<int32> PrevYear;
 			//
 			
-			unit<uint32> PrevDomain := ='Per1Jan/y'+string(PrevYear)+'/select';
+			unit<uint32> PrevDomain := =PrevYear == 2011i ? 'range(uint32, 0, 0)' : 'Per1Jan/y'+string(PrevYear)+'/select', Descr = "De stand van het vorige jaar. Het eerste jaar heeft er geen; dan een lege verzameling, en alle items die hem lezen nemen voor dat jaar een vaste waarde.";
 			
 			unit<uint32> select := select_with_org_rel(begindatum < int32(string(Year)+'0101') && einddatum >= int32(string(Year)+'0101'))
 			, Descr = "stand op 1 januari"
@@ -1193,22 +1193,25 @@ container PrepBAG : using = "AdditionalClassifications"
 		}
 	}
 
-	unit<uint32> Read_FinalMutationTable
+	unit<uint32> Read_FinalMutationTable_Store
 	: StorageName = "='%LocalDataProjDir%/Temp/FinalMutationTable_'+/Parameters/BAG_Selection_Area+'_'+Parameters/BAG_file_date+'.mmd'"
 	, StorageReadOnly = "true"
+	, Descr = "De weggeschreven mutatietabel, alleen-lezen.";
+
+	unit<uint32> Read_FinalMutationTable := Read_FinalMutationTable_Store
 	{
-		// attribute<rdc>                      geometry;
-		// attribute<rdc>                      pand_geometry (poly);
-		// attribute<uint64>                   vbo_bag_nr;
-		// attribute<jaar>                     pand_bouwjaar;
-		// attribute<uint64>                   pand_bag_nr;
-		// attribute<int32>                    vbo_oppervlakte;
-		// attribute<pand_status>              pand_status_rel;
-		// attribute<int32>                    LastDatum_BouwvergunningVerleend;
-		// attribute<int32>                    MutatieMaand;
-		// attribute<MutatieTypen>             MutatieTypen_rel_src;
-		// attribute<MutatieTypen_UnID>        MutatieTypen_UnID_rel;
-		// attribute<MutatieTypen_Uitgesloten> MutatieTypen_Uitgesloten_rel;
+		attribute<rdc>                      geometry                         := Read_FinalMutationTable_Store/geometry;
+		attribute<rdc>                      pand_geometry (poly)             := Read_FinalMutationTable_Store/pand_geometry;
+		attribute<uint64>                   vbo_bag_nr                       := Read_FinalMutationTable_Store/vbo_bag_nr;
+		attribute<jaar>                     pand_bouwjaar                    := Read_FinalMutationTable_Store/pand_bouwjaar;
+		attribute<uint64>                   pand_bag_nr                      := Read_FinalMutationTable_Store/pand_bag_nr;
+		attribute<int32>                    vbo_oppervlakte                  := Read_FinalMutationTable_Store/vbo_oppervlakte;
+		attribute<pand_status>              pand_status_rel                  := Read_FinalMutationTable_Store/pand_status_rel;
+		attribute<int32>                    LastDatum_BouwvergunningVerleend := Read_FinalMutationTable_Store/LastDatum_BouwvergunningVerleend;
+		attribute<int32>                    MutatieMaand                     := Read_FinalMutationTable_Store/MutatieMaand;
+		attribute<MutatieTypen>             MutatieTypen_rel_src             := Read_FinalMutationTable_Store/MutatieTypen_rel_src;
+		attribute<MutatieTypen_UnID>        MutatieTypen_UnID_rel            := Read_FinalMutationTable_Store/MutatieTypen_UnID_rel;
+		attribute<MutatieTypen_Uitgesloten> MutatieTypen_Uitgesloten_rel     := Read_FinalMutationTable_Store/MutatieTypen_Uitgesloten_rel;
 		attribute<MutatieTypen>             MutatieTypen_rel      := MutatieTypen_rel_src; //#22: C+/C- niet meer blind naar T/O gemapt; echte DirectInVoorraad-toevoegingen/-nieuwbouw worden nu aan de bron getypeerd (IDEN_T_1b, IDEN_N_3), de rest is administratief
 
 		unit<uint32> ZonderCorrecties := select_with_org_rel(not(MakeDefined(MutatieTypen_rel_src == MutatieTypen/v/Cplus || MutatieTypen_rel_src == MutatieTypen/v/Cmin, FALSE)))
