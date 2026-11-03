@@ -1,7 +1,7 @@
 ## =====================================================================
 ## 07_plannen.R -- het plannenspoor: duur en aantal woningbouwplannen
 ##
-## Input : analyses/analysis_stikstof/analysis_files/afstand_n2000_plannen.dta
+## Input : analyses/analysis_stikstof/archive/analysis_files/afstand_n2000_plannen.dta
 ##         (Huubs analysebestand: provinciale planmonitoring gekoppeld aan
 ##          BAG, N2000-afstanden en gebiedskenmerken; 1 rij per subplan x jaar)
 ## Output: _output/plannen_<extract>.json
@@ -37,7 +37,8 @@ source(file.path(.here, "00_config.R"))
 suppressPackageStartupMessages({library(fixest); library(haven)})
 options(width = 200)
 
-PLANNEN_DTA <- "D:/Radboud Universiteit/Woningbouw RU-VU - General/analyses/analysis_stikstof/analysis_files/afstand_n2000_plannen.dta"
+## het analysebestand staat sinds 3 november 2026 in archive/ (mtime 24 maart 2026, dus hetzelfde bestand als eerder)
+PLANNEN_DTA <- "D:/Radboud Universiteit/Woningbouw RU-VU - General/analyses/analysis_stikstof/archive/analysis_files/afstand_n2000_plannen.dta"
 sink(file.path(PATHS$output, sprintf("plannen_%s.txt", EXTRACT)), split = TRUE)
 t0 <- Sys.time()
 

@@ -48,6 +48,7 @@ t0 <- Sys.time()
 d <- read_derived("vbo_analyse")
 R <- list()
 EINDE <- as.Date(BAG_DATUM, "%Y%m%d")   # de BAG-levering achter het extract (00_config.R), niet de exportdatum
+VOLG_DAGEN <- 90L   # vervolg dat een pand minstens moet hebben voor de bouwstart binnen 60 en 90 dagen
 
 ## Zoals in 09_aanvragen.R: met PYTHON=python draait dit ook op een machine
 ## zonder 3.13. Beide scripts hieronder gebruiken alleen de standaardbibliotheek.
@@ -93,10 +94,13 @@ R$meta <- list(extract = EXTRACT, gemaakt = format(Sys.time(), "%Y-%m-%d %H:%M")
 ## 1. Van vergunning tot bouwstart
 ## ---------------------------------------------------------------------
 kop("1. Aandeel panden met Bouw gestart binnen 60 en 90 dagen na Bouwvergunning verleend")
-## alleen panden met minstens 90 dagen tussen vergunning en extract
-R$start <- p[volg >= 90, .(panden = .N, objecten = sum(objecten), zonder_start = mean(is.na(start)),
-                          binnen60 = mean(!is.na(dagen_start) & dagen_start <= 60),
-                          binnen90 = mean(!is.na(dagen_start) & dagen_start <= 90)), by = .(type, hj)]
+## alleen panden met minstens VOLG_DAGEN dagen tussen vergunning en BAG-levering, en alleen halfjaren waarin elk pand
+## dat vervolg heeft: van het laatste halfjaar blijven anders alleen de eerste dagen over
+hj_einde <- function(hj) as.Date(paste0(substr(hj, 1L, 4L), fifelse(substr(hj, 5L, 6L) == "H1", "-06-30", "-12-31")))
+R$start <- p[volg >= VOLG_DAGEN, .(panden = .N, objecten = sum(objecten), zonder_start = mean(is.na(start)),
+                                  binnen60 = mean(!is.na(dagen_start) & dagen_start <= 60),
+                                  binnen90 = mean(!is.na(dagen_start) & dagen_start <= 90)), by = .(type, hj)]
+R$start <- R$start[hj_einde(hj) + VOLG_DAGEN <= EINDE]
 setorder(R$start, type, hj)
 print(R$start[, lapply(.SD, function(x) if (is.numeric(x)) round(x, 3) else x)])
 
@@ -128,7 +132,7 @@ print(R$publicatie[, lapply(.SD, function(x) if (is.numeric(x)) round(x, 3) else
 kop("3. Per ring en periode, en binnen gemeente en periode: binnenste kilometer tegenover verder dan 5 km")
 R$ring <- k[uitkomst %in% "verleend" & periode != "voor juli 2021",
             .(panden = .N, later30 = mean(na_publ > 30)), by = .(type, periode, ring)]
-R$ring <- merge(R$ring, p[volg >= 90 & bvv >= as.Date("2021-07-01") & bvv <= as.Date("2026-06-30"),
+R$ring <- merge(R$ring, p[volg >= VOLG_DAGEN & bvv >= as.Date("2021-07-01") & bvv <= as.Date("2026-06-30"),
                           .(panden_start = .N, binnen60 = mean(!is.na(dagen_start) & dagen_start <= 60)), by = .(type, periode, ring)],
                 by = c("type", "periode", "ring"), all = TRUE)
 setorder(R$ring, type, periode, ring)
@@ -157,7 +161,7 @@ ring_did <- function(dt, uitkomst) {
       }][]
 }
 k[, later30 := as.integer(na_publ > 30)]
-kk <- p[volg >= 90 & bvv >= as.Date("2021-07-01") & bvv <= as.Date("2026-06-30")]
+kk <- p[volg >= VOLG_DAGEN & bvv >= as.Date("2021-07-01") & bvv <= as.Date("2026-06-30")]
 kk[, binnen60 := as.integer(!is.na(dagen_start) & dagen_start <= 60)]
 R$ring_did <- rbindlist(lapply(c("eengezins", "meergezins"), function(ty) rbind(
   cbind(type = ty, uitkomst = "later dan 30 dagen na publicatie", ring_did(k[uitkomst %in% "verleend" & type == ty], "later30")),
