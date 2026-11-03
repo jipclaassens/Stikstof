@@ -48,12 +48,17 @@ R <- list()   # het resultaatobject; weggeschreven met to_json() uit 00_config.R
 ## ---------------------------------------------------------------------
 d <- read_derived("vbo_analyse")
 
+## KW_START is de oorsprong van de kwartaalindex (q = 1 is 2012Q1), niet het
+## begin van de analyse: dat is JAAR_MIN uit 00_config.R. Zo blijven de
+## kwartaalnummers in de code gelijk als het startjaar verschuift.
 KW_START <- 2012L
 kw_index <- function(datum) {
   y <- as.integer(format(datum, "%Y")); m <- as.integer(format(datum, "%m"))
   (y - KW_START) * 4L + (m - 1L) %/% 3L + 1L
 }
 kw_label <- function(q) sprintf("%dQ%d", KW_START + (q - 1L) %/% 4L, (q - 1L) %% 4L + 1L)
+JAAR_MIN <- PARAMS$jaar_min
+Q_MIN    <- kw_index(as.Date(sprintf("%d-01-01", JAAR_MIN)))
 
 EVENTS <- data.table(
   naam   = c("PAS-uitspraak", "Logtsebaan", "bouwvrijstelling", "Porthos", "Omgevingswet + Wkb", "intern salderen", "Pasgeld-West"),
@@ -79,7 +84,7 @@ Q_MAX_VERG <- kw_index(as.Date("2026-03-31"))   # 2026Q2: piek van juni 2026 (17
 Q_MAX_NWB  <- kw_index(as.Date("2026-06-30"))
 
 R$meta <- list(extract = EXTRACT, bag_datum = "20260710", gemaakt = format(Sys.time(), "%Y-%m-%d %H:%M"),
-               kw_start = KW_START, q_ref = Q_REF, q_pas = Q_PAS, q_por = Q_POR, q_sal = Q_SAL,
+               kw_start = KW_START, jaar_min = JAAR_MIN, q_min = Q_MIN, q_ref = Q_REF, q_pas = Q_PAS, q_por = Q_POR, q_sal = Q_SAL,
                q_max_verg = Q_MAX_VERG, q_max_nwb = Q_MAX_NWB,
                kw_labels = kw_label(1:Q_MAX_NWB))
 R$events <- EVENTS[, .(naam, datum, kwartaal = kw, q, soort, hoofd, ecli, strekking)]
@@ -152,11 +157,11 @@ R$data$matrix <- s[, .(N = .N, ambigu = sum(uitkomst_ambigu), gesloopt = sum(lat
                     by = .(cbs = cbs_nieuwbouw, pand, vbo, groep = uitkomstgroep)][N >= 200][order(groep, -N)]
 
 ## censurering: aandeel pipeline per vergunningjaar x nabij
-sv <- s[!is.na(vergunning_jaar) & vergunning_jaar >= 2012 & vergunning_jaar <= 2025]
+sv <- s[!is.na(vergunning_jaar) & vergunning_jaar >= JAAR_MIN & vergunning_jaar <= 2025]
 sv[, nabij := fifelse(kl2500 == 1, "nabij", "ver")]
 R$data$censurering <- dcast(sv[, .(pct = round(100 * mean(uitkomst == "pipeline"), 1)), by = .(jaar = vergunning_jaar, nabij)],
                             jaar ~ nabij, value.var = "pct")
-dur <- s[!is.na(duur_tot_oplevering) & duur_tot_oplevering > 0 & vergunning_jaar >= 2012]
+dur <- s[!is.na(duur_tot_oplevering) & duur_tot_oplevering > 0 & vergunning_jaar >= JAAR_MIN]
 R$data$doorlooptijd <- list(mediaan_jr = round(median(dur$duur_tot_oplevering) / 365.25, 2),
                             p25 = round(quantile(dur$duur_tot_oplevering, .25) / 365.25, 2),
                             p75 = round(quantile(dur$duur_tot_oplevering, .75) / 365.25, 2))
@@ -256,15 +261,18 @@ fit_regime <- function(p, cl = ~prov_k) {
 zet_D_afstand <- function(p, dr) { p[, D := as.integer(k <= dr / PARAMS$klasse_breedte)]; invisible(p) }
 N_KL <- as.integer(PARAMS$klasse_max_m / PARAMS$klasse_breedte) + 1L
 
-## Steekproeven per kwartaal
-verg <- s[!is.na(vergunning_datum) & vergunning_datum >= as.Date("2012-01-01")]
+## Steekproeven per kwartaal. UIT_VANAF_INDEX houdt ook 2012 en 2013 vast, alleen
+## voor de robuustheidsvariant; alle andere analyses beginnen bij JAAR_MIN.
+verg <- s[!is.na(vergunning_datum) & vergunning_datum >= as.Date(sprintf("%d-01-01", KW_START))]
 verg[, q := kw_index(vergunning_datum)]; verg <- verg[q >= 1 & q <= Q_MAX_VERG]
 nwb <- d[cbs_nieuwbouw == TRUE & projecttype != "admin_fout" & !is.na(dist2n2000_m) & !is.na(provinciecode) & !is.na(mutatiemaand)]
 nwb[, q := kw_index(mutatiemaand)]; nwb <- nwb[q >= 1 & q <= Q_MAX_NWB]
 nwb[, pid_cl := fifelse(!is.na(cluster_rel), paste(gemeentecode, cluster_rel), paste0("__los_", .I))]
 nwb[, pid_doc := projectid]
 nwb[, jaar := mutatiejaar]; verg[, jaar := vergunning_jaar]
-UIT <- list(vergunningen = verg, nieuwbouw = nwb)
+UIT_VANAF_INDEX <- list(vergunningen = verg, nieuwbouw = nwb)
+UIT <- lapply(UIT_VANAF_INDEX, function(x) x[q >= Q_MIN])
+verg <- UIT$vergunningen; nwb <- UIT$nieuwbouw          # verderop gebruikt, ook bij de depositie
 
 ## ---------------------------------------------------------------------
 ## 3. SERIES
@@ -306,7 +314,7 @@ for (u in names(UIT)) {
     es <- fit_es(p, Q_REF)
     w  <- wald_pre(es$model, min(Q_REF))
     g1 <- gem_regime(es$model, Q_PAS, Q_SAL - 1L); g2 <- gem_regime(es$model, Q_SAL, q_max)
-    g0 <- gem_regime(es$model, 1L, min(Q_REF) - 1L)
+    g0 <- gem_regime(es$model, Q_MIN, min(Q_REF) - 1L)
     out[[as.character(dr)]] <- list(drempel = dr, coef = es$tab[, .(t, kw = kw_label(t), b, se, irr, lo, hi)],
                                     pre_wald = w, gem_pre = g0, gem_pas = g1, gem_sal = g2)
     reg[[as.character(dr)]] <- c(list(drempel = dr), fit_regime(p))
@@ -334,15 +342,15 @@ robuust <- function(u) {
     rij("zonder seizoens-FE", P(dt, szn = FALSE)),
     rij("jaar i.p.v. kwartaal", P(dt, tijd = "jaar", szn = FALSE), post = 2019),
     rij("cluster-id i.p.v. documentnr", P(dt, id = "pid_cl")),
-    rij("vanaf 2014", P(dt[q >= kw_index(as.Date("2014-01-01"))])),
+    rij(sprintf("vanaf %d, met de registratieachterstand", KW_START), P(UIT_VANAF_INDEX[[u]])),
     rij("t/m 2023 (voor Omgevingswet)", P(dt[q <= kw_index(as.Date("2023-12-31"))])),
     rij("cluster se: afstandsklasse", P(dt), cl = ~k),
     rij("cluster se: provincie", P(dt), cl = ~provinciecode),
-    rij("placebo: 2016Q1 op 2012-2018", P(dt[q <= max(Q_REF)]), post = kw_index(as.Date("2016-01-01")))
+    rij(sprintf("placebo: 2016Q1 op %d-2018", JAAR_MIN), P(dt[q <= max(Q_REF)]), post = kw_index(as.Date("2016-01-01")))
   )
   if (u == "nieuwbouw") {
     alles <- d[cbs_nieuwbouw == TRUE & !is.na(dist2n2000_m) & !is.na(provinciecode) & !is.na(mutatiemaand)]
-    alles[, q := kw_index(mutatiemaand)]; alles <- alles[q >= 1 & q <= Q_MAX_NWB]; alles[, pid_doc := projectid]
+    alles[, q := kw_index(mutatiemaand)]; alles <- alles[q >= Q_MIN & q <= Q_MAX_NWB]; alles[, pid_doc := projectid]
     out <- c(out, list(rij("geen statusfilter", P(alles))))
     st <- alles[!grepl("Niet_gerealiseerd_pand|Pand_gesloopt|Sloopvergunning_verleend|Pand_ten_onrechte_opgevoerd", pand_status_mutatie)]
     out <- c(out, list(rij("Stata-filter (pand_status snapshot)", P(st))))
@@ -387,17 +395,17 @@ for (u in names(UIT)) {
 ## 7. UITVAL en PIJPLIJN: cohortanalyse met vast venster
 ## ---------------------------------------------------------------------
 kop("7. Uitval en pijplijn")
-co <- s[!is.na(vergunning_jaar) & vergunning_jaar >= 2012 & vergunning_jaar <= 2021]
+co <- s[!is.na(vergunning_jaar) & vergunning_jaar >= JAAR_MIN & vergunning_jaar <= 2021]
 co[, `:=`(D = kl2500, post = as.integer(vergunning_jaar >= 2019), y4 = as.integer(gerealiseerd_binnen_4jr),
           prov_jaar = paste(provinciecode, vergunning_jaar), prov_k = paste(provinciecode, afstandsklasse))]
-cat("cohorten 2012-2021, NA in gerealiseerd_binnen_4jr:", sum(is.na(co$y4)), "\n")
+cat(sprintf("cohorten %d-2021, NA in gerealiseerd_binnen_4jr:", JAAR_MIN), sum(is.na(co$y4)), "\n")
 tab4 <- dcast(co[!is.na(y4), .(pct = round(100 * mean(y4), 1), N = .N), by = .(jaar = vergunning_jaar, nabij = fifelse(D == 1, "nabij", "ver"))],
               jaar ~ nabij, value.var = c("pct", "N"))
 m4 <- feols(y4 ~ D:post | prov_jaar + prov_k, data = co[!is.na(y4)], cluster = ~prov_k)
 es4 <- feols(y4 ~ i(vergunning_jaar, D, ref = 2018) | prov_jaar + prov_k, data = co[!is.na(y4)], cluster = ~prov_k)
 cf <- coef(es4); se4 <- se(es4)
 ## uitval-eindstand voor oude cohorten (<= 2019, minstens 6 jaar opvolging)
-uit <- s[!is.na(vergunning_jaar) & vergunning_jaar >= 2012 & vergunning_jaar <= 2019]
+uit <- s[!is.na(vergunning_jaar) & vergunning_jaar >= JAAR_MIN & vergunning_jaar <= 2019]
 tabu <- dcast(uit[, .(pct = round(100 * mean(uitkomst == "uitval"), 2)), by = .(jaar = vergunning_jaar, nabij = fifelse(kl2500 == 1, "nabij", "ver"))],
               jaar ~ nabij, value.var = "pct")
 R$uitval <- list(
@@ -433,7 +441,7 @@ suppressPackageStartupMessages(library(survival))
 ## kost. De cache vervalt vanzelf bij een nieuw extract of een nieuwe
 ## vbo_analyse.rds; hoog het versienummer hieronder op zodra je de
 ## SPECIFICATIE van een van de drie blokken verandert.
-R$duur <- met_cache("duur", "1", {
+R$duur <- met_cache("duur", "2", {   # 2: cohorten vanaf JAAR_MIN in plaats van 2012
 
 kop("7b. Duur")
 DU <- list()
@@ -441,18 +449,18 @@ DU <- list()
 ## (i) vensters
 vensters <- rbindlist(lapply(c(3L, 4L, 5L), function(j) {
   v <- paste0("gerealiseerd_binnen_", j, "jr")
-  cj <- s[!is.na(vergunning_jaar) & vergunning_jaar >= 2012 & vergunning_jaar <= (2025L - j) & !is.na(get(v))]
+  cj <- s[!is.na(vergunning_jaar) & vergunning_jaar >= JAAR_MIN & vergunning_jaar <= (2025L - j) & !is.na(get(v))]
   cj[, `:=`(y = as.integer(get(v)), D = kl2500, post = as.integer(vergunning_jaar >= 2019),
             prov_jaar = paste(provinciecode, vergunning_jaar), prov_k = paste(provinciecode, afstandsklasse))]
   m <- feols(y ~ D:post | prov_jaar + prov_k, data = cj, cluster = ~prov_k)
-  data.table(venster_jr = j, cohorten = sprintf("2012-%d", 2025L - j), b = coef(m)[["D:post"]], se = se(m)[["D:post"]], n = m$nobs,
+  data.table(venster_jr = j, cohorten = sprintf("%d-%d", JAAR_MIN, 2025L - j), b = coef(m)[["D:post"]], se = se(m)[["D:post"]], n = m$nobs,
              basis_nabij_pre = round(mean(cj[D == 1 & post == 0, y]), 3), basis_ver_pre = round(mean(cj[D == 0 & post == 0, y]), 3))
 }))
 DU$vensters <- vensters
 print(vensters)
 
-## (ii) doorlooptijd onder opgeleverde objecten, cohorten 2012-2021
-dd <- s[!is.na(vergunning_jaar) & vergunning_jaar >= 2012 & vergunning_jaar <= 2021 &
+## (ii) doorlooptijd onder opgeleverde objecten, cohorten JAAR_MIN-2021
+dd <- s[!is.na(vergunning_jaar) & vergunning_jaar >= JAAR_MIN & vergunning_jaar <= 2021 &
           !is.na(duur_tot_oplevering) & duur_tot_oplevering > 0 & duur_tot_oplevering <= 4 * 365.25]
 dd[, `:=`(nabij = fifelse(kl2500 == 1, "nabij", "ver"),
           duur_bouwstart = as.integer(bouwstart_eerste_datum - vergunning_datum))]
@@ -468,8 +476,8 @@ DU$logduur_did <- list(b = coef(mld)[["D:post"]], se = se(mld)[["D:post"]], n = 
 cat(sprintf("log(doorlooptijd) DiD onder opgeleverd binnen 4 jr: %+.4f (%.4f)\n", coef(mld)[["D:post"]], se(mld)[["D:post"]]))
 print(DU$mediaan)
 
-## (iii) Cox met censurering, cohorten 2012-2025
-cb <- s[!is.na(vergunning_jaar) & vergunning_jaar >= 2012 & vergunning_jaar <= 2025 & !is.na(opvolgtijd_dagen) & opvolgtijd_dagen > 0]
+## (iii) Cox met censurering, cohorten JAAR_MIN-2025
+cb <- s[!is.na(vergunning_jaar) & vergunning_jaar >= JAAR_MIN & vergunning_jaar <= 2025 & !is.na(opvolgtijd_dagen) & opvolgtijd_dagen > 0]
 cb[, event := as.integer(!is.na(duur_tot_oplevering) & duur_tot_oplevering > 0 & duur_tot_oplevering <= opvolgtijd_dagen)]
 cb[, tijd  := fifelse(event == 1L, as.numeric(duur_tot_oplevering), as.numeric(opvolgtijd_dagen))]
 cb <- cb[tijd > 0]
@@ -502,7 +510,7 @@ print(DU$cox_es[, .(jaar, hr = round(hr, 3), lo = round(lo, 3), hi = round(hi, 3
 ## bij 78% van de opgeleverde objecten bekend. Twee fasen, elk met een
 ## mediaan, een DiD op de logaritme en een Cox met censurering.
 kop("7c. Bouwstart")
-bs <- s[!is.na(vergunning_jaar) & vergunning_jaar >= 2012 & vergunning_jaar <= 2021]
+bs <- s[!is.na(vergunning_jaar) & vergunning_jaar >= JAAR_MIN & vergunning_jaar <= 2021]
 bs[, `:=`(d1 = as.integer(bouwstart_eerste_datum - vergunning_datum),
           d2 = as.integer(oplevering_eerste_datum - bouwstart_eerste_datum),
           nabij = fifelse(kl2500 == 1, "nabij", "ver"), D = kl2500, post = as.integer(vergunning_jaar >= 2019),
@@ -512,7 +520,7 @@ f2 <- bs[!is.na(d2) & d2 > 0 & !is.na(d1) & d1 >= 0 & d2 <= 4 * 365.25]
 m1 <- feols(log1p(d1) ~ D:post | prov_jaar + prov_k, data = f1, cluster = ~prov_k)
 m2 <- feols(log(d2) ~ D:post | prov_jaar + prov_k, data = f2, cluster = ~prov_k)
 ## Cox op tijd tot bouwstart, gecensureerd op de extractdatum
-cbs <- s[!is.na(vergunning_jaar) & vergunning_jaar >= 2012 & vergunning_jaar <= 2025 & !is.na(opvolgtijd_dagen) & opvolgtijd_dagen > 0]
+cbs <- s[!is.na(vergunning_jaar) & vergunning_jaar >= JAAR_MIN & vergunning_jaar <= 2025 & !is.na(opvolgtijd_dagen) & opvolgtijd_dagen > 0]
 cbs[, d1 := as.integer(bouwstart_eerste_datum - vergunning_datum)]
 cbs[, event := as.integer(!is.na(d1) & d1 > 0 & d1 <= opvolgtijd_dagen)]
 cbs[, tijd := fifelse(event == 1L, as.numeric(d1), as.numeric(opvolgtijd_dagen))]
@@ -545,7 +553,7 @@ cat(sprintf("Cox tijd tot bouwstart: HR %.3f [%.3f - %.3f]\n", exp(bb), exp(bb -
 ##    steekproef van 150.000 objecten omdat de gewogen dataset anders te
 ##    groot wordt
 kop("7d. Competing risks")
-cr <- s[!is.na(vergunning_jaar) & vergunning_jaar >= 2012 & vergunning_jaar <= 2025 & !is.na(opvolgtijd_dagen) & opvolgtijd_dagen > 0]
+cr <- s[!is.na(vergunning_jaar) & vergunning_jaar >= JAAR_MIN & vergunning_jaar <= 2025 & !is.na(opvolgtijd_dagen) & opvolgtijd_dagen > 0]
 cr[, t_opl := fifelse(!is.na(duur_tot_oplevering) & duur_tot_oplevering > 0 & duur_tot_oplevering <= opvolgtijd_dagen, as.numeric(duur_tot_oplevering), NA_real_)]
 cr[, t_uit := fifelse(uitkomst == "uitval" & last_pand_status %chin% c("Niet_gerealiseerd_pand", PAND_GESLOOPT) & !is.na(last_pand_status_datum),
                       as.numeric(last_pand_status_datum - vergunning_datum), NA_real_)]

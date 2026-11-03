@@ -69,7 +69,15 @@ PARAMS <- list(
   ## Waarnemingsvenster. 2026 is een halve jaargang (mutaties t/m 2026-07)
   ## en moet er altijd uit. 2024 is het eerste jaar onder de Omgevingswet
   ## en de Wkb-"knip" -> zie CHECK in 03_checks.R en de gevoeligheidsanalyse.
-  jaar_min         = 2012,
+  ##
+  ## De analyses beginnen in 2014, niet in 2012. In 2012 telt de BAG een
+  ## derde meer nieuwbouw dan StatLine 82235NED en in 2013 een twaalfde meer;
+  ## vanaf 2014 sluiten de twee binnen een procent op elkaar aan. Daarnaast
+  ## mist in 2012 en 2013 een kwart en ruim een achtste van de nieuwbouw een
+  ## vergunningrecord. 2012 blijft in de robuustheidstabel als variant.
+  ## De kwartaalindex in de scripts telt wel vanaf 2012 (KW_START), zodat
+  ## de kwartaalnummers in de code niet verschuiven.
+  jaar_min         = 2014,
   jaar_max         = 2025,
   wkb_breuk_jaar   = 2024,
 

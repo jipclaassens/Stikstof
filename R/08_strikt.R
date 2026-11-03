@@ -58,6 +58,10 @@ kw_index <- function(datum) {
   (y - KW_START) * 4L + (m - 1L) %/% 3L + 1L
 }
 kw_label <- function(q) sprintf("%dQ%d", KW_START + (q - 1L) %/% 4L, (q - 1L) %% 4L + 1L)
+## KW_START is de oorsprong van de kwartaalindex, niet het begin van de analyse:
+## dat is PARAMS$jaar_min (zie 00_config.R), zodat 2012 en 2013 wegvallen.
+JAAR_MIN <- PARAMS$jaar_min
+Q_MIN    <- kw_index(as.Date(sprintf("%d-01-01", JAAR_MIN)))
 Q_REF <- kw_index(as.Date(c("2018-01-01", "2018-04-01", "2018-07-01", "2018-10-01")))
 Q_PAS <- kw_index(as.Date("2019-05-29"))
 Q_POR <- kw_index(as.Date("2022-11-02"))
@@ -71,9 +75,9 @@ N_KL <- as.integer(PARAMS$klasse_max_m / PARAMS$klasse_breedte) + 1L
 ## ---------------------------------------------------------------------
 s <- d[in_sample == TRUE]
 verg <- s[!is.na(vergunning_datum) & vergunning_datum >= as.Date("2012-01-01")]
-verg[, q := kw_index(vergunning_datum)]; verg <- verg[q >= 1 & q <= Q_MAX_VERG]
+verg[, q := kw_index(vergunning_datum)]; verg <- verg[q >= Q_MIN & q <= Q_MAX_VERG]
 nwb <- d[cbs_nieuwbouw == TRUE & projecttype != "admin_fout" & !is.na(dist2n2000_m) & !is.na(provinciecode) & !is.na(mutatiemaand)]
-nwb[, q := kw_index(mutatiemaand)]; nwb <- nwb[q >= 1 & q <= Q_MAX_NWB]
+nwb[, q := kw_index(mutatiemaand)]; nwb <- nwb[q >= Q_MIN & q <= Q_MAX_NWB]
 UIT <- list(vergunningen = verg, nieuwbouw = nwb)
 
 R$meta <- list(extract = EXTRACT, gemaakt = format(Sys.time(), "%Y-%m-%d %H:%M"),
@@ -228,7 +232,7 @@ for (u in names(UIT)) {
 ## ---------------------------------------------------------------------
 ## 3. E en F: eigen trend per gemeente, trendbreuk; venster t/m 2024Q3
 ## ---------------------------------------------------------------------
-kop("E en F. Eigen trend per gemeente en trendbreuk, 2012Q1 t/m 2024Q3")
+kop("E en F. Eigen trend per gemeente en trendbreuk, %s t/m 2024Q3", kw_label(Q_MIN))
 R$trend <- list()
 for (u in names(UIT)) {
   p <- paneel_gemeente(UIT[[u]], 2500)[t <= Q_SAL - 1L]
@@ -246,7 +250,7 @@ for (u in names(UIT)) {
 }
 
 ## ---------------------------------------------------------------------
-## 4. Placebo: nepgebeurtenis 2016Q1 op 2012-2018, streng
+## 4. Placebo: nepgebeurtenis 2016Q1 op JAAR_MIN tot en met 2018, streng
 ## ---------------------------------------------------------------------
 kop("Placebo 2016Q1, streng")
 R$placebo <- rbindlist(lapply(names(UIT), function(u) {

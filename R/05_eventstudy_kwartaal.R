@@ -96,15 +96,19 @@ cat(sprintf("laatste kwartaal nieuwbouw   : %s\n", kw_label(q_max_nwb)))
 ## Steekproeven
 ## ---------------------------------------------------------------------
 
+## De kwartaalindex telt vanaf KW_START (2012), de analyse begint bij
+## PARAMS$jaar_min: zie de toelichting in 00_config.R.
+q_min <- kw_index(as.Date(sprintf("%d-01-01", PARAMS$jaar_min)))
+
 verg <- d[in_sample == TRUE & !is.na(vergunning_datum) &
             vergunning_datum >= as.Date(sprintf("%d-01-01", KW_START))]
 verg[, q := kw_index(vergunning_datum)]
-verg <- verg[q >= 1L & q <= q_max_verg]
+verg <- verg[q >= q_min & q <= q_max_verg]
 
 nwb <- d[cbs_nieuwbouw == TRUE & projecttype != "admin_fout" &
            !is.na(dist2n2000_m) & !is.na(provinciecode) & !is.na(mutatiemaand)]
 nwb[, q := kw_index(mutatiemaand)]
-nwb <- nwb[q >= 1L & q <= q_max_nwb]
+nwb <- nwb[q >= q_min & q <= q_max_nwb]
 
 cat(sprintf("\nvergunningen : %s objecten, %s t/m %s\n", nfmt(nrow(verg)),
             kw_label(min(verg$q)), kw_label(max(verg$q))))
@@ -209,8 +213,8 @@ for (uitkomst in c("vergunningen", "nieuwbouw")) {
     g2 <- regime_gemiddelde(es$model, Q_SAL, q_max)
 
     cat(sprintf("\n--- drempel %d m ---\n", dr))
-    cat(sprintf("pre-trend (joint Wald, %d kwartalen 2012Q1-2017Q4): stat = %.1f, p = %.3f\n",
-                w["df"], w["stat"], w["p"]))
+    cat(sprintf("pre-trend (joint Wald, %d kwartalen %s-2017Q4): stat = %.1f, p = %.3f\n",
+                w["df"], kw_label(q_min), w["stat"], w["p"]))
     cat(sprintf("gemiddeld %s t/m %s : IRR %.3f [%.3f - %.3f]  (%d kwartalen)\n",
                 kw_label(Q_PAS), kw_label(Q_SAL - 1L), g1["irr"], g1["lo"], g1["hi"], g1["n_kw"]))
     cat(sprintf("gemiddeld %s t/m %s : IRR %.3f [%.3f - %.3f]  (%d kwartalen)\n",

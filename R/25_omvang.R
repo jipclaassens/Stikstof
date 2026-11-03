@@ -23,10 +23,10 @@
 ## ---------------------------------------------------------------------
 ## Project   : gemeente plus documentnummer van de vergunning (projectid).
 ## Vergund   : objecten met in_sample en een eerste bouwvergunning van
-##             2012Q1 tot en met 2026Q1 (hoofdzaak). Een project telt een
+##             2014Q1 tot en met 2026Q1 (hoofdzaak). Een project telt een
 ##             keer, in het kwartaal van zijn eerste vergunning.
 ## Opgeleverd: objecten met cbs_nieuwbouw, zonder admin_fout, met een
-##             mutatiemaand van 2012Q1 tot en met 2026Q2. Een project telt
+##             mutatiemaand van 2014Q1 tot en met 2026Q2. Een project telt
 ##             een keer, in het kwartaal van zijn eerste oplevering; ook
 ##             08_strikt.R telt opleveringen in het kwartaal van de mutatie.
 ## Nabij     : de kleinste afstand van de objecten van het project in de
@@ -97,6 +97,10 @@ kw_index <- function(datum) {
   (y - KW_START) * 4L + (m - 1L) %/% 3L + 1L
 }
 kw_label <- function(q) sprintf("%dQ%d", KW_START + (q - 1L) %/% 4L, (q - 1L) %% 4L + 1L)
+## KW_START is de oorsprong van de kwartaalindex, niet het begin van de analyse:
+## dat is PARAMS$jaar_min (zie 00_config.R), zodat 2012 en 2013 wegvallen.
+JAAR_MIN <- PARAMS$jaar_min
+Q_MIN    <- kw_index(as.Date(sprintf("%d-01-01", JAAR_MIN)))
 Q_PAS <- kw_index(as.Date("2019-05-29"))
 Q_OW  <- kw_index(as.Date("2024-01-01"))   # Omgevingswet
 Q_SAL <- kw_index(as.Date("2024-12-18"))   # uitspraak over intern salderen
@@ -113,9 +117,9 @@ SCHATTERS <- c("log-OLS", "Poisson")
 ## ---------------------------------------------------------------------
 s <- d[in_sample == TRUE]
 verg <- s[!is.na(vergunning_datum) & vergunning_datum >= as.Date("2012-01-01")]
-verg[, q := kw_index(vergunning_datum)]; verg <- verg[q >= 1 & q <= Q_MAX[["vergund"]]]
+verg[, q := kw_index(vergunning_datum)]; verg <- verg[q >= Q_MIN & q <= Q_MAX[["vergund"]]]
 nwb <- d[cbs_nieuwbouw == TRUE & projecttype != "admin_fout" & !is.na(dist2n2000_m) & !is.na(provinciecode) & !is.na(mutatiemaand)]
-nwb[, q := kw_index(mutatiemaand)]; nwb <- nwb[q >= 1 & q <= Q_MAX[["opgeleverd"]]]
+nwb[, q := kw_index(mutatiemaand)]; nwb <- nwb[q >= Q_MIN & q <= Q_MAX[["opgeleverd"]]]
 UIT <- list(vergund = verg, opgeleverd = nwb)
 
 ## ---------------------------------------------------------------------
@@ -160,12 +164,12 @@ zet_nabij <- function(x, dr, afstand = "dmin") {
 R$meta <- list(
   extract = EXTRACT, gemaakt = format(Sys.time(), "%Y-%m-%d %H:%M"),
   q_pas = Q_PAS, kw_pas = kw_label(Q_PAS), q_omgevingswet = Q_OW, q_salderen = Q_SAL,
-  laatste_kwartaal = lapply(Q_MAX, kw_label), venster_trendbreuk = sprintf("2012Q1 tot en met %s", kw_label(Q_SAL - 1L)),
+  laatste_kwartaal = lapply(Q_MAX, kw_label), venster_trendbreuk = sprintf("%s tot en met %s", kw_label(Q_MIN), kw_label(Q_SAL - 1L)),
   drempels = DREMPELS, klassen = KLASSEN, claim_conceptartikel_pct = CLAIM,
   definities = list(
     project = "gemeente plus documentnummer van de vergunning (projectid)",
-    vergund = "in_sample, eerste bouwvergunning 2012Q1 tot en met 2026Q1; project telt in het kwartaal van zijn eerste vergunning",
-    opgeleverd = "cbs_nieuwbouw zonder admin_fout, mutatiemaand 2012Q1 tot en met 2026Q2; project telt in het kwartaal van zijn eerste oplevering",
+    vergund = sprintf("in_sample, eerste bouwvergunning %s tot en met 2026Q1; project telt in het kwartaal van zijn eerste vergunning", kw_label(Q_MIN)),
+    opgeleverd = sprintf("cbs_nieuwbouw zonder admin_fout, mutatiemaand %s tot en met 2026Q2; project telt in het kwartaal van zijn eerste oplevering", kw_label(Q_MIN)),
     nabij = "kleinste afstand van de objecten van het project in de steekproef tot habitat is hoogstens de drempel",
     omvang = "projectomvang: objecten met dezelfde projectsleutel in het hele bestand",
     woningen = "objecten van het project in de steekproef (vergund: woonobjecten met in_sample; opgeleverd: CBS-nieuwbouw)",
@@ -314,7 +318,7 @@ for (vn in ES_VARIANTEN) {
                                                         sprintf("%+.3f (%.3f) p=%.2f", b, se, p)))], jaar ~ kolom, value.var = "w"))
 }
 cat("2026 is een deeljaar: vergund tot en met Q1, opgeleverd tot en met Q2; intervallen staan in de JSON\n")
-cat("\ngezamenlijke toets 2012 tot en met 2017 = 0:\n")
+cat(sprintf("\ngezamenlijke toets %d tot en met 2017 = 0:\n", JAAR_MIN))
 print(R$eventstudy_voortoets[, .(variant, uitkomst, schatter, stat = round(stat, 2), df, p = round(p, 3))])
 
 ## ---------------------------------------------------------------------
@@ -326,7 +330,7 @@ print(R$eventstudy_voortoets[, .(variant, uitkomst, schatter, stat = round(stat,
 ## de trend erna. Het venster eindigt voor de uitspraak over intern
 ## salderen, zoals E en F in 08_strikt.R. De DiD in hetzelfde venster staat
 ## erbij, zodat duidelijk is wat de trendtermen eraan veranderen.
-kop("3b. Trendbreuk per drempel, 2012Q1 tot en met 2024Q3: voortrend, sprong bij de uitspraak, natrend")
+kop("3b. Trendbreuk per drempel, %s tot en met 2024Q3: voortrend, sprong bij de uitspraak, natrend", kw_label(Q_MIN))
 R$trendbreuk <- rbindlist(lapply(names(P), function(u) rbindlist(lapply(DREMPELS, function(dr) {
   x <- zet_nabij(P[[u]][t < Q_SAL], dr)
   x[, tj := (t - Q_PAS) / 4]
