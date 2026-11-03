@@ -15,7 +15,7 @@
 ## zijn in plaats van iets van de natuur:
 ##   A. Op zwaar belaste plekken (totale depositie 2018) daalde de bouw
 ##      tegenover de lichtst belaste in dezelfde gemeente, in de
-##      vergunningen al vanaf 2012 (hoofdstuk 10). Zwaar belaste plekken
+##      vergunningen al vanaf het begin van de reeks (hoofdstuk 10). Zwaar belaste plekken
 ##      liggen vooral in de landelijke delen van een gemeente.
 ##   B. In de binnenste kilometer daalden de vergunde appartementen sinds
 ##      de Omgevingswet tegenover verder dan 5 km (hoofdstuk 13), vooral
@@ -36,7 +36,7 @@
 })
 source(file.path(.here, "00_config.R"))
 suppressPackageStartupMessages(library(fixest))
-stopifnot(requireNamespace("bit64", quietly = TRUE), requireNamespace("jsonlite", quietly = TRUE))
+stopifnot(requireNamespace("bit64", quietly = TRUE))
 options(width = 200)
 
 sink(file.path(PATHS$output, sprintf("samenstelling_%s.txt", EXTRACT)), split = TRUE)
@@ -45,9 +45,14 @@ R <- list()
 KW_START <- 2012L
 kw_index <- function(datum) (as.integer(format(datum, "%Y")) - KW_START) * 4L + (as.integer(format(datum, "%m")) - 1L) %/% 3L + 1L
 Q_PAS <- kw_index(as.Date("2019-05-29")); Q_OW <- kw_index(as.Date("2024-01-01")); Q_SAL <- kw_index(as.Date("2024-12-18"))
-Q_MAX_VERG <- kw_index(as.Date("2026-03-31")); Q_MAX_NWB <- kw_index(as.Date("2026-06-30"))
+## De kwartaalindex telt vanaf KW_START; de analyse begint bij PARAMS$jaar_min
+## en eindigt bij de eindkwartalen in PARAMS (00_config.R).
+JAAR_MIN   <- PARAMS$jaar_min
+Q_MIN      <- kw_index(as.Date(sprintf("%d-01-01", JAAR_MIN)))
+Q_MAX_VERG <- kw_index(as.Date(PARAMS$kw_eind_vergund))
+Q_MAX_NWB  <- kw_index(as.Date(PARAMS$kw_eind_nieuwbouw))
 klasse <- function(oad) fifelse(is.na(oad), NA_character_, fifelse(oad >= 1500, "hoog", fifelse(oad >= 500, "midden", "laag")))
-gr <- unlist(jsonlite::fromJSON(file.path(PATHS$output, sprintf("ruimte_%s.json", EXTRACT)))$dosis_grenzen)
+gr <- fread(file.path(PATHS$derived, "dosis_grenzen.csv"), sep = ";")[, setNames(waarde, grens)]   # uit 11_ruimte.R
 cat("depositiegrenzen:", gr, "\n")
 alle <- readRDS(file.path(PATHS$derived, "econlogic_vbo.rds"))
 
@@ -153,10 +158,10 @@ rs <- merge(fread(file.path(PATHS$derived, "vbo_xy.csv"), sep = ";"),
             fread(file.path(PATHS$derived, "vbo_raster.csv"), sep = ";")[, .(id, ndep_2018, stedelijk)], by = "id")
 d <- merge(d, rs[, !"id"], by = c("x", "y"), all.x = TRUE, sort = FALSE)
 rm(alle, e1); invisible(gc())
-verg <- d[in_sample == TRUE & !is.na(vergunning_datum) & vergunning_datum >= as.Date("2012-01-01")]
-verg[, q := kw_index(vergunning_datum)]; verg <- verg[q >= 1 & q <= Q_MAX_VERG]
+verg <- d[in_sample == TRUE & !is.na(vergunning_datum) & vergunning_datum >= as.Date(sprintf("%d-01-01", JAAR_MIN))]
+verg[, q := kw_index(vergunning_datum)]; verg <- verg[q >= Q_MIN & q <= Q_MAX_VERG]
 nwb <- d[cbs_nieuwbouw == TRUE & projecttype != "admin_fout" & !is.na(dist2n2000_m) & !is.na(provinciecode) & !is.na(mutatiemaand)]
-nwb[, q := kw_index(mutatiemaand)]; nwb <- nwb[q >= 1 & q <= Q_MAX_NWB]
+nwb[, q := kw_index(mutatiemaand)]; nwb <- nwb[q >= Q_MIN & q <= Q_MAX_NWB]
 
 ## =====================================================================
 ## A2. Vergunningen en opleveringen per kwartaal, per depositiekwartiel

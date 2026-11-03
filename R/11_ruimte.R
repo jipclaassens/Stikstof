@@ -82,14 +82,18 @@ kw_label <- function(q) sprintf("%dQ%d", KW_START + (q - 1L) %/% 4L, (q - 1L) %%
 Q_REF <- kw_index(as.Date(c("2018-01-01", "2018-04-01", "2018-07-01", "2018-10-01")))
 Q_PAS <- kw_index(as.Date("2019-05-29"))
 Q_SAL <- kw_index(as.Date("2024-12-18"))
-Q_MAX_VERG <- kw_index(as.Date("2026-03-31"))
-Q_MAX_NWB  <- kw_index(as.Date("2026-06-30"))
+## De kwartaalindex telt vanaf KW_START; de analyse begint bij PARAMS$jaar_min
+## en eindigt bij de eindkwartalen in PARAMS (00_config.R).
+JAAR_MIN   <- PARAMS$jaar_min
+Q_MIN      <- kw_index(as.Date(sprintf("%d-01-01", JAAR_MIN)))
+Q_MAX_VERG <- kw_index(as.Date(PARAMS$kw_eind_vergund))
+Q_MAX_NWB  <- kw_index(as.Date(PARAMS$kw_eind_nieuwbouw))
 
 s <- d[in_sample == TRUE]
-verg <- s[!is.na(vergunning_datum) & vergunning_datum >= as.Date("2012-01-01")]
-verg[, q := kw_index(vergunning_datum)]; verg <- verg[q >= 1 & q <= Q_MAX_VERG]
+verg <- s[!is.na(vergunning_datum) & vergunning_datum >= as.Date(sprintf("%d-01-01", JAAR_MIN))]
+verg[, q := kw_index(vergunning_datum)]; verg <- verg[q >= Q_MIN & q <= Q_MAX_VERG]
 nwb <- d[cbs_nieuwbouw == TRUE & projecttype != "admin_fout" & !is.na(dist2n2000_m) & !is.na(provinciecode) & !is.na(mutatiemaand)]
-nwb[, q := kw_index(mutatiemaand)]; nwb <- nwb[q >= 1 & q <= Q_MAX_NWB]
+nwb[, q := kw_index(mutatiemaand)]; nwb <- nwb[q >= Q_MIN & q <= Q_MAX_NWB]
 UIT <- list(vergunningen = verg, nieuwbouw = nwb)
 
 ## woningtype uit het pand: meergezins als het pand drie of meer
@@ -249,11 +253,13 @@ for (u in names(UIT)) {
 ## C. Stikstofdepositie op de bouwlocatie als dosis
 ## =====================================================================
 ## Kwartielen van de totale depositie 2018 over de vergunde objecten van
-## 2012 tot en met 2018. Binnen dezelfde gemeente en hetzelfde kwartaal:
+## het startjaar (PARAMS$jaar_min) tot de uitspraak. Binnen dezelfde gemeente en hetzelfde kwartaal:
 ## Q2, Q3, Q4 tegenover Q1, na de uitspraak, en per kwartiel een trendbreuk.
 kop("C. Depositie 2018 als dosis, kwartielen binnen de gemeente")
 grenzen <- quantile(UIT$vergunningen[q < Q_PAS & ndep_2018 > 0, ndep_2018], c(.25, .5, .75))
 R$dosis_grenzen <- as.list(setNames(round(grenzen), c("p25", "p50", "p75")))
+## ook als csv, voor 22_langereeks.R en 26_samenstelling.R (zonder jsonlite)
+fwrite(data.table(grens = names(R$dosis_grenzen), waarde = unlist(R$dosis_grenzen)), file.path(PATHS$derived, "dosis_grenzen.csv"), sep = ";")
 cat("grenzen (mol N/ha/jr):", paste(round(grenzen), collapse = ", "), "\n")
 R$dosis <- list()
 for (u in names(UIT)) {

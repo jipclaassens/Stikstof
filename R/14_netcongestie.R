@@ -53,8 +53,12 @@ kw_index <- function(datum) {
 }
 kw_label <- function(q) sprintf("%dQ%d", KW_START + (q - 1L) %/% 4L, (q - 1L) %% 4L + 1L)
 Q_REF <- kw_index(as.Date(c("2018-01-01", "2018-04-01", "2018-07-01", "2018-10-01")))
-Q_MAX_VERG <- kw_index(as.Date("2026-03-31"))   # 2026Q2: piek van juni 2026 (17_registratie.R)
-Q_MAX_NWB  <- kw_index(as.Date("2026-06-30"))
+## De kwartaalindex telt vanaf KW_START; de analyse begint bij PARAMS$jaar_min
+## en eindigt bij de eindkwartalen in PARAMS (00_config.R).
+JAAR_MIN   <- PARAMS$jaar_min
+Q_MIN      <- kw_index(as.Date(sprintf("%d-01-01", JAAR_MIN)))
+Q_MAX_VERG <- kw_index(as.Date(PARAMS$kw_eind_vergund))
+Q_MAX_NWB  <- kw_index(as.Date(PARAMS$kw_eind_nieuwbouw))
 Q_START_B  <- kw_index(as.Date("2016-01-01"))
 
 ## ---------------------------------------------------------------------
@@ -91,10 +95,10 @@ d <- merge(d, vpp, by = "pand_bag_nr", all.x = TRUE)
 d[, type := fifelse(n_pand >= 3L, "meergezins", "eengezins")]
 
 s <- d[in_sample == TRUE]
-verg <- s[!is.na(vergunning_datum) & vergunning_datum >= as.Date("2012-01-01")]
-verg[, q := kw_index(vergunning_datum)]; verg <- verg[q >= 1 & q <= Q_MAX_VERG]
+verg <- s[!is.na(vergunning_datum) & vergunning_datum >= as.Date(sprintf("%d-01-01", JAAR_MIN))]
+verg[, q := kw_index(vergunning_datum)]; verg <- verg[q >= Q_MIN & q <= Q_MAX_VERG]
 nwb <- d[cbs_nieuwbouw == TRUE & projecttype != "admin_fout" & !is.na(dist2n2000_m) & !is.na(provinciecode) & !is.na(mutatiemaand)]
-nwb[, q := kw_index(mutatiemaand)]; nwb <- nwb[q >= 1 & q <= Q_MAX_NWB]
+nwb[, q := kw_index(mutatiemaand)]; nwb <- nwb[q >= Q_MIN & q <= Q_MAX_NWB]
 UIT <- list(vergunningen = verg, nieuwbouw = nwb)
 R$meta <- list(extract = EXTRACT, gemaakt = format(Sys.time(), "%Y-%m-%d %H:%M"),
                objecten = lapply(UIT, nrow),

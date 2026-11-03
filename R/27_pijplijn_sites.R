@@ -36,7 +36,7 @@
 ## D. Vergunde vervanging uit de BAG zelf, zonder titels of bekendmakingen:
 ##    nieuwe objecten die niet in gebruik zijn (pandstatus Bouwvergunning
 ##    verleend, Bouw gestart of Niet gerealiseerd pand; _derived/vbo_base.rds,
-##    vergunning vanaf 2012) binnen 5 of 10 meter van een bestaand object van
+##    vergunning vanaf PARAMS$jaar_min) binnen 5 of 10 meter van een bestaand object van
 ##    een site. De vangst van die afstandsregel meet de afstand tussen de
 ##    nieuwe en de gesloopte objecten van dezelfde SN-site.
 ## Lees C als verkenning: een zaak aan het dichtstbijzijnde object is niet
@@ -56,7 +56,7 @@ options(width = 200)
 t0 <- Sys.time()
 sink(file.path(PATHS$output, sprintf("pijplijn_sites_%s.txt", EXTRACT)), split = TRUE)
 
-W  <- Sys.getenv("ECONLOGIC_WERK", "C:/LocalData/Redevelopment/R_werk")
+W  <- PATHS$econlogic
 PL <- file.path(PATHS$derived, "pijplijn")
 VENSTER_BAG <- as.IDate("2021-06-01")   # zaak_bag: panden met de vergunningstatus vanaf juni 2021
 LANDELIJK   <- as.IDate("2021-07-01")   # sindsdien publiceren alle gemeenten in de bekendmakingen
@@ -69,8 +69,9 @@ pct   <- function(v) if (!length(v) || all(is.na(v))) NA_real_ else 100 * mean(v
 
 ## ---- 0. objecten en sites van EconLogic --------------------------------
 slank <- file.path(PATHS$derived, "econlogic_sites_obj.rds")
-if (!file.exists(slank)) {
-  x <- readRDS(file.path(W, "perobject_Nederland_20260710.rds"))
+f_obj <- file.path(W, sprintf("perobject_Nederland_%s.rds", ECONLOGIC_EXPORT))
+if (!file.exists(slank) || file.mtime(slank) < file.mtime(f_obj)) {
+  x <- readRDS(f_obj)
   stopifnot(max(x$vbo_bag_nr, na.rm = TRUE) < 2^53, max(x$pand_bag_nr, na.rm = TRUE) < 2^53)
   o <- x[, .(site_id, vbo_id = sprintf("%016.0f", vbo_bag_nr), pand_id = sprintf("%016.0f", pand_bag_nr), pand_docnum,
              is_plus, is_min, is_incumbent, redev_type = as.character(redev_type_lbl), redev_yearmonth,
@@ -82,7 +83,7 @@ if (!file.exists(slank)) {
 } else o <- readRDS(slank)
 kop("Objecten: %s in %s sites", format(nrow(o), big.mark = "."), format(uniqueN(o$site_id), big.mark = "."))
 
-s  <- readRDS(file.path(W, "sites_Nederland_20260710.rds"))
+s  <- readRDS(file.path(W, sprintf("sites_Nederland_%s.rds", ECONLOGIC_EXPORT)))
 st <- s$attrs[!is.na(site_id), .(site_id, oad, gemeente_code, site_size)]
 st[oad >= 4294967295, oad := NA]
 st[, groep := sub("_.*$", "", site_id)][groep == "OnvS", groep := "Onv"]
@@ -90,9 +91,9 @@ st[, heeft_inc := site_id %chin% s$incumbent$site_id]
 st[s$new, on = "site_id", `:=`(redev_ym = i.redev_yearmonth, n_units_new = i.n_units_new)]
 st[s$incumbent, on = "site_id", `:=`(n_units_res = i.n_units_res, n_obj = i.n_obj)]
 rm(s); invisible(gc())
-st[readRDS(file.path(W, "clusters_sn_Nederland_20260710.rds"))$sites, on = "site_id", K := i.cluster]
-st[readRDS(file.path(W, "stage1_sn_Nederland_20260710.rds"))$iv, on = "site_id", iv := i.iv]
-st[, stedelijk := !is.na(oad) & oad >= 1000]   # de scope van stage 2 (cfg$oad_min in EconLogicPaper)
+st[readRDS(file.path(W, sprintf("clusters_sn_Nederland_%s.rds", ECONLOGIC_EXPORT)))$sites, on = "site_id", K := i.cluster]
+st[readRDS(file.path(W, sprintf("stage1_sn_Nederland_%s.rds", ECONLOGIC_EXPORT)))$iv, on = "site_id", iv := i.iv]
+st[, stedelijk := !is.na(oad) & oad >= PARAMS$oad_stedelijk]   # de scope van stage 2 (cfg$oad_min in EconLogicPaper)
 cat("\nSites naar voorvoegsel, met en zonder bestaande opstal:\n")
 print(dcast(st[, .N, by = .(groep, heeft_inc)], groep ~ heeft_inc, value.var = "N", fill = 0)[order(-`TRUE`)])
 R$sites <- st[, .(sites = .N, met_opstal = sum(heeft_inc), met_nieuwbouw = sum(!is.na(redev_ym)), met_K = sum(!is.na(K)),
@@ -391,9 +392,9 @@ rm(sn_min, sn_plus, pr); invisible(gc())
 ## de geplande objecten die niet in gebruik zijn, aan het dichtstbijzijnde bestaande object binnen 10 meter
 vp <- readRDS(file.path(PATHS$derived, "vbo_base.rds"))
 vp <- vp[last_pand_status %chin% c("Bouwvergunning_verleend", "Bouw_gestart", "Niet_gerealiseerd_pand") & !is.na(x) & !is.na(y) &
-         !is.na(vergunning_datum) & vergunning_datum >= as.IDate("2012-01-01"),
+         !is.na(vergunning_datum) & vergunning_datum >= as.IDate(sprintf("%d-01-01", PARAMS$jaar_min)),
          .(pid = .I, status = last_pand_status, verg = as.IDate(vergunning_datum), x = as.numeric(x), y = as.numeric(y))]
-cat(sprintf("Geplande objecten, niet in gebruik, vergunning vanaf 2012: %s (%s)\n", format(nrow(vp), big.mark = "."),
+cat(sprintf("Geplande objecten, niet in gebruik, vergunning vanaf %d: %s (%s)\n", PARAMS$jaar_min, format(nrow(vp), big.mark = "."),
             paste(vp[, .N, by = status][, sprintf("%s %s", status, format(N, big.mark = "."))], collapse = ", ")))
 bestaand <- o[is_incumbent == TRUE & !is.na(x), .(qid = .I, site_id, ox = x, oy = y)]
 pv <- paren(vp, bestaand, 10)
@@ -426,7 +427,8 @@ R$D_iv_gemeente <- dec("y_bag", D[groep2 == "onveranderd"])
 cat("\nOnveranderd, stedelijk: gepland object binnen 5 m naar deciel van de inclusive value, ruw en binnen de gemeente (procentpunt):\n")
 print(merge(R$D_iv, R$D_iv_gemeente[, .(deciel, b, se, p)], by = "deciel", all.x = TRUE)[, lapply(.SD, function(v) if (is.numeric(v)) round(v, 3) else v)])
 
-R$meta <- list(export_econlogic = "perobject_Nederland_20260710", venster_bag = format(VENSTER_BAG), landelijk = format(LANDELIJK),
+R$meta <- list(export_econlogic = sprintf("perobject_Nederland_%s", ECONLOGIC_EXPORT), werkmap_econlogic = W,
+               perobject_gemaakt = format(file.mtime(f_obj), "%Y-%m-%d %H:%M"), venster_bag = format(VENSTER_BAG), landelijk = format(LANDELIJK),
                eind = format(EIND), gemaakt = format(Sys.time(), "%Y-%m-%d %H:%M"))
 writeLines(to_json(R), file.path(PATHS$output, sprintf("pijplijn_sites_%s.json", EXTRACT)), useBytes = TRUE)
 kop("Klaar in %.0f sec -- %s", as.numeric(difftime(Sys.time(), t0, units = "secs")),

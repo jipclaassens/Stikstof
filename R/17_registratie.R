@@ -180,7 +180,7 @@ g <- jun[, .N, by = gemeentecode][order(-N)]
 ## hun gewone aantal (docs/BAG-dataschoning-inzichten.md, sectie 7)
 BATCH <- c(1948L, 1721L)
 f_pr <- file.path(PATHS$derived, "panden_recent.csv"); f_bn <- file.path(PATHS$derived, "besluit_nabij.csv")
-if (!file.exists(f_bn)) {
+if (!file.exists(f_bn) || file.mtime(f_bn) < file.mtime(derived_path("vbo_analyse"))) {
   fwrite(p[bvv >= as.Date("2025-06-01") & bvv <= as.Date("2026-06-30"), .(pand_id, bvv, x, y)], f_pr, sep = ";")
   if (system2(PY, c(PY_VER, shQuote(normalizePath(file.path(.here, "17b_besluit_nabij.py"))), shQuote(normalizePath(f_pr)),
                       shQuote(normalizePath(f_bn, mustWork = FALSE)), shQuote(normalizePath(PATHS$verg)))) != 0)

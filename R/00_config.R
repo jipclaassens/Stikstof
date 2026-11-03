@@ -36,7 +36,12 @@ PATHS <- list(
   ## bekendmakingen, natuurbesluiten en rechtspraak; 09_aanvragen.R leest
   ## er analyse/zaken.csv uit
   verg    = Sys.getenv("VERGUNNINGEN_DATA",
-              "E:/OneDrive - Objectvision/VU/Projects/202505-StikstofPaper/vergunningen")
+              file.path(Sys.getenv("OneDriveCommercial", "E:/OneDrive - Objectvision"),
+                        "VU/Projects/202505-StikstofPaper/vergunningen")),
+  ## De werkmap van het EconLogic-paper (EconLogicPaper/R, stap 02 tot 06): objecten,
+  ## sites, clusters en stage 1 van zijn export. 21a, 27 en 28 lezen eruit. Op OVSRV08
+  ## staat de run van 11 oktober 2026 (na de perceelfix), op OVSRV06 een van 25 september.
+  econlogic = Sys.getenv("ECONLOGIC_WERK", "C:/LocalData/EconLogicPaper/R_werk")
 )
 
 dir.create(PATHS$derived, showWarnings = FALSE, recursive = TRUE)
@@ -51,6 +56,9 @@ dir.create(PATHS$output,  showWarnings = FALSE, recursive = TRUE)
 
 EXTRACT <- "20261103"
 
+## De GeoDMS-export van het EconLogic-paper achter de bestanden in PATHS$econlogic.
+ECONLOGIC_EXPORT <- "20260710"
+
 FILES <- list(
   pand_duur  = file.path(PATHS$raw, sprintf("Pand_VergunningDuur_%s.csv",            EXTRACT)),
   nieuwbouw  = file.path(PATHS$raw, sprintf("Object_Nieuwbouw_%s.csv",               EXTRACT)),
@@ -64,6 +72,9 @@ BAG_DATUM <- local({
   if (!grepl("^[0-9]{8}$", d)) stop("geen BAG_file_date in de xml van ", FILES$vergunning)
   d
 })
+
+## Het kwartaal van een datum als label, bijvoorbeeld "2026Q3".
+kw_van <- function(datum) paste0(format(datum, "%Y"), quarters(datum))
 
 ## ---------------------------------------------------------------------
 ## 3. Analyseparameters
@@ -88,6 +99,10 @@ PARAMS <- list(
   jaar_min         = 2014,
   jaar_max         = 2025,
   wkb_breuk_jaar   = 2024,
+
+  ## Stedelijk is een omgevingsadressendichtheid (OAD) vanaf 1.000 adressen
+  ## per km2: de basisscope van stage 2 in het EconLogic-paper (cfg$oad_min).
+  oad_stedelijk    = 1000,
 
   ## Het laatste kwartaal in de kwartaalschattingen. Vergunningen tot en met
   ## 2026Q1: 2026Q2 bevat de piek van juni 2026 in twee gemeenten

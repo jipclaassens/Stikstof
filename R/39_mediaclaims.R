@@ -43,12 +43,12 @@ M <- list(
   stop_begin    = as.Date("2025-01-01"),      # eerste kwartaal na intern salderen (18-12-2024) en Pasgeld-West (14-01-2025)
   herstart      = as.Date("2026-01-01"),      # eigen term vanaf 2026: Noord-Brabant verwachtte weer te vergunnen, Friesland stopte tot uiterlijk september 2026
   venster_begin = as.Date("2021-01-01"),      # provinciale vergelijking: vier jaar voor de stop
-  laatste_verg  = as.Date("2026-03-31"),      # laatste volle kwartaal vergunningen in het extract (10_landelijk.R)
+  laatste_verg  = as.Date(PARAMS$kw_eind_vergund),   # laatste kwartaal vergunningen in de schattingen (00_config.R)
   provincies    = c("Noord-Brabant", "Friesland")     # zoals provincienaam in de BAG-export
 )
 
 d <- read_derived("vbo_analyse")
-verg <- d[in_sample == TRUE & !is.na(vergunning_datum) & vergunning_datum >= as.Date("2012-01-01") &
+verg <- d[in_sample == TRUE & !is.na(vergunning_datum) & vergunning_datum >= as.Date(sprintf("%d-01-01", PARAMS$jaar_min)) &
           vergunning_datum <= M$laatste_verg & !is.na(dist2n2000_m) & !is.na(gemeentecode)]
 verg[, `:=`(nabij = as.integer(dist2n2000_m <= M$nabij_m), maand = as.IDate(format(vergunning_datum, "%Y-%m-01")),
             jaar = year(vergunning_datum), kw = (month(vergunning_datum) - 1L) %/% 3L + 1L)]
@@ -156,7 +156,7 @@ did3 <- function(prov, data) {
 R$provincie_did <- rbindlist(c(lapply(M$provincies, function(p) did(p, p2)),
                                lapply(M$provincies, function(p) did(p, p2, 1L)),
                                lapply(M$provincies, did3, data = p2)))
-kop("2c. Provincie na de stop tegenover de overige tien, binnen de gemeente (venster 2021Q1 tot en met 2026Q1)")
+kop("2c. Provincie na de stop tegenover de overige tien, binnen de gemeente (venster 2021Q1 tot en met %s)", kw_van(M$laatste_verg))
 print(R$provincie_did[, .(provincie, objecten, term, pct = round(pct, 1), lo = round(lo, 1), hi = round(hi, 1),
                           p = round(p, 3), gemeenten_prov, n_prov_na)])
 

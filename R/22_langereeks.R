@@ -10,7 +10,7 @@
 ##
 ## Waarom
 ## ---------------------------------------------------------------------
-## De reeksen van dit rapport beginnen in 2012. De achterstand nabij natuur
+## De reeksen van dit rapport beginnen in 2014 (PARAMS$jaar_min). De achterstand nabij natuur
 ## in de opleveringen heeft bij de PAS-uitspraak geen knik en zit in grote
 ## projecten; is ze een trend die al veel langer liep, dan is 2019 een
 ## willekeurig punt op die trend. Het bouwjaar van de woningvoorraad geeft
@@ -187,29 +187,30 @@ R$vier <- rbindlist(lapply(names(WEG), function(w) cbind(zonder = w, vier(paneel
 print(R$vier[, lapply(.SD, function(x) if (is.numeric(x)) round(x, 3) else x)])
 
 ## ---------------------------------------------------------------------
-## 7. Tweede route voor 2012-2025: dezelfde jaarcoëfficiënten uit de
+## 7. Tweede route voor PARAMS$jaar_min tot en met jaar_max: dezelfde jaarcoëfficiënten uit de
 ##    opleveringen (CBS-nieuwbouw, jaar van de mutatie), met de afstand en
 ##    de gemeente uit het objectenbestand
 ## ---------------------------------------------------------------------
-kop("7. Bouwjaar tegenover jaar van oplevering, 2012-2025, binnen de gemeente, tegenover 2018")
+JAAR_MIN <- PARAMS$jaar_min; JAAR_MAX <- PARAMS$jaar_max
+kop("7. Bouwjaar tegenover jaar van oplevering, %d-%d, binnen de gemeente, tegenover 2018", JAAR_MIN, JAAR_MAX)
 d <- read_derived("vbo_analyse")[cbs_nieuwbouw == TRUE & projecttype != "admin_fout" & !is.na(dist2n2000_m) & !is.na(mutatiemaand) & !is.na(gemeentecode)]
 d[, `:=`(t = as.integer(format(mutatiemaand, "%Y")), G = as.integer(dist2n2000_m <= NABIJ_M), E = as.character(gemeentecode))]
-cel <- d[t >= 2012L & t <= 2025L, .(y = .N), by = .(E, G, t)]
-p <- merge(CJ(E = sort(unique(cel$E)), G = 0:1, t = 2012:2025), cel, by = c("E", "G", "t"), all.x = TRUE); p[is.na(y), y := 0]
+cel <- d[t >= JAAR_MIN & t <= JAAR_MAX, .(y = .N), by = .(E, G, t)]
+p <- merge(CJ(E = sort(unique(cel$E)), G = 0:1, t = JAAR_MIN:JAAR_MAX), cel, by = c("E", "G", "t"), all.x = TRUE); p[is.na(y), y := 0]
 p[, `:=`(E_G = paste(E, G), E_t = paste(E, t))]
 m <- fepois(y ~ i(t, G, ref = 2018) | E_G + E_t, data = p, cluster = ~E, notes = FALSE)
 ct <- as.data.table(coeftable(m), keep.rownames = "term")[, jaar := as.integer(sub("^t::(\\d+):G$", "\\1", term))]
 R$oplevering <- rbind(ct[, .(jaar, b = Estimate, se = `Std. Error`)], data.table(jaar = 2018L, b = 0, se = 0))[order(jaar)][, irr := exp(b)]
 v <- merge(R$oplevering[, .(jaar, irr_oplevering = irr)], R$jaren[zonder == "geen", .(jaar, irr_bouwjaar = irr)], by = "jaar")
 print(v[, lapply(.SD, function(x) round(x, 3))])
-R$samenhang <- v[, .(r = cor(irr_oplevering, irr_bouwjaar), gem_2012_2018_opl = mean(irr_oplevering[jaar <= 2018]),
-                     gem_2012_2018_bj = mean(irr_bouwjaar[jaar <= 2018]), gem_2019_2025_opl = mean(irr_oplevering[jaar >= 2019]),
+R$samenhang <- v[, .(r = cor(irr_oplevering, irr_bouwjaar), periode = sprintf("%d-%d", JAAR_MIN, JAAR_MAX), gem_tot_2018_opl = mean(irr_oplevering[jaar <= 2018]),
+                     gem_tot_2018_bj = mean(irr_bouwjaar[jaar <= 2018]), gem_2019_2025_opl = mean(irr_oplevering[jaar >= 2019]),
                      gem_2019_2025_bj = mean(irr_bouwjaar[jaar >= 2019]))]
 print(R$samenhang)
 
 ## ---------------------------------------------------------------------
-## 8. De ringen naast elkaar: oppervlakte, voorraad van 2012 en de bouw
-##    per duizend bestaande woningen, voor en na 2019Q2 (elk 29 kwartalen)
+## 8. De ringen naast elkaar: oppervlakte, voorraad bij het begin van de reeks
+##    (PARAMS$jaar_min) en de bouw per duizend bestaande woningen, voor en na 2019Q2
 ## ---------------------------------------------------------------------
 kop("8. Oppervlakte, voorraad en bouw per ring")
 f_ring <- file.path(PATHS$derived, "ringen_oppervlakte.csv")
@@ -220,37 +221,45 @@ if (system2("cmd.exe", c("/c", shQuote(normalizePath(cmd), type = "cmd"))) != 0)
 RINGEN <- c("0 tot 1 km", "1 tot 2,5 km", "2,5 tot 5 km", "verder dan 5 km")
 ring_van <- function(a) factor(fifelse(a <= 1000, RINGEN[1], fifelse(a <= 2500, RINGEN[2], fifelse(a <= 5000, RINGEN[3], RINGEN[4]))), levels = RINGEN)
 opp <- fread(f_ring, sep = ";", encoding = "UTF-8")
-## de voorraad van 2012: woningen die er toen al stonden (geen toevoegende mutatie sinds 2012)
+## de voorraad bij het begin van de reeks: woningen die er toen al stonden (gebouwd voor
+## JAAR_MIN en zonder toevoegende mutatie vanaf JAAR_MIN; een onbekende maand telt als toevoeging)
 vr <- readRDS(file.path(PATHS$derived, "econlogic_vbo.rds"))[woon == TRUE & !is.na(x) & !is.na(bouwjaar)]
 ## per object: een object met een toevoegende mutatie in een van zijn rijen telt niet mee
-plus <- vr[redev_type %in% c("Nieuwbouw", "SN_Nieuwbouw", "Toevoeging", "Transformatie_Plus"), unique(vbo_id)]
-vr <- vr[bouwjaar <= 2011L & !vbo_id %in% plus]
+plus <- vr[redev_type %in% c("Nieuwbouw", "SN_Nieuwbouw", "Toevoeging", "Transformatie_Plus") &
+             (is.na(redev_yearmonth) | redev_yearmonth >= JAAR_MIN * 100L + 1L), unique(vbo_id)]
+vr <- vr[bouwjaar <= JAAR_MIN - 1L & !vbo_id %in% plus]
 vr <- vr[!duplicated(vbo_id)]
 vr[pt, on = c("x", "y"), afstand := i.afstand]
 vr <- vr[afstand >= 0]
 kw_i <- function(datum) (as.integer(format(datum, "%Y")) - 2012L) * 4L + (as.integer(format(datum, "%m")) - 1L) %/% 3L + 1L
 d[, q := kw_i(mutatiemaand)]
-d <- d[q >= 1L & q <= 58L]
+Q_BEGIN <- kw_i(as.Date(sprintf("%d-01-01", JAAR_MIN))); Q_EIND <- kw_i(as.Date(PARAMS$kw_eind_nieuwbouw))
+Q_NA <- kw_i(as.Date("2019-04-01"))   # 2019Q2, het eerste kwartaal na de uitspraak
+N_VOOR <- Q_NA - Q_BEGIN; N_NA <- Q_EIND - Q_NA + 1L
+d <- d[q >= Q_BEGIN & q <= Q_EIND]
 R$ringen <- Reduce(function(a, b) merge(a, b, by = "ring"), list(
   opp,
-  vr[, .(voorraad_2012 = .N), by = .(ring = ring_van(afstand))],
-  d[q < 30L, .(opgeleverd_voor = .N), by = .(ring = ring_van(dist2n2000_m))],
-  d[q >= 30L, .(opgeleverd_na = .N), by = .(ring = ring_van(dist2n2000_m))]))
+  vr[, .(voorraad_begin = .N), by = .(ring = ring_van(afstand))],
+  d[q < Q_NA, .(opgeleverd_voor = .N), by = .(ring = ring_van(dist2n2000_m))],
+  d[q >= Q_NA, .(opgeleverd_na = .N), by = .(ring = ring_van(dist2n2000_m))]))
 R$ringen <- R$ringen[order(match(ring, RINGEN))]
-R$ringen[, `:=`(voorraad_per_km2 = voorraad_2012 / km2_nederland,
-                per_1000_per_jaar_voor = 1000 * opgeleverd_voor / voorraad_2012 / (29 / 4),
-                per_1000_per_jaar_na = 1000 * opgeleverd_na / voorraad_2012 / (29 / 4))]
+R$ringen[, `:=`(voorraad_per_km2 = voorraad_begin / km2_nederland,
+                per_1000_per_jaar_voor = 1000 * opgeleverd_voor / voorraad_begin / (N_VOOR / 4),
+                per_1000_per_jaar_na = 1000 * opgeleverd_na / voorraad_begin / (N_NA / 4))]
+R$ringen_periode <- list(voorraad_jaar = JAAR_MIN, kwartalen_voor = N_VOOR, kwartalen_na = N_NA,
+                         voor = sprintf("%dQ1 tot en met 2019Q1", JAAR_MIN),
+                         na = sprintf("2019Q2 tot en met %s", kw_van(as.Date(PARAMS$kw_eind_nieuwbouw))))
 print(R$ringen[, lapply(.SD, function(x) if (is.numeric(x)) round(x, 2) else x)])
 
 ## ---------------------------------------------------------------------
 ## 9. Per depositiekwartiel: liepen zwaar belaste plekken al voor 2019
 ##    achter, en sinds wanneer? De totale depositie van 2018 op de plek
 ##    (RIVM, 1 km), met de kwartielgrenzen van hoofdstuk 10 (11_ruimte.R:
-##    de vergunde objecten van 2012 tot de uitspraak), per kwartiel
+##    de vergunde objecten van het startjaar tot de uitspraak), per kwartiel
 ##    tegenover het lichtste, binnen de gemeente
 ## ---------------------------------------------------------------------
 kop("9. Per depositiekwartiel tegenover het lichtste, binnen de gemeente")
-gr <- unlist(jsonlite::fromJSON(file.path(PATHS$output, sprintf("ruimte_%s.json", EXTRACT)))$dosis_grenzen)
+gr <- fread(file.path(PATHS$derived, "dosis_grenzen.csv"), sep = ";")[, setNames(waarde, grens)]   # uit 11_ruimte.R
 cat("grenzen:", gr, "
 ")
 e[, kw := fifelse(ndep > 0, findInterval(ndep, gr) + 1L, NA_integer_)]
@@ -286,21 +295,21 @@ print(R$depositie_breuk[, lapply(.SD, function(x) round(x, 3))])
 ## depositie per object uit 11a_rasters.py (vbo_raster.csv, via vbo_xy.csv)
 rs <- merge(fread(file.path(PATHS$derived, "vbo_xy.csv"), sep = ";"), fread(file.path(PATHS$derived, "vbo_raster.csv"), sep = ";")[, .(id, ndep_2018)], by = "id")
 d[rs, on = c("x", "y"), ndep := i.ndep_2018]
-d2 <- d[t >= 2012L & t <= 2025L & ndep > 0][, kw := findInterval(ndep, gr) + 1L][kw %in% c(1L, 4L)][, G := as.integer(kw == 4L)]
+d2 <- d[t >= JAAR_MIN & t <= JAAR_MAX & ndep > 0][, kw := findInterval(ndep, gr) + 1L][kw %in% c(1L, 4L)][, G := as.integer(kw == 4L)]
 cel2 <- d2[, .(y = .N), by = .(E, G, t)]
-p2 <- merge(CJ(E = sort(unique(cel2$E)), G = 0:1, t = 2012:2025), cel2, by = c("E", "G", "t"), all.x = TRUE); p2[is.na(y), y := 0]
+p2 <- merge(CJ(E = sort(unique(cel2$E)), G = 0:1, t = JAAR_MIN:JAAR_MAX), cel2, by = c("E", "G", "t"), all.x = TRUE); p2[is.na(y), y := 0]
 p2[, `:=`(E_G = paste(E, G), E_t = paste(E, t))]
 m2 <- fepois(y ~ i(t, G, ref = 2018) | E_G + E_t, data = p2, cluster = ~E, notes = FALSE)
 c2 <- as.data.table(coeftable(m2), keep.rownames = "term")[, jaar := as.integer(sub("^t::(\\d+):G$", "\\1", term))]
 R$depositie_oplevering <- rbind(c2[, .(jaar, b = Estimate, se = `Std. Error`)], data.table(jaar = 2018L, b = 0, se = 0))[order(jaar)][, irr := exp(b)]
 v2 <- merge(R$depositie_oplevering[, .(jaar, irr_oplevering = irr)], R$depositie_jaren[kwartiel == 4L, .(jaar, irr_bouwjaar = irr)], by = "jaar")
 print(v2[, lapply(.SD, function(x) round(x, 3))])
-R$depositie_samenhang <- v2[, .(r = cor(irr_oplevering, irr_bouwjaar), gem_2012_2014_opl = mean(irr_oplevering[jaar <= 2014]),
-                                gem_2012_2014_bj = mean(irr_bouwjaar[jaar <= 2014]), gem_2019_2025_opl = mean(irr_oplevering[jaar >= 2019]),
+R$depositie_samenhang <- v2[, .(r = cor(irr_oplevering, irr_bouwjaar), periode = sprintf("%d-%d", JAAR_MIN, JAAR_MAX), gem_eerste3_opl = mean(irr_oplevering[jaar <= JAAR_MIN + 2L]),
+                                gem_eerste3_bj = mean(irr_bouwjaar[jaar <= JAAR_MIN + 2L]), gem_2019_2025_opl = mean(irr_oplevering[jaar >= 2019]),
                                 gem_2019_2025_bj = mean(irr_bouwjaar[jaar >= 2019]))]
 print(R$depositie_samenhang)
 
-R$meta <- list(extract = EXTRACT, gemaakt = format(Sys.time(), "%Y-%m-%d %H:%M"), woningen = nrow(e),
+R$meta <- list(extract = EXTRACT, jaar_min = JAAR_MIN, gemaakt = format(Sys.time(), "%Y-%m-%d %H:%M"), woningen = nrow(e),
                gemeenten = uniqueN(e$gemeente_code), jaren = range(JAREN))
 
 json <- to_json(R)

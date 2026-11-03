@@ -68,8 +68,12 @@ kw_index <- function(datum) {
   (y - KW_START) * 4L + (m - 1L) %/% 3L + 1L
 }
 Q_PAS <- kw_index(as.Date("2019-05-29"))
-Q_MAX_VERG <- kw_index(as.Date("2026-03-31"))
-Q_MAX_NWB  <- kw_index(as.Date("2026-06-30"))
+## De kwartaalindex telt vanaf KW_START; de analyse begint bij PARAMS$jaar_min
+## en eindigt bij de eindkwartalen in PARAMS (00_config.R).
+JAAR_MIN   <- PARAMS$jaar_min
+Q_MIN      <- kw_index(as.Date(sprintf("%d-01-01", JAAR_MIN)))
+Q_MAX_VERG <- kw_index(as.Date(PARAMS$kw_eind_vergund))
+Q_MAX_NWB  <- kw_index(as.Date(PARAMS$kw_eind_nieuwbouw))
 
 ## ---------------------------------------------------------------------
 ## 1. Oppervlakte van het land onder elke groep, nabij en ver
@@ -91,10 +95,10 @@ d <- read_derived("vbo_analyse")
 xy <- merge(fread(file.path(PATHS$derived, "vbo_xy.csv"), sep = ";"), fread(file.path(PATHS$derived, "vbo_beperking.csv"), sep = ";"), by = "id")
 d <- merge(d, xy[, !"id"], by = c("x", "y"), all.x = TRUE, sort = FALSE)
 s <- d[in_sample == TRUE]
-verg <- s[!is.na(vergunning_datum) & vergunning_datum >= as.Date("2012-01-01")]
-verg[, q := kw_index(vergunning_datum)]; verg <- verg[q >= 1 & q <= Q_MAX_VERG]
+verg <- s[!is.na(vergunning_datum) & vergunning_datum >= as.Date(sprintf("%d-01-01", JAAR_MIN))]
+verg[, q := kw_index(vergunning_datum)]; verg <- verg[q >= Q_MIN & q <= Q_MAX_VERG]
 nwb <- d[cbs_nieuwbouw == TRUE & projecttype != "admin_fout" & !is.na(dist2n2000_m) & !is.na(provinciecode) & !is.na(mutatiemaand)]
-nwb[, q := kw_index(mutatiemaand)]; nwb <- nwb[q >= 1 & q <= Q_MAX_NWB]
+nwb[, q := kw_index(mutatiemaand)]; nwb <- nwb[q >= Q_MIN & q <= Q_MAX_NWB]
 UIT <- list(vergunningen = verg, nieuwbouw = nwb)
 R$meta <- list(extract = EXTRACT, gemaakt = format(Sys.time(), "%Y-%m-%d %H:%M"), n = lapply(UIT, nrow),
                met_beperking_bekend = lapply(UIT, function(x) mean(!is.na(x$beperking) & x$beperking >= 0L)))

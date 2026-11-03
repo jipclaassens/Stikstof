@@ -2,7 +2,7 @@
 ## 21a_econlogic.R -- een slanke afgeleide van de objectexport van het
 ##                    densification-paper (EconLogicPaper, GeoDMS)
 ##
-## Input : C:/LocalData/Redevelopment/R_werk/perobject_Nederland_20260710.rds
+## Input : PATHS$econlogic/perobject_Nederland_<ECONLOGIC_EXPORT>.rds
 ##         (EconLogicPaper/R/02_load_perobject.R; 8,7 miljoen verblijfs-
 ##         objecten, ook de onveranderde voorraad, met de mutatietypering
 ##         volgens de CBS-regels uit Claassens, Koomen en Rouwendal 2026)
@@ -14,7 +14,7 @@
 ## (OAD, CBS-kerncijfers 2012 van de buurt van 2012) en stedelijkheidsklasse
 ## (0 vanaf 1.500, 1 van 500 tot 1.500, 2 onder 500 adressen per km2), UAI 2012, grondproductie-
 ## kosten, beschermd stadsgezicht en ligging in Natura 2000. De export
-## staat op OVSRV08 (LocalData); pad te zetten met ECONLOGIC_PEROBJECT.
+## staat in de werkmap van het EconLogic-paper (PATHS$econlogic, 00_config.R); een ander bestand met ECONLOGIC_PEROBJECT.
 ## =====================================================================
 
 .here <- local({
@@ -24,7 +24,7 @@
 })
 source(file.path(.here, "00_config.R"))
 
-bron <- Sys.getenv("ECONLOGIC_PEROBJECT", "C:/LocalData/Redevelopment/R_werk/perobject_Nederland_20260710.rds")
+bron <- Sys.getenv("ECONLOGIC_PEROBJECT", file.path(PATHS$econlogic, sprintf("perobject_Nederland_%s.rds", ECONLOGIC_EXPORT)))
 x <- readRDS(bron)
 kop("Export gelezen: %s rijen", format(nrow(x), big.mark = "."))
 ## het BAG-nummer staat in de export als double; tot 2^53 exact, dus via

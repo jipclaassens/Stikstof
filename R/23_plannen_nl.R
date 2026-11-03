@@ -14,9 +14,9 @@
 ## Hetzelfde als 20_plannen_nh.R, nu voor heel Nederland: ligt er nabij
 ## natuur minder plancapaciteit dan de bouw van voor 2019 zou doen
 ## verwachten? Per gemeente verdelen we de netto plancapaciteit naar de
-## verdeling van de opleveringen van 2012 tot en met 2019Q1 over nabij en
+## verdeling van de opleveringen van het startjaar tot en met 2019Q1 over nabij en
 ## ver, en zetten dat verwachte aantal nabij naast het werkelijke; hetzelfde
-## voor de opleveringen van 2019Q2 tot en met 2026Q2. Een plan telt met zijn
+## voor de opleveringen van 2019Q2 tot en met het eindkwartaal. Een plan telt met zijn
 ## dichtstbijzijnde rand, zoals een project in de BAG met zijn dichtstbij-
 ## zijnde object; daarom ook de afstand van het zwaartepunt en drempels van
 ## 1.000 tot 2.500 meter. De marge komt uit een bootstrap over gemeenten (1.999 trekkingen).
@@ -68,9 +68,17 @@ kw_index <- function(datum) {
   y <- as.integer(format(datum, "%Y")); m <- as.integer(format(datum, "%m"))
   (y - KW_START) * 4L + (m - 1L) %/% 3L + 1L
 }
-Q_PAS <- kw_index(as.Date("2019-05-29")); Q_MAX_NWB <- kw_index(as.Date("2026-06-30"))
+Q_PAS <- kw_index(as.Date("2019-05-29"))
+## De kwartaalindex telt vanaf KW_START; de analyse begint bij PARAMS$jaar_min
+## en eindigt bij het eindkwartaal in PARAMS (00_config.R).
+JAAR_MIN  <- PARAMS$jaar_min
+Q_MIN     <- kw_index(as.Date(sprintf("%d-01-01", JAAR_MIN)))
+Q_MAX_NWB <- kw_index(as.Date(PARAMS$kw_eind_nieuwbouw))
+P_VOOR    <- sprintf("opleveringen %d tot en met 2019Q1", JAAR_MIN)
+P_NA      <- sprintf("opleveringen 2019Q2 tot en met %s", kw_van(as.Date(PARAMS$kw_eind_nieuwbouw)))
+R$meta    <- c(R$meta, list(periode_voor = P_VOOR, periode_na = P_NA))
 nwb <- d[cbs_nieuwbouw == TRUE & projecttype != "admin_fout" & !is.na(dist2n2000_m) & !is.na(mutatiemaand) & !is.na(gemeentecode)]
-nwb[, q := kw_index(mutatiemaand)]; nwb <- nwb[q >= 1 & q <= Q_MAX_NWB]
+nwb[, q := kw_index(mutatiemaand)]; nwb <- nwb[q >= Q_MIN & q <= Q_MAX_NWB]
 nwb[, afst_project := min(dist2n2000_m), by = projectid]
 nwb[, periode := fifelse(q < Q_PAS, "voor", "na")]
 rm(d); invisible(gc())
@@ -83,7 +91,7 @@ RINGEN <- c("0 tot 1 km", "1 tot 2,5 km", "2,5 tot 5 km", "verder dan 5 km")
 ring_van <- function(a) fifelse(a <= 1000, RINGEN[1], fifelse(a <= 2500, RINGEN[2], fifelse(a <= 5000, RINGEN[3], RINGEN[4])))
 GM <- intersect(unique(pl$gemeentecode), unique(nwb[periode == "voor", gemeentecode]))
 aandelen <- rbind(
-  nwb[gemeentecode %in% GM, .(n = .N), by = .(maat = fifelse(periode == "voor", "opleveringen 2012 tot 2019Q1", "opleveringen 2019Q2 tot 2026Q2"), ring = ring_van(afst_project))],
+  nwb[gemeentecode %in% GM, .(n = .N), by = .(maat = fifelse(periode == "voor", P_VOOR, P_NA), ring = ring_van(afst_project))],
   pl[gemeentecode %in% GM, .(n = sum(cap)), by = .(ring = ring_van(afstand_min))][, maat := "plancapaciteit, alle plannen"],
   pl[gemeentecode %in% GM & hard == 1L, .(n = sum(cap)), by = .(ring = ring_van(afstand_min))][, maat := "plancapaciteit, harde plannen"],
   pl[gemeentecode %in% GM & hard == 0L, .(n = sum(cap)), by = .(ring = ring_van(afstand_min))][, maat := "plancapaciteit, zachte plannen"],
@@ -96,16 +104,17 @@ print(R$aandelen[, lapply(.SD, function(x) if (is.numeric(x)) round(x, 3) else x
 ## 2. Binnen de gemeente: werkelijk nabij tegenover verwacht, per drempel,
 ##    met een bootstrap over gemeenten
 ## ---------------------------------------------------------------------
-kop("2. Werkelijk nabij tegenover verwacht uit de opleveringen van 2012 tot en met 2019Q1, binnen de gemeente")
+kop("2. Werkelijk nabij tegenover verwacht uit de %s, binnen de gemeente", P_VOOR)
 ## de opleveringen op dezelfde gemeenten als de plannen, en ter vergelijking op alle gemeenten
 MATEN <- list(
-  "opleveringen 2019Q2 tot en met 2026Q2, gemeenten met plannen" = function(dr) nwb[periode == "na" & gemeentecode %in% GM, .(totaal = .N, nabij = sum(afst_project <= dr)), by = gemeentecode],
-  "opleveringen 2019Q2 tot en met 2026Q2, alle gemeenten" = function(dr) nwb[periode == "na", .(totaal = .N, nabij = sum(afst_project <= dr)), by = gemeentecode],
+  na_gm = function(dr) nwb[periode == "na" & gemeentecode %in% GM, .(totaal = .N, nabij = sum(afst_project <= dr)), by = gemeentecode],
+  na_alle = function(dr) nwb[periode == "na", .(totaal = .N, nabij = sum(afst_project <= dr)), by = gemeentecode],
   "plancapaciteit, alle plannen" = function(dr) pl[, .(totaal = sum(cap), nabij = sum(cap * (afstand_min <= dr))), by = gemeentecode],
   "plancapaciteit, harde plannen" = function(dr) pl[hard == 1L, .(totaal = sum(cap), nabij = sum(cap * (afstand_min <= dr))), by = gemeentecode],
   "plancapaciteit, zachte plannen" = function(dr) pl[hard == 0L, .(totaal = sum(cap), nabij = sum(cap * (afstand_min <= dr))), by = gemeentecode],
   "plancapaciteit, tot en met 2030" = function(dr) pl[, .(totaal = sum(vroeg), nabij = sum(vroeg * (afstand_min <= dr))), by = gemeentecode],
   "plancapaciteit, zwaartepunt" = function(dr) pl[, .(totaal = sum(cap), nabij = sum(cap * (afstand_midden <= dr))), by = gemeentecode])
+names(MATEN)[1:2] <- paste0(P_NA, c(", gemeenten met plannen", ", alle gemeenten"))
 WEG <- list("geen" = integer(0), "Amsterdam" = 363L, "vier grote steden" = c(363L, 599L, 518L, 344L))
 B <- 1999L
 R$verhoudingen <- rbindlist(lapply(names(WEG), function(w) rbindlist(lapply(c(1000, 1500, 2000, 2500), function(dr) {

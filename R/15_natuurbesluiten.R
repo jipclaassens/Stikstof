@@ -30,7 +30,7 @@ d <- read_derived("vbo_analyse")
 vpp <- d[, .(n_pand = uniqueN(vbo_bag_nr)), by = pand_bag_nr]
 d <- merge(d, vpp, by = "pand_bag_nr", all.x = TRUE)
 verg <- d[in_sample == TRUE & !is.na(vergunning_datum) & vergunning_datum >= as.Date("2016-01-01") &
-          vergunning_datum <= as.Date("2026-03-31") & !is.na(x) & !is.na(dist2n2000_m)]
+          vergunning_datum <= as.Date(PARAMS$kw_eind_vergund) & !is.na(x) & !is.na(dist2n2000_m)]
 proj <- verg[, .(objecten = .N, x = round(mean(x)), y = round(mean(y)), vergund = min(vergunning_datum),
                  afstand = min(dist2n2000_m), meergezins = mean(n_pand >= 3L)), by = projectid][objecten >= 20L]
 proj[, `:=`(jaar = as.integer(format(vergund, "%Y")),
@@ -39,7 +39,7 @@ proj[, `:=`(jaar = as.integer(format(vergund, "%Y")),
             type = fifelse(meergezins >= 0.5, "meergezins", "eengezins"))]
 f_proj <- file.path(PATHS$derived, "projecten_20plus.csv")
 fwrite(proj[, .(projectid, objecten, x, y, vergund = format(vergund), jaar, ring, type)], f_proj, sep = ";")
-cat("projecten van 20 of meer objecten, vergund 2016 tot en met 2026Q1:", nrow(proj), "\n")
+cat(sprintf("projecten van 20 of meer objecten, vergund 2016 tot en met %s:", kw_van(as.Date(PARAMS$kw_eind_vergund))), nrow(proj), "\n")
 
 f_uit <- file.path(PATHS$output, sprintf("natuurbesluiten_%s.json", EXTRACT))
 py <- Sys.getenv("PYTHON", "py")

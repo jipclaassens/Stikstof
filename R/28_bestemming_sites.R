@@ -49,7 +49,7 @@ options(width = 200)
 t0 <- Sys.time()
 sink(file.path(PATHS$output, sprintf("bestemming_sites_%s.txt", EXTRACT)), split = TRUE)
 
-W <- Sys.getenv("ECONLOGIC_WERK", "C:/LocalData/Redevelopment/R_werk")
+W <- PATHS$econlogic
 B <- file.path(PATHS$derived, "bestemming")
 R <- list()
 pct <- function(v) if (!length(v) || all(is.na(v))) NA_real_ else 100 * mean(v, na.rm = TRUE)
@@ -57,7 +57,7 @@ ROND <- function(x, d = 2) x[, lapply(.SD, function(v) if (is.numeric(v)) round(
 
 ## ---- 0. punten per site ---------------------------------------------
 f_sp <- file.path(PATHS$derived, "bestemming_site_punt.rds")
-if (!file.exists(f_sp)) {
+if (!file.exists(f_sp) || file.mtime(f_sp) < file.mtime(file.path(PATHS$derived, "econlogic_sites_obj.rds"))) {
   o <- readRDS(file.path(PATHS$derived, "econlogic_sites_obj.rds"))
   p <- o[is_incumbent == TRUE & !is.na(x), .(site_id, x, y)]
   u <- unique(p[, .(x, y)])[, pid := .I]
@@ -103,7 +103,7 @@ per_site <- function(S) {
 B12 <- per_site(S12); B14 <- per_site(S14); BNU <- per_site(SNU)
 
 ## ---- 2. de sites van het paper ---------------------------------------
-s <- readRDS(file.path(W, "sites_Nederland_20260710.rds"))
+s <- readRDS(file.path(W, sprintf("sites_Nederland_%s.rds", ECONLOGIC_EXPORT)))
 st <- s$attrs[!is.na(site_id), .(site_id, oad, gemeente_code, site_size)]
 st[oad >= 4294967295, oad := NA]
 st[, groep := sub("_.*$", "", site_id)][groep == "OnvS", groep := "Onv"]
@@ -111,9 +111,9 @@ st[, heeft_inc := site_id %chin% s$incumbent$site_id]
 st[s$new, on = "site_id", redev_ym := i.redev_yearmonth]
 st[s$incumbent, on = "site_id", `:=`(n_obj = i.n_obj, n_units_res = i.n_units_res)]
 rm(s); invisible(gc())
-st[readRDS(file.path(W, "clusters_sn_Nederland_20260710.rds"))$sites, on = "site_id", K := i.cluster]
-st[readRDS(file.path(W, "stage1_sn_Nederland_20260710.rds"))$iv, on = "site_id", iv := i.iv]
-st[, stedelijk := !is.na(oad) & oad >= 1000]
+st[readRDS(file.path(W, sprintf("clusters_sn_Nederland_%s.rds", ECONLOGIC_EXPORT)))$sites, on = "site_id", K := i.cluster]
+st[readRDS(file.path(W, sprintf("stage1_sn_Nederland_%s.rds", ECONLOGIC_EXPORT)))$iv, on = "site_id", iv := i.iv]
+st[, stedelijk := !is.na(oad) & oad >= PARAMS$oad_stedelijk]
 U <- st[heeft_inc == TRUE & groep %chin% c("SN", "Onv", "S", "O")]
 U[, redev_jaar := redev_ym %/% 100L]
 U[B12, on = "site_id", `:=`(hg12 = i.hoofdgroep, orde12 = i.orde, hoogte12 = i.hoogte, bv12 = i.bouwvlak, datum12 = i.plandatum, we12 = i.wooneenheden)]

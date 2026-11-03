@@ -183,13 +183,19 @@ kw_index <- function(datum) {
   y <- as.integer(format(datum, "%Y")); m <- as.integer(format(datum, "%m"))
   (y - KW_START) * 4L + (m - 1L) %/% 3L + 1L
 }
+## De kwartaalindex telt vanaf KW_START; de reeksen beginnen bij PARAMS$jaar_min
+## en eindigen bij de eindkwartalen in PARAMS (00_config.R).
+JAAR_MIN   <- PARAMS$jaar_min
+Q_MIN      <- kw_index(as.Date(sprintf("%d-01-01", JAAR_MIN)))
+Q_MAX_VERG <- kw_index(as.Date(PARAMS$kw_eind_vergund))
+Q_MAX_NWB  <- kw_index(as.Date(PARAMS$kw_eind_nieuwbouw))
 s <- d[in_sample == TRUE]
-verg <- s[!is.na(vergunning_datum) & vergunning_datum >= as.Date("2012-01-01")]
+verg <- s[!is.na(vergunning_datum) & vergunning_datum >= as.Date(sprintf("%d-01-01", JAAR_MIN))]
 verg[, q := kw_index(vergunning_datum)]
 nwb <- d[cbs_nieuwbouw == TRUE & projecttype != "admin_fout" & !is.na(dist2n2000_m) & !is.na(provinciecode) & !is.na(mutatiemaand)]
 nwb[, q := kw_index(mutatiemaand)]
-rij <- function(dt, naam, qmax) dt[q >= 1 & q <= qmax, .(n = .N), by = .(q, nabij = as.integer(dist2n2000_m <= 2500))][, reeks := naam][]
-bag <- rbind(rij(verg, "vergund", kw_index(as.Date("2026-03-31"))), rij(nwb, "opgeleverd", kw_index(as.Date("2026-06-30"))))
+rij <- function(dt, naam, qmax) dt[q >= Q_MIN & q <= qmax, .(n = .N), by = .(q, nabij = as.integer(dist2n2000_m <= 2500))][, reeks := naam][]
+bag <- rbind(rij(verg, "vergund", Q_MAX_VERG), rij(nwb, "opgeleverd", Q_MAX_NWB))
 bag[, `:=`(jaar = KW_START + (q - 1L) %/% 4L, kw = (q - 1L) %% 4L + 1L)]
 R$bag <- dcast(bag, jaar + kw ~ reeks + nabij, value.var = "n", fill = 0)[order(jaar, kw)]
 print(R$bag[, lapply(.SD, sum), by = jaar, .SDcols = patterns("_")])
@@ -199,8 +205,8 @@ print(R$bag[, lapply(.SD, sum), by = jaar, .SDcols = patterns("_")])
 ## geel tot 5 km. Zelfde afstand als hierboven (tot stikstofgevoelig
 ## habitat), per jaar van vergunning en van oplevering.
 zone <- function(m) fifelse(m <= 1000, "0-1 km", fifelse(m <= 3000, "1-3 km", fifelse(m <= 5000, "3-5 km", "verder")))
-zo <- rbind(verg[q >= 1 & q <= kw_index(as.Date("2026-03-31")), .(n = .N), by = .(jaar = KW_START + (q - 1L) %/% 4L, zone = zone(dist2n2000_m))][, reeks := "vergund"],
-            nwb[q >= 1 & q <= kw_index(as.Date("2026-06-30")), .(n = .N), by = .(jaar = KW_START + (q - 1L) %/% 4L, zone = zone(dist2n2000_m))][, reeks := "opgeleverd"])
+zo <- rbind(verg[q >= Q_MIN & q <= Q_MAX_VERG, .(n = .N), by = .(jaar = KW_START + (q - 1L) %/% 4L, zone = zone(dist2n2000_m))][, reeks := "vergund"],
+            nwb[q >= Q_MIN & q <= Q_MAX_NWB, .(n = .N), by = .(jaar = KW_START + (q - 1L) %/% 4L, zone = zone(dist2n2000_m))][, reeks := "opgeleverd"])
 zo[, aandeel := n / sum(n), by = .(reeks, jaar)]
 R$zones <- zo[order(reeks, jaar, zone)]
 cat("\nvergund per zone (aantal, aandeel):\n")

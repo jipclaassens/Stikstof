@@ -24,7 +24,7 @@
 ##   3. Binnen de gemeente zit de dip in de binnenste ring bij eengezins.
 ## Daarna per woningtype en per ring een eigen stap bij de Omgevingswet
 ## (2024Q1) en bij de uitspraak over intern salderen (2024Q4), binnen
-## gemeente en kwartaal, op het venster 2019Q2 tot en met 2026Q1.
+## gemeente en kwartaal, op het venster 2019Q2 tot en met PARAMS$kw_eind_vergund.
 ##
 ## Woningtype zoals in 11_ruimte.R: meergezins als het pand drie of meer
 ## woonobjecten telt in het objectenbestand, anders eengezins.
@@ -53,8 +53,12 @@ kw_index <- function(datum) {
 Q_PAS <- kw_index(as.Date("2019-05-29"))
 Q_OW  <- kw_index(as.Date("2024-01-01"))
 Q_SAL <- kw_index(as.Date("2024-12-18"))
-Q_MAX_VERG <- kw_index(as.Date("2026-03-31"))   # 2026Q2: piek van juni 2026 (17_registratie.R)
-Q_MAX_NWB  <- kw_index(as.Date("2026-06-30"))
+## De kwartaalindex telt vanaf KW_START; de analyse begint bij PARAMS$jaar_min
+## en eindigt bij de eindkwartalen in PARAMS (00_config.R).
+JAAR_MIN   <- PARAMS$jaar_min
+Q_MIN      <- kw_index(as.Date(sprintf("%d-01-01", JAAR_MIN)))
+Q_MAX_VERG <- kw_index(as.Date(PARAMS$kw_eind_vergund))
+Q_MAX_NWB  <- kw_index(as.Date(PARAMS$kw_eind_nieuwbouw))
 
 vbo_per_pand <- d[, .(n_pand = uniqueN(vbo_bag_nr)), by = pand_bag_nr]
 d <- merge(d, vbo_per_pand, by = "pand_bag_nr", all.x = TRUE)
@@ -65,10 +69,10 @@ d[, ringk := fifelse(is.na(dist2n2000_m), NA_character_,
 halfjaar <- function(datum) paste0(format(datum, "%Y"), fifelse(as.integer(format(datum, "%m")) <= 6L, "H1", "H2"))
 
 s <- d[in_sample == TRUE]
-verg <- s[!is.na(vergunning_datum) & vergunning_datum >= as.Date("2012-01-01")]
-verg[, q := kw_index(vergunning_datum)]; verg <- verg[q >= 1 & q <= Q_MAX_VERG]
+verg <- s[!is.na(vergunning_datum) & vergunning_datum >= as.Date(sprintf("%d-01-01", JAAR_MIN))]
+verg[, q := kw_index(vergunning_datum)]; verg <- verg[q >= Q_MIN & q <= Q_MAX_VERG]
 nwb <- d[cbs_nieuwbouw == TRUE & projecttype != "admin_fout" & !is.na(dist2n2000_m) & !is.na(provinciecode) & !is.na(mutatiemaand)]
-nwb[, q := kw_index(mutatiemaand)]; nwb <- nwb[q >= 1 & q <= Q_MAX_NWB]
+nwb[, q := kw_index(mutatiemaand)]; nwb <- nwb[q >= Q_MIN & q <= Q_MAX_NWB]
 R$meta <- list(extract = EXTRACT, gemaakt = format(Sys.time(), "%Y-%m-%d %H:%M"),
                q_ow = Q_OW, q_sal = Q_SAL, vergunningen = nrow(verg), opleveringen = nrow(nwb),
                laatste_oplevermaand = format(max(nwb$mutatiemaand)))
@@ -78,18 +82,20 @@ R$meta <- list(extract = EXTRACT, gemaakt = format(Sys.time(), "%Y-%m-%d %H:%M")
 ## ---------------------------------------------------------------------
 kop("1. Aandeel opleveringen zonder vergunningrecord in de BAG, per halfjaar")
 nwb[, hj := halfjaar(mutatiemaand)]
-R$zonder_bvv <- nwb[mutatiemaand >= as.Date("2019-01-01") & mutatiemaand < as.Date("2026-07-01"),
+R$zonder_bvv <- nwb[mutatiemaand >= as.Date("2019-01-01") & mutatiemaand <= as.Date(PARAMS$kw_eind_nieuwbouw),
                     .(opgeleverd = .N, zonder_bvv = sum(!bron_vergunning)), by = .(hj, type)][order(hj, type)]
 R$zonder_bvv[, aandeel := zonder_bvv / opgeleverd]
 print(dcast(R$zonder_bvv, hj ~ type, value.var = c("opgeleverd", "aandeel"))[, lapply(.SD, function(x) if (is.numeric(x)) round(x, 3) else x)])
-R$zonder_bvv_ring <- nwb[mutatiemaand >= as.Date("2021-01-01") & mutatiemaand < as.Date("2026-07-01"),
+R$zonder_bvv_ring <- nwb[mutatiemaand >= as.Date("2021-01-01") & mutatiemaand <= as.Date(PARAMS$kw_eind_nieuwbouw),
                          .(opgeleverd = .N, zonder_bvv = sum(!bron_vergunning)), by = .(jaar = as.integer(format(mutatiemaand, "%Y")), ringk)][order(jaar, ringk)]
 R$zonder_bvv_ring[, aandeel := zonder_bvv / opgeleverd]
-cat("\nper jaar en ring (2026 = eerste halfjaar):\n")
+cat(sprintf("\nper jaar en ring (2026 tot en met %s):\n", kw_van(as.Date(PARAMS$kw_eind_nieuwbouw))))
 print(dcast(R$zonder_bvv_ring, jaar ~ ringk, value.var = "aandeel")[, lapply(.SD, function(x) round(x, 3))])
 ## Zitten er al woningen van na de Omgevingswet tussen? Moment van de eerste
-## vergunning op het pand voor opleveringen van juli 2025 tot en met juni 2026.
-recent <- nwb[mutatiemaand >= as.Date("2025-07-01") & mutatiemaand < as.Date("2026-07-01")]
+## vergunning op het pand voor de opleveringen in de vier kwartalen tot en met
+## PARAMS$kw_eind_nieuwbouw.
+recent <- nwb[mutatiemaand > seq(as.Date(PARAMS$kw_eind_nieuwbouw), by = "-1 year", length.out = 2L)[2L] &
+              mutatiemaand <= as.Date(PARAMS$kw_eind_nieuwbouw)]
 recent[, moment := fifelse(!bron_vergunning, "geen vergunningrecord",
                    fifelse(vergunning_datum < as.Date("2024-01-01"), "vergund voor 2024",
                    fifelse(vergunning_datum < as.Date("2024-07-01"), "vergund 2024H1", "vergund vanaf 2024H2")))]
@@ -137,7 +143,7 @@ print(dcast(R$ringen_jaar[ring == RINGEN[1] & jaar >= 2015], jaar ~ soort, value
 ## ---------------------------------------------------------------------
 ## 4. Een eigen stap per ring bij de Omgevingswet en bij intern salderen
 ## ---------------------------------------------------------------------
-## Venster 2019Q2 tot en met 2026Q1: de stappen meten tegen 2019Q2-2023Q4.
+## Venster 2019Q2 tot en met de eindkwartalen in PARAMS: de stappen meten tegen 2019Q2-2023Q4.
 kop("4. Stappen per ring bij de Omgevingswet (2024Q1) en intern salderen (2024Q4), binnen gemeente en kwartaal")
 R$stappen <- rbindlist(lapply(names(SOORTEN), function(sn) {
   p <- paneel_ring(verg[eval(SOORTEN[[sn]])])[t >= Q_PAS]
@@ -167,7 +173,7 @@ print(R$stappen[, .(soort, ring, stap, b = round(b, 3), se = round(se, 3), p = r
 ##     van tegenover verder dan 5 km
 ## ---------------------------------------------------------------------
 kop("4b. Stappen in de binnenste ring zonder de grootste steden, en tegenover alles verderop")
-tien <- d[cbs_nieuwbouw == TRUE & !is.na(gemeentecode) & !is.na(mutatiemaand) & mutatiemaand <= as.Date("2026-06-30"), .N, by = gemeentecode][order(-N)][1:10, gemeentecode]
+tien <- d[cbs_nieuwbouw == TRUE & !is.na(gemeentecode) & !is.na(mutatiemaand) & mutatiemaand <= as.Date(PARAMS$kw_eind_nieuwbouw), .N, by = gemeentecode][order(-N)][1:10, gemeentecode]
 WEG <- list("geen" = integer(0), "Amsterdam" = 363L, "de vier grote steden" = c(363L, 599L, 518L, 344L), "de tien grootste gemeenten" = tien)
 R$stappen_robuust <- rbindlist(lapply(names(SOORTEN), function(sn) rbindlist(lapply(names(WEG), function(w) rbindlist(lapply(c(FALSE, TRUE), function(binair) {
   dt <- verg[!gemeentecode %in% WEG[[w]]][eval(SOORTEN[[sn]])]
@@ -284,7 +290,9 @@ print(R$woningen_2025q1)
 ## september 2025 de vergunning voor de omgevingsplanactiviteit (BWTinfo,
 ## september 2025). Een inhaalslag zou als piek zichtbaar zijn.
 kop("7c. Vergunde objecten (in_sample) per maand")
-alle_verg <- s[!is.na(vergunning_datum) & vergunning_datum >= as.Date("2024-01-01") & vergunning_datum <= as.Date("2026-06-30")]
+## tot en met het laatste volle kwartaal voor de BAG-levering (PARAMS$kw_eind_nieuwbouw), ook bij de
+## vergunningen: deze reeks per maand moet de piek van juni 2026 juist laten zien
+alle_verg <- s[!is.na(vergunning_datum) & vergunning_datum >= as.Date("2024-01-01") & vergunning_datum <= as.Date(PARAMS$kw_eind_nieuwbouw)]
 R$per_maand <- alle_verg[, .(n = .N), by = .(maand = format(vergunning_datum, "%Y-%m"), type)][order(maand, type)]
 print(dcast(R$per_maand, maand ~ type, value.var = "n"))
 
