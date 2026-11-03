@@ -193,8 +193,12 @@ container N2000_Analyse :  using = "units;classifications/bag;geography;sourceda
 		{
 			attribute<int32> First_DatumVergunning  := ../last_pand_bouwvergunningberleend_datum[first_rel] / 100i;
 			attribute<int32> Second_DatumVergunning := ../last_pand_bouwvergunningberleend_datum[second_rel] / 100i;
-			
-			attribute<bool> HasSimilarDate         := First_DatumVergunning >= Second_DatumVergunning - 6i &&  First_DatumVergunning <= Second_DatumVergunning + 6i;
+
+			// YYYYMM -> maandindex (jaar*12 + maand); ±6 rechtstreeks op YYYYMM matcht nooit over een jaargrens (bv. 202312 vs 202401 = 89)
+			attribute<int32> First_MaandIndex       := (First_DatumVergunning  / 100i) * 12i + First_DatumVergunning  % 100i;
+			attribute<int32> Second_MaandIndex      := (Second_DatumVergunning / 100i) * 12i + Second_DatumVergunning % 100i;
+
+			attribute<bool> HasSimilarDate         := First_MaandIndex >= Second_MaandIndex - 6i &&  First_MaandIndex <= Second_MaandIndex + 6i;
 			attribute<bool> NonDoublures           := first_rel < second_rel;
 			
 			unit<uint32> subset := select_with_org_rel(HasSimilarDate && NonDoublures)
