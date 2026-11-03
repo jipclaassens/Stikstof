@@ -1,0 +1,68 @@
+container Output : using = "units;classifications;geography;classifications/bag"
+{
+	container Vergunningenspoor
+	:	Descr = "Invoer voor het BAG-spoor van de vergunningendatabase (vergunningen/pipeline/bag_export.py): per pand de fasen uit dezelfde BAG-levering als de exports in Analyse/N2000_Analyse (#31)."
+	{
+		unit<uint32> pand_voorkomen := /SourceData/BAG/VolledigeBAG/panden/pand;
+		unit<uint32> vbo_voorkomen  := /SourceData/BAG/VolledigeBAG/VBOs/vbo;
+
+		unit<uint32> vbo := unique(vbo_voorkomen/vbo_bag_nr)
+		,	Descr = "Elk verblijfsobject in zijn laatste voorkomen, met elke status: bij een vergund pand zijn de verblijfsobjecten nog gevormd."
+		{
+			attribute<vbo>           voorkomen_rel (vbo_voorkomen) := rlookup(vbo_voorkomen/vbo_bag_nr, values);
+			attribute<vbo_voorkomen> laatste                       := last(id(vbo_voorkomen), voorkomen_rel);
+			attribute<uint64>        pand_bag_nr                   := vbo_voorkomen/pand_bag_nr[laatste];
+			attribute<bool>          woon                          := vbo_voorkomen/gebruiksdoelen/woon[laatste];
+			attribute<int32>         oppervlakte                   := vbo_voorkomen/oppervlakte[laatste];
+			attribute<pand>          pand_rel                      := rlookup(pand_bag_nr, pand/values);
+		}
+
+		unit<uint32> pand := unique(pand_voorkomen/pand_bag_nr)
+		,	Descr = "Per pand de eerste begindatum van elke fase over al zijn voorkomens, en de status, het bouwjaar en de ligging van het laatste voorkomen."
+		{
+			attribute<pand>           voorkomen_rel (pand_voorkomen) := rlookup(pand_voorkomen/pand_bag_nr, values);
+			attribute<pand_voorkomen> laatste                        := last(id(pand_voorkomen), voorkomen_rel);
+			attribute<pand_status>    status_rel    (pand_voorkomen) := pand_voorkomen/status_rel;
+			attribute<int32>          begindatum    (pand_voorkomen) := pand_voorkomen/begindatum;
+
+			attribute<int32>          verg_begin                     := min(status_rel == pand_status/V/Bouwvergunning_verleend ? begindatum : null_i, voorkomen_rel);
+			attribute<int32>          start_begin                    := min(status_rel == pand_status/V/Bouw_gestart ? begindatum : null_i, voorkomen_rel);
+			attribute<int32>          gebruik_begin                  := min(status_rel == pand_status/V/Pand_in_gebruik || status_rel == pand_status/V/Pand_in_gebruik_niet_ingemeten ? begindatum : null_i, voorkomen_rel);
+			attribute<int32>          niet_gerealiseerd_begin        := min(status_rel == pand_status/V/Niet_gerealiseerd_pand ? begindatum : null_i, voorkomen_rel);
+			attribute<int32>          sloopverg_begin                := min(status_rel == pand_status/V/Sloopvergunning_verleend ? begindatum : null_i, voorkomen_rel);
+			attribute<int32>          gesloopt_begin                 := min(status_rel == pand_status/V/Pand_gesloopt ? begindatum : null_i, voorkomen_rel);
+			attribute<int32>          verbouwing_begin               := min(status_rel == pand_status/V/Verbouwing_pand ? begindatum : null_i, voorkomen_rel);
+
+			attribute<string>         huidige_status                 := pand_status/label[pand_voorkomen/status_rel[laatste]];
+			attribute<jaar>           bouwjaar                       := pand_voorkomen/bouwjaar[laatste];
+			attribute<rdc>            punt                           := centroid_or_mid(pand_voorkomen/geometry[laatste]);
+			attribute<uint32>         n_voorkomens                   := pcount(voorkomen_rel);
+			attribute<uint32>         n_vbo                          := pcount(vbo/pand_rel);
+			attribute<uint32>         n_woon                         := sum(uint32(vbo/woon), vbo/pand_rel);
+			attribute<int32>          opp_woon                       := sum(vbo/woon ? vbo/oppervlakte : 0i, vbo/pand_rel);
+		}
+
+		unit<uint32> Export := select_with_org_rel(pand/verg_begin < /SourceData/BAG/VolledigeBAG/MaxDatum)
+		,	StorageName = "='%LocalDataProjDir%/Pand_Fasen_' + /Parameters/BAG_file_date + '.parquet'"
+		,	StorageType = "gdalwrite.vect"
+		,	Descr       = "Een rij per pand met een voorkomen Bouwvergunning verleend dat een begindatum heeft; datums als JJJJMMDD. Een fase zonder voorkomen krijgt het hoogste int32-getal (2147483647), een voorkomen zonder begindatum 20500101."
+		{
+			attribute<string>  identificatie           := string(pand/values[org_rel]);
+			attribute<int32>   verg_begin              := pand/verg_begin[org_rel];
+			attribute<int32>   start_begin             := pand/start_begin[org_rel];
+			attribute<int32>   gebruik_begin           := pand/gebruik_begin[org_rel];
+			attribute<int32>   niet_gerealiseerd_begin := pand/niet_gerealiseerd_begin[org_rel];
+			attribute<int32>   sloopverg_begin         := pand/sloopverg_begin[org_rel];
+			attribute<int32>   gesloopt_begin          := pand/gesloopt_begin[org_rel];
+			attribute<int32>   verbouwing_begin        := pand/verbouwing_begin[org_rel];
+			attribute<string>  huidige_status          := pand/huidige_status[org_rel];
+			attribute<uint32>  bouwjaar                := uint32(pand/bouwjaar[org_rel]);
+			attribute<float64> x                       := float64(PointCol(pand/punt[org_rel]));
+			attribute<float64> y                       := float64(PointRow(pand/punt[org_rel]));
+			attribute<uint32>  n_voorkomens            := pand/n_voorkomens[org_rel];
+			attribute<uint32>  n_vbo                   := pand/n_vbo[org_rel];
+			attribute<uint32>  n_woon                  := pand/n_woon[org_rel];
+			attribute<int32>   opp_woon                := pand/opp_woon[org_rel];
+		}
+	}
+}

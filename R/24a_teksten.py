@@ -1,14 +1,16 @@
 """Natuur en andere redenen in de uitgebreide procedure: vlaggen per zaak uit titel, samenvatting en volledige tekst.
 
 Gebruik: py -3.13 R/24a_teksten.py samenvatting <uitvoer.txt> [datamap]
-         py -3.13 R/24a_teksten.py teksten <uitvoer.csv> [teksten.sqlite]
+         py -3.13 R/24a_teksten.py teksten <uitvoer.csv> [teksten.sqlite]   (datamap uit VERGUNNINGEN_DATA)
 
 samenvatting  telt de zaken met een uitgebreide procedure (analyse/zaken.csv, uitgebreid = 1) waarvan een publicatie in
               titel of samenvatting natuur of stikstof noemt (patroon NATUUR hieronder), uit vergunningen.sqlite, alleen
               lezend; datamap standaard VERGUNNINGEN_DATA
 teksten       leest de volledige teksten van de gerichte oogst (vergunningen/pipeline/teksten.py; tabel tekst in
-              C:/LocalData/Stikstof/teksten/teksten.sqlite of TEKSTEN_DIR, alleen lezend) en schrijft per zaak of een van
-              haar teksten het volgende noemt:
+              C:/LocalData/Stikstof/teksten/teksten.sqlite of TEKSTEN_DIR, alleen lezend), koppelt elke tekst via zijn
+              publicatie aan de zaak van de huidige zaakvorming (publicatie_zaak in vergunningen.sqlite, datamap
+              VERGUNNINGEN_DATA; het zaak_id in de tabel tekst is dat van het moment van oogsten en verschuift bij elke
+              nieuwe zaakvorming) en schrijft per zaak of een van haar teksten het volgende noemt:
   natura      Natura 2000, stikstof(depositie), AERIUS, passende beoordeling, voortoets, (Wet) natuurbescherming,
               natuurvergunning of gebiedsbescherming: de natuurtoets voor gebieden, waaronder stikstof
   stikstof    alleen stikstof of AERIUS
@@ -72,11 +74,18 @@ def samenvatting(uit, data):
     print("\n".join(regels))
 
 
-def teksten(uit, bron):
+def teksten(uit, bron, data):
+    con = sqlite3.connect(f"file:{(data / 'vergunningen.sqlite').as_posix()}?immutable=1", uri=True)
+    zaak_van = dict(con.execute("SELECT identifier, zaak_id FROM publicatie_zaak"))
+    con.close()
     db = sqlite3.connect(f"file:{bron.as_posix()}?mode=ro", uri=True)
     per = {}
-    n = 0
-    for zid, blob in db.execute("SELECT zaak_id, tekst FROM tekst WHERE status = 200 AND tekst IS NOT NULL"):
+    n = zonder = 0
+    for ident, blob in db.execute("SELECT identifier, tekst FROM tekst WHERE status = 200 AND tekst IS NOT NULL"):
+        zid = zaak_van.get(ident)
+        if zid is None:
+            zonder += 1
+            continue
         t = zlib.decompress(blob).decode("utf-8", errors="replace")
         z = per.setdefault(zid, {k: 0 for k in V} | {"teksten": 0, "woningen": None})
         z["teksten"] += 1
@@ -94,14 +103,14 @@ def teksten(uit, bron):
         w.writerow(["zaak_id", "teksten", *V.keys(), "woningen"])
         for zid, z in sorted(per.items()):
             w.writerow([zid, z["teksten"], *(z[k] for k in V), "" if z["woningen"] is None else z["woningen"]])
-    print(f"{n} teksten, {len(per)} zaken: {uit}")
+    print(f"{n} teksten, {len(per)} zaken, {zonder} teksten zonder zaak in de huidige zaakvorming: {uit}")
 
 
 if __name__ == "__main__":
     modus, uit = sys.argv[1], Path(sys.argv[2])
+    data = Path(os.environ.get("VERGUNNINGEN_DATA", r"E:\OneDrive - Objectvision\VU\Projects\202505-StikstofPaper\vergunningen"))
     if modus == "samenvatting":
-        samenvatting(uit, Path(sys.argv[3]) if len(sys.argv) > 3 else Path(os.environ.get(
-            "VERGUNNINGEN_DATA", r"E:\OneDrive - Objectvision\VU\Projects\202505-StikstofPaper\vergunningen")))
+        samenvatting(uit, Path(sys.argv[3]) if len(sys.argv) > 3 else data)
     else:
         teksten(uit, Path(sys.argv[3]) if len(sys.argv) > 3 else
-                Path(os.environ.get("TEKSTEN_DIR", r"C:\LocalData\Stikstof\teksten")) / "teksten.sqlite")
+                Path(os.environ.get("TEKSTEN_DIR", r"C:\LocalData\Stikstof\teksten")) / "teksten.sqlite", data)

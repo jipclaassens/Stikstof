@@ -7,6 +7,7 @@
 #   1. /MaakOntkoppeldeData/Write_IsMogelijkWoningCorporatiePand
 #   2. /MaakOntkoppeldeData/Write_FinalMutationTable
 #   3. /Analyse/N2000_Analyse/Export
+#   4. /Output/Vergunningenspoor/Export (de pandexport voor bag_export.py van de vergunningenketen)
 # Stap 2 en 3 lezen wat de stap ervoor schreef, dus elk in een eigen aanroep. Op OVSRV06 kostte dat in
 # november 2026 samen ongeveer een half uur. Start een lange run buiten de Claude-sessie, via WMI:
 #   Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{

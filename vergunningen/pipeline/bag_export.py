@@ -2,18 +2,19 @@
 per fase (vergunning, bouwstart, in gebruik, niet gerealiseerd, sloop), het aantal verblijfsobjecten met
 woonfunctie, de gemeente in de huidige indeling en de afstand tot AERIUS-habitats en overbelaste hexagonen.
 
-Bron is bron\\gebouwen\\bag_pand_historie.sqlite, afgeleid uit het LV BAG-extract (Kadaster, CC0) met de scripts in
-bron\\gebouwen\\scripts. De BAG registreert alleen nieuwe panden (status Bouwvergunning verleend, Bouw gestart, Pand in
+Bron is de pandexport van de Stikstof-configuratie (cfg/main/Output.dms, Output/Vergunningenspoor/Export): een parquet
+op dezelfde BAG-levering als de objectexports, uit de store van BAG-Tools die ook de RuimteScanner leest (#31). Het pad
+komt uit de omgevingsvariabele VERGUNNINGEN_BAG of uit het eerste argument. De BAG registreert alleen nieuwe panden (status Bouwvergunning verleend, Bouw gestart, Pand in
 gebruik), dus dit is de nieuwbouwkant van de vergunningen, landelijk vanaf de start van de BAG (2010) en daarmee ook
 voor de gemeenten die pas in 2021 bekendmakingen gingen publiceren. De afstandsrasters komen uit afstand.py en
 blootstelling.py en liggen op hetzelfde 25 meter-grid; de gemeente komt uit een rasterisatie van de bestuurlijke
 gebieden (PDOK) op dat grid, eenmalig gemaakt en bewaard naast de grenzen.
 
-Draaien met de QGIS-python: "C:\\Program Files\\QGIS 3.38.1\\bin\\python-qgis.bat" bag_export.py
+Draaien met de QGIS-python: "C:\\Program Files\\QGIS 3.38.1\\bin\\python-qgis.bat" bag_export.py [pand_fasen.parquet]
 Uitvoer: analyse\\bag_panden.csv (een rij per pand).
 """
 import csv
-import sqlite3
+import os
 import sys
 from pathlib import Path
 
@@ -23,7 +24,7 @@ from osgeo import gdal, ogr, osr
 from afstand import klasse
 from config import DATA_DIR
 
-BAG_DB = DATA_DIR / "bron" / "gebouwen" / "bag_pand_historie.sqlite"
+BAG_FASEN = os.environ.get("VERGUNNINGEN_BAG")  # Pand_Fasen_<BAG-datum>.parquet uit de Stikstof-configuratie
 GRENZEN = DATA_DIR / "bron" / "gebouwen" / "grenzen" / "bestuurlijke_gebieden.gpkg"
 GEMEENTE_RASTER = DATA_DIR / "bron" / "gebouwen" / "grenzen" / "gemeente_25m.tif"
 AFSTAND_HABITAT = DATA_DIR / "bron" / "aerius_relevant_habitats_afstand_25m.tif"
@@ -31,6 +32,7 @@ AFSTAND_OVERBELAST = DATA_DIR / "bron" / "natuur" / "afstand_overbelast_25m.tif"
 OVERBELASTING = DATA_DIR / "bron" / "natuur" / "overbelasting_250m.tif"
 UIT = DATA_DIR / "analyse" / "bag_panden.csv"
 VANAF = "2005-01-01"  # de BAG begint in 2009 tot 2011; oudere vergunningdatums zijn conversieartefacten
+GEEN_DATUM = 20500101  # de BAG-lezer zet een voorkomen zonder begindatum op deze dag
 
 # Het 25 meter-grid van afstand.py: 12.000 bij 13.200 cellen vanaf (0, 630000), heel Nederland.
 X0, Y0, CEL, NX, NY = 0.0, 630000.0, 25.0, 12000, 13200
@@ -78,27 +80,46 @@ def bemonster(pad: Path, x: np.ndarray, y: np.ndarray, buiten):
     return uit
 
 
+def iso(v):
+    """Een datum als JJJJMMDD-getal naar JJJJ-MM-DD; leeg, nul of de dag zonder begindatum wordt leeg."""
+    if v is None:
+        return None
+    v = int(v)
+    if v <= 0 or v >= GEEN_DATUM:
+        return None
+    return f"{v // 10000:04d}-{v // 100 % 100:02d}-{v % 100:02d}"
+
+
+def lees_fasen(bron: Path):
+    """De pandexport als rijen in de volgorde en kolommen van de oude tabel pand_fasen, plus de verblijfsobjecten."""
+    ds = ogr.Open(str(bron))
+    if ds is None:
+        raise SystemExit(f"kan {bron} niet openen")
+    laag = ds.GetLayer(0)
+    rijen, vbo = [], {}
+    for f in laag:
+        verg = iso(f.GetField("verg_begin"))
+        if verg is None or not (VANAF <= verg < "2027-01-01"):
+            continue
+        pid = f"{int(f.GetField('identificatie')):016d}"
+        bouwjaar = f.GetField("bouwjaar")
+        rijen.append((pid, verg, None, iso(f.GetField("start_begin")), iso(f.GetField("gebruik_begin")),
+                      iso(f.GetField("niet_gerealiseerd_begin")), iso(f.GetField("sloopverg_begin")),
+                      iso(f.GetField("gesloopt_begin")), iso(f.GetField("verbouwing_begin")), f.GetField("huidige_status"),
+                      bouwjaar if bouwjaar else None, f.GetField("x"), f.GetField("y"), f.GetField("n_voorkomens")))
+        vbo[pid] = (f.GetField("n_vbo") or 0, f.GetField("n_woon") or 0, f.GetField("opp_woon") or 0)
+    ds = None
+    rijen.sort(key=lambda r: (r[1], r[0]))
+    return rijen, vbo
+
+
 def main(argv):
-    bron = Path(argv[0]) if argv else BAG_DB
-    conn = sqlite3.connect(bron)
-    conn.execute("CREATE TEMP TABLE sel AS SELECT identificatie FROM pand_fasen WHERE verg_begin >= ? AND verg_begin < '2027-01-01'", (VANAF,))
-    conn.execute("CREATE INDEX temp.ix_sel ON sel(identificatie)")
-    n = conn.execute("SELECT count(*) FROM sel").fetchone()[0]
-    print(f"{n} panden met een vergunningdatum vanaf {VANAF}")
-    # Verblijfsobjecten per pand: alle statussen tellen mee, want bij een vergund pand zijn ze nog 'gevormd'.
-    vbo = {}
-    for pid, n_vbo, n_woon, opp in conn.execute(
-        "SELECT v.pand_identificatie, count(*), sum(v.gebruiksdoel LIKE '%woonfunctie%'), sum(CASE WHEN v.gebruiksdoel LIKE '%woonfunctie%' THEN v.oppervlakte END) "
-        "FROM vbo_actueel v JOIN sel s ON s.identificatie = v.pand_identificatie GROUP BY v.pand_identificatie"
-    ):
-        vbo[pid] = (n_vbo, n_woon or 0, opp or 0)
-    print(f"verblijfsobjecten gekoppeld voor {len(vbo)} panden")
-    rijen = conn.execute(
-        "SELECT f.identificatie, f.verg_begin, f.verg_documentdatum, f.start_begin, f.gebruik_begin, f.niet_gerealiseerd_begin, "
-        "f.sloopverg_begin, f.gesloopt_begin, f.verbouwing_begin, f.huidige_status, f.bouwjaar, f.x, f.y, f.n_voorkomens "
-        "FROM pand_fasen f JOIN sel s ON s.identificatie = f.identificatie ORDER BY f.verg_begin, f.identificatie"
-    ).fetchall()
-    conn.close()
+    bron = Path(argv[0]) if argv else (Path(BAG_FASEN) if BAG_FASEN else None)
+    if bron is None or not bron.exists():
+        raise SystemExit("geef de pandexport (Pand_Fasen_<datum>.parquet) als argument of in VERGUNNINGEN_BAG")
+    rijen, vbo = lees_fasen(bron)
+    print(f"{len(rijen)} panden met een vergunningdatum vanaf {VANAF} uit {bron.name}")
+    print(f"verblijfsobjecten gekoppeld voor {sum(1 for v in vbo.values() if v[0])} panden")
     x = np.array([float(r[11]) if r[11] not in (None, "") else np.nan for r in rijen])
     y = np.array([float(r[12]) if r[12] not in (None, "") else np.nan for r in rijen])
     geldig = np.isfinite(x) & np.isfinite(y)
