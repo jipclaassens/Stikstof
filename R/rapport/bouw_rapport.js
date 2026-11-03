@@ -11,9 +11,20 @@ const extract = process.argv[2] || "20261103";
 const here = __dirname;
 const src = fs.readFileSync(path.join(here, "rapport_stikstof_src.html"), "utf8");
 
+// Bestaat de JSON van dit extract nog niet, omdat het script op de andere machine nog niet gedraaid heeft,
+// dan neemt het rapport de nieuwste oudere en noemt het die in de kop (build.ouder).
+const ouder = {};
 const lees = (naam) => {
-  const t = fs.readFileSync(path.join(here, "..", "_output", `${naam}_${extract}.json`), "utf8")
-              .replace(/<\/script/gi, "<\\/script");
+  const dir = path.join(here, "..", "_output");
+  let f = path.join(dir, `${naam}_${extract}.json`);
+  if (!fs.existsSync(f)) {
+    const eerder = fs.readdirSync(dir).map(x => x.match(new RegExp(`^${naam}_(\\d{8})\\.json$`))).filter(Boolean)
+                     .map(m => m[1]).filter(d => d < extract).sort();
+    if (!eerder.length) throw new Error(`geen ${naam}-JSON`);
+    ouder[naam] = eerder[eerder.length - 1];
+    f = path.join(dir, `${naam}_${ouder[naam]}.json`);
+  }
+  const t = fs.readFileSync(f, "utf8").replace(/<\/script/gi, "<\\/script");
   JSON.parse(t);
   return t;
 };
@@ -39,6 +50,7 @@ const build = {
   versie: VERSIE,
   extract,
   git,
+  ouder,
   gebouwd: `${nu.getFullYear()}-${pad(nu.getMonth() + 1)}-${pad(nu.getDate())} ${pad(nu.getHours())}:${pad(nu.getMinutes())}`
 };
 
@@ -70,3 +82,4 @@ fs.writeFileSync(out, src.replace("__DATA__", () => data)
                          .replace("__AANVRAGEN_LANDELIJK__", () => extra.aanvragen_landelijk)
                          .replace("__BUILD__", () => JSON.stringify(build)));
 console.log(`geschreven: ${out}  (versie ${VERSIE}${git ? ", commit " + git : ""}, ${build.gebouwd})`);
+if (Object.keys(ouder).length) console.log("op een ouder extract: " + Object.entries(ouder).map(([k, d]) => `${k} (${d})`).join(", "));

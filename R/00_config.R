@@ -57,6 +57,14 @@ FILES <- list(
   vergunning = file.path(PATHS$raw, sprintf("Object_BouwvergunningVerleend_%s.csv",  EXTRACT))
 )
 
+## De BAG-levering achter het extract, uit de xml die GeoDMS naast de export schrijft.
+BAG_DATUM <- local({
+  x <- paste(readLines(sub("\\.csv$", ".xml", FILES$vergunning), warn = FALSE), collapse = " ")
+  d <- sub(".*<BAG_file_date>\\s*([0-9]{8}).*", "\\1", x)
+  if (!grepl("^[0-9]{8}$", d)) stop("geen BAG_file_date in de xml van ", FILES$vergunning)
+  d
+})
+
 ## ---------------------------------------------------------------------
 ## 3. Analyseparameters
 ## ---------------------------------------------------------------------
@@ -66,8 +74,8 @@ PARAMS <- list(
   treatment_jaar   = 2019,
   referentie_jaar  = 2018,
 
-  ## Waarnemingsvenster. 2026 is een halve jaargang (mutaties t/m 2026-07)
-  ## en moet er altijd uit. 2024 is het eerste jaar onder de Omgevingswet
+  ## Waarnemingsvenster. 2026 is een onvolledige jaargang (mutaties t/m
+  ## 2026-10 in extract 20261103) en moet er bij jaarcijfers altijd uit. 2024 is het eerste jaar onder de Omgevingswet
   ## en de Wkb-"knip" -> zie CHECK in 03_checks.R en de gevoeligheidsanalyse.
   ##
   ## De analyses beginnen in 2014, niet in 2012. In 2012 telt de BAG een
@@ -80,6 +88,14 @@ PARAMS <- list(
   jaar_min         = 2014,
   jaar_max         = 2025,
   wkb_breuk_jaar   = 2024,
+
+  ## Het laatste kwartaal in de kwartaalschattingen. Vergunningen tot en met
+  ## 2026Q1: 2026Q2 bevat de piek van juni 2026 in twee gemeenten
+  ## (17_registratie.R), die ook in de levering van oktober nog in de data
+  ## staat. Nieuwbouw tot en met het laatste volle kwartaal voor de
+  ## BAG-levering (BAG van 8 oktober 2026).
+  kw_eind_vergund   = "2026-03-31",
+  kw_eind_nieuwbouw = "2026-09-30",
 
   ## Renovatie-drempel: pand_bouwjaar - vergunningjaar <= -6 betekent dat
   ## het gebouw er al stond. Zie docs/BAG-dataschoning-inzichten.md sec. 6.

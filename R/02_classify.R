@@ -174,9 +174,9 @@ d[, objectgroep := fcase(
 ## Pandstatus en objectstatus spreken elkaar tegen. Wordt gemeten in
 ## plaats van weggepoetst; dit was de aanleiding voor de hele exercitie.
 d[, pand_vbo_inconsistent :=
-    (last_pand_status == "Niet_gerealiseerd_pand" & vbo_in_voorraad) |
+    (last_pand_status %chin% "Niet_gerealiseerd_pand" & vbo_in_voorraad) |
     (last_pand_status %chin% PAND_IN_VOORRAAD &
-       vbo_status == "Niet_gerealiseerd_verblijfsobject")]
+       vbo_status %chin% "Niet_gerealiseerd_verblijfsobject")]   # %chin%: een ontbrekende status is geen tegenspraak
 
 ## Oplevering voor de eerste vergunning -- zie toelichting bij as 1
 d[, vlag_duur_negatief := !is.na(duur_negatief) & duur_negatief]

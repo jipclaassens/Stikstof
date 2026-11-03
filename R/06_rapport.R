@@ -80,10 +80,10 @@ Q_REF <- kw_index(as.Date(c("2018-01-01", "2018-04-01", "2018-07-01", "2018-10-0
 Q_PAS <- EVENTS[naam == "PAS-uitspraak", q]
 Q_POR <- EVENTS[naam == "Porthos", q]
 Q_SAL <- EVENTS[naam == "intern salderen", q]
-Q_MAX_VERG <- kw_index(as.Date("2026-03-31"))   # 2026Q2: piek van juni 2026 (17_registratie.R)
-Q_MAX_NWB  <- kw_index(as.Date("2026-06-30"))
+Q_MAX_VERG <- kw_index(as.Date(PARAMS$kw_eind_vergund))   # zie 00_config.R: 2026Q2 bevat de piek van juni 2026
+Q_MAX_NWB  <- kw_index(as.Date(PARAMS$kw_eind_nieuwbouw))
 
-R$meta <- list(extract = EXTRACT, bag_datum = "20260710", gemaakt = format(Sys.time(), "%Y-%m-%d %H:%M"),
+R$meta <- list(extract = EXTRACT, bag_datum = BAG_DATUM, gemaakt = format(Sys.time(), "%Y-%m-%d %H:%M"),
                kw_start = KW_START, jaar_min = JAAR_MIN, q_min = Q_MIN, q_ref = Q_REF, q_pas = Q_PAS, q_por = Q_POR, q_sal = Q_SAL,
                q_max_verg = Q_MAX_VERG, q_max_nwb = Q_MAX_NWB,
                kw_labels = kw_label(1:Q_MAX_NWB))

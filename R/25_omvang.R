@@ -23,10 +23,10 @@
 ## ---------------------------------------------------------------------
 ## Project   : gemeente plus documentnummer van de vergunning (projectid).
 ## Vergund   : objecten met in_sample en een eerste bouwvergunning van
-##             2014Q1 tot en met 2026Q1 (hoofdzaak). Een project telt een
+##             2014Q1 tot en met PARAMS$kw_eind_vergund. Een project telt een
 ##             keer, in het kwartaal van zijn eerste vergunning.
 ## Opgeleverd: objecten met cbs_nieuwbouw, zonder admin_fout, met een
-##             mutatiemaand van 2014Q1 tot en met 2026Q2. Een project telt
+##             mutatiemaand van 2014Q1 tot en met PARAMS$kw_eind_nieuwbouw. Een project telt
 ##             een keer, in het kwartaal van zijn eerste oplevering; ook
 ##             08_strikt.R telt opleveringen in het kwartaal van de mutatie.
 ## Nabij     : de kleinste afstand van de objecten van het project in de
@@ -104,7 +104,7 @@ Q_MIN    <- kw_index(as.Date(sprintf("%d-01-01", JAAR_MIN)))
 Q_PAS <- kw_index(as.Date("2019-05-29"))
 Q_OW  <- kw_index(as.Date("2024-01-01"))   # Omgevingswet
 Q_SAL <- kw_index(as.Date("2024-12-18"))   # uitspraak over intern salderen
-Q_MAX <- c(vergund = kw_index(as.Date("2026-03-31")), opgeleverd = kw_index(as.Date("2026-06-30")))
+Q_MAX <- c(vergund = kw_index(as.Date(PARAMS$kw_eind_vergund)), opgeleverd = kw_index(as.Date(PARAMS$kw_eind_nieuwbouw)))
 stopifnot(Q_PAS == 30L)
 DREMPELS <- c(500, 1000, 2500)
 KLASSE_GRENZEN <- c(0, 4, 19, 49, 199, Inf)
@@ -168,8 +168,8 @@ R$meta <- list(
   drempels = DREMPELS, klassen = KLASSEN, claim_conceptartikel_pct = CLAIM,
   definities = list(
     project = "gemeente plus documentnummer van de vergunning (projectid)",
-    vergund = sprintf("in_sample, eerste bouwvergunning %s tot en met 2026Q1; project telt in het kwartaal van zijn eerste vergunning", kw_label(Q_MIN)),
-    opgeleverd = sprintf("cbs_nieuwbouw zonder admin_fout, mutatiemaand %s tot en met 2026Q2; project telt in het kwartaal van zijn eerste oplevering", kw_label(Q_MIN)),
+    vergund = sprintf("in_sample, eerste bouwvergunning %s tot en met %s; project telt in het kwartaal van zijn eerste vergunning", kw_label(Q_MIN), kw_label(Q_MAX[["vergund"]])),
+    opgeleverd = sprintf("cbs_nieuwbouw zonder admin_fout, mutatiemaand %s tot en met %s; project telt in het kwartaal van zijn eerste oplevering", kw_label(Q_MIN), kw_label(Q_MAX[["opgeleverd"]])),
     nabij = "kleinste afstand van de objecten van het project in de steekproef tot habitat is hoogstens de drempel",
     omvang = "projectomvang: objecten met dezelfde projectsleutel in het hele bestand",
     woningen = "objecten van het project in de steekproef (vergund: woonobjecten met in_sample; opgeleverd: CBS-nieuwbouw)",

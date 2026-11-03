@@ -79,15 +79,15 @@ print(EVENTS[, .(naam, datum, kwartaal = kw, q, hoofd)])
 cat(sprintf("\nreferentieperiode: %s t/m %s (q = %d-%d)\n",
             kw_label(min(Q_REF)), kw_label(max(Q_REF)), min(Q_REF), max(Q_REF)))
 
-## Laatste VOLLEDIGE kwartaal per uitkomst. Vergunningen lopen tot
-## 2026-07-08 (dus 2026Q3 is 8 dagen), opleveringen tot 2026-07.
+## Laatste VOLLEDIGE kwartaal per uitkomst. Vergunningen en opleveringen
+## lopen tot de datum van de BAG-levering, dus het laatste kwartaal is onvolledig.
 ## Juni 2026 bevat een batchregistratie van BVV-panden (Meierijstad en
 ## Bernheze, 21% van de maand; docs/BAG-dataschoning-inzichten.md sec. 7).
 ## Dat kwartaal is voor vergunningen daarom niet bruikbaar: index 2,39
 ## tegen ~1,0 in de kwartalen ervoor. Opleveringen zijn er niet door
-## geraakt (index 0,99) en lopen door t/m 2026Q2.
-q_max_verg <- kw_index(as.Date("2026-03-31"))
-q_max_nwb  <- kw_index(as.Date("2026-06-30"))
+## geraakt (index 0,99). De eindkwartalen staan in PARAMS (00_config.R).
+q_max_verg <- kw_index(as.Date(PARAMS$kw_eind_vergund))
+q_max_nwb  <- kw_index(as.Date(PARAMS$kw_eind_nieuwbouw))
 cat(sprintf("laatste kwartaal vergunningen: %s (2026Q2 uitgesloten: batchregistratie)\n",
             kw_label(q_max_verg)))
 cat(sprintf("laatste kwartaal nieuwbouw   : %s\n", kw_label(q_max_nwb)))

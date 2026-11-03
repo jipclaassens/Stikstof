@@ -2109,6 +2109,9 @@ const FOUTEN = [
     `<span>analyses gedraaid ${dt(D.meta && D.meta.gemaakt)}</span>`
   ];
   if (B.git) delen.push(`<span>commit <code>${B.git}</code></span>`);
+  const oud = B.ouder ? Object.entries(B.ouder) : [];
+  if (oud.length) { const per = {}; oud.forEach(([k, d]) => (per[d] = per[d] || []).push(k.replace(/_/g, ' ')));
+    Object.entries(per).forEach(([d, ks]) => delen.push(`<span>nog op het extract van ${+d.slice(6,8)} ${['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december'][+d.slice(4,6)-1]} ${d.slice(0,4)}: ${ks.join(', ')}</span>`)); }
   el.innerHTML = delen.join('');
 })();
 
