@@ -9,16 +9,28 @@ Vinex-naam. Volgorde van bewijs per wijk:
      andere locatie met een betere treffer.
 Wat daarna nog over is, staat in het tabblad Niet gekoppeld, om met de hand toe te wijzen.
 
-Uitvoer: vinex_realisatie_20260710.xlsx en vinex_woonobjecten_20260710_nl.csv (puntkomma, decimale komma).
+Naast de telling binnen het raster telt het script ook alle nieuwbouw vanaf 1995 in de gekoppelde
+wijken, binnen en buiten het raster. Het raster is een plangrens; bij Waalsprong dekt het alleen een
+deel van Lent, terwijl Ressen en Oosterhout in dezelfde wijk Nijmegen-Noord liggen. Die tweede maat
+staat in eigen tabbladen; de tabbladen van de telling binnen het raster blijven zoals ze waren.
+
+Uitvoer: vinex_realisatie_20260710.xlsx, vinex_woonobjecten_20260710_nl.csv en
+woonobjecten_hele_wijk_20260710_nl.csv (puntkomma, decimale komma).
 """
+import json
 import os
 import re
 import unicodedata
 
+import numpy as np
 import pandas as pd
+from shapely import STRtree, points
+from shapely.geometry import shape
 
 MAP = r"C:\LocalData\Stikstof\Vinex"
 EXCEL = os.environ.get("VINEX_EXCEL", r"C:\Users\Jip\Downloads\realisatie_VINEX.xlsx")   # de tabel met de 71 Vinex-locaties
+NIEUWBOUW = f"{MAP}/woonobjecten_vanaf1995_20260710.parquet"   # GeoDMS-export /Analyse/Vinex/NieuwbouwNL
+CACHE = f"{MAP}/cbs_buurten_vinex.json"                         # de wijken en buurten die 02_buurten.py ophaalde
 MIN_AANDEEL_BUURT = 0.25
 MIN_WOORD = 6
 VANAF, TOT = 1995, 2026
@@ -141,6 +153,77 @@ pwj = (obj[obj["pand_bouwjaar"] >= 1990].groupby(["wijk_sleutel", "pand_bouwjaar
        .rename("woningen").reset_index())
 pwj["locatie"] = pwj["wijk_sleutel"].map(lambda s: loc.loc[koppeling[s][0], "locatie"] if s in koppeling else "")
 
+# Tweede maat: alle woningen vanaf 1995 in de gekoppelde CBS-wijken, ook buiten het raster.
+# De wijkcode volgt uit de buurtcode (BU + gemeente + wijk + buurt), de wijkgrens uit de cache van 02_buurten.py.
+wijken_obj = pd.DataFrame({"wijkcode": "WK" + obj["buurtcode"].fillna("").str[2:8], "wijk_sleutel": obj["wijk_sleutel"]})
+sleutel_van_code = (wijken_obj[wijken_obj["wijk_sleutel"].isin(koppeling)].drop_duplicates("wijkcode")
+                    .set_index("wijkcode")["wijk_sleutel"].to_dict())
+with open(CACHE, encoding="utf-8") as f:
+    cache = json.load(f)
+wijk_geo = {}
+for gebied in cache.values():
+    for ft in gebied["wijken"]:
+        code = ft["properties"]["wijkcode"]
+        if code in sleutel_van_code and code not in wijk_geo:
+            wijk_geo[code] = shape(ft["geometry"])
+ontbreekt = sorted(set(sleutel_van_code) - set(wijk_geo))
+if ontbreekt:
+    raise SystemExit(f"geen wijkgrens in {CACHE} voor {ontbreekt}")
+
+nb = pd.read_parquet(NIEUWBOUW)
+nb = nb[nb["pand_bouwjaar"].between(VANAF, TOT)].reset_index(drop=True)
+codes = list(wijk_geo)
+ip, iw = STRtree([wijk_geo[c] for c in codes]).query(points(nb[["x", "y"]].to_numpy()), predicate="within")
+nb["wijkcode"] = None
+nb.loc[ip, "wijkcode"] = np.array(codes, dtype=object)[iw]
+nb = nb[nb["wijkcode"].notna()].copy()
+nb["wijk_sleutel"] = nb["wijkcode"].map(sleutel_van_code)
+nb["loc_i"] = nb["wijk_sleutel"].map(lambda s: koppeling[s][0])
+nb["in_raster"] = nb["vinex_gebied"] > 0
+
+rij_w = []
+for i, r in loc.iterrows():
+    d = nb[nb["loc_i"] == i]
+    heeft = pd.notna(per_locatie.loc[i, "totaal_vanaf_1995"])
+    per_jaar = d.groupby("pand_bouwjaar").size().reindex(range(VANAF, TOT + 1), fill_value=0)
+    cum = per_jaar.cumsum()
+    gehaald = next((int(j) for j, c in cum.items() if c >= r["doel"]), None) if heeft else None
+    buiten = int((~d["in_raster"]).sum())
+
+    def periode(van, tot):
+        return int(d["pand_bouwjaar"].between(van, tot).sum()) if heeft else None
+
+    uit = {"locatie": r["locatie"], "vinexgebied": r["vinexgebied"], "doel": r["doel"],
+           "raster_vanaf_1995": per_locatie.loc[i, "totaal_vanaf_1995"],
+           "raster_doelbereik_nu": per_locatie.loc[i, "doelbereik_nu"],
+           "raster_doel_gehaald_in": per_locatie.loc[i, "doel_gehaald_in"],
+           "wijk_1995_1999": periode(1995, 1999), "wijk_2000_2004": periode(2000, 2004),
+           "wijk_2005_2009": periode(2005, 2009), "wijk_2010_2014": periode(2010, 2014),
+           "wijk_2015_2019": periode(2015, 2019), "wijk_2020_2026": periode(2020, TOT),
+           "wijk_vanaf_1995": int(len(d)) if heeft else None,
+           "wijk_doelbereik_nu": round(len(d) / r["doel"], 3) if heeft else None,
+           "wijk_doel_gehaald_in": gehaald, "wijk_jaren_vanaf_1995": (gehaald - VANAF + 1) if gehaald else None,
+           "buiten_raster_vanaf_1995": buiten if heeft else None,
+           "aandeel_buiten_raster": round(buiten / len(d), 3) if heeft and len(d) else None,
+           "controle_raster_uit_landelijke_export": int(d["in_raster"].sum()) if heeft else None,
+           "cbs_wijken": "; ".join(f"{k} ({v})" for k, v in d.groupby("wijk_sleutel").size().sort_values(ascending=False).items()),
+           "bewijs": per_locatie.loc[i, "bewijs"]}
+    for j in range(VANAF, TOT + 1):
+        uit[f"wijk_cum_{j}"] = int(cum[j]) if heeft else None
+    rij_w.append(uit)
+per_locatie_wijk = pd.DataFrame(rij_w)
+
+# per gekoppelde wijk: hoeveel van de nieuwbouw binnen en buiten het raster ligt
+wijken_rw = (nb.groupby("wijk_sleutel").agg(wijkcode=("wijkcode", "first"),
+                                             in_raster_vanaf_1995=("in_raster", "sum"),
+                                             hele_wijk_vanaf_1995=("vbo_id", "size"))
+             .reset_index())
+wijken_rw["buiten_raster_vanaf_1995"] = wijken_rw["hele_wijk_vanaf_1995"] - wijken_rw["in_raster_vanaf_1995"]
+wijken_rw["aandeel_buiten_raster"] = (wijken_rw["buiten_raster_vanaf_1995"] / wijken_rw["hele_wijk_vanaf_1995"]).round(3)
+wijken_rw.insert(0, "locatie", wijken_rw["wijk_sleutel"].map(lambda s: loc.loc[koppeling[s][0], "locatie"]))
+wijken_rw["bewijs"] = wijken_rw["wijk_sleutel"].map(lambda s: koppeling[s][1])
+wijken_rw = wijken_rw.sort_values(["locatie", "hele_wijk_vanaf_1995"], ascending=[True, False])
+
 uitleg = pd.DataFrame({"Toelichting": [
     "Bron woningen: BAG van 10 juli 2026, alle verblijfsobjecten met een woonfunctie die nu in de voorraad staan.",
     "Bouwjaar: het bouwjaar van het pand. Woningen die na de bouw zijn gesloopt, tellen niet mee.",
@@ -151,6 +234,10 @@ uitleg = pd.DataFrame({"Toelichting": [
     "Kolommen cum_1995 tot en met cum_2026: het aantal woningen vanaf 1995, opgeteld tot en met dat jaar.",
     "Kolommen excel_*: de oorspronkelijke cijfers uit realisatie_VINEX.xlsx, alleen ter controle. totaal_1995_2004 hoort daar dicht bij te liggen; een groot verschil wijst op een verkeerde of onvolledige koppeling.",
     "Niet gekoppelde CBS-wijken staan in het tabblad 'Niet gekoppeld'; die zijn met de hand toe te wijzen via 'Per wijk per jaar'.",
+    "Tabblad 'Per locatie, hele wijk' (toegevoegd op 3 november 2026): dezelfde locaties, maar nu met alle woningen vanaf 1995 in de gekoppelde CBS-wijken, ook buiten het Vinex-raster. Het raster is een plangrens; bij sommige locaties ligt een deel van de latere bebouwing erbuiten, bij Waalsprong bijvoorbeeld Ressen en Oosterhout.",
+    "Die tweede maat telt ook nieuwbouw in de wijk die geen Vinex is, zoals inbreiding of een uitbreiding van een oude dorpskern. Beide maten staan daarom naast elkaar: raster_* is de telling binnen het raster uit 'Per locatie', wijk_* de telling in de hele wijk. aandeel_buiten_raster laat zien hoeveel van de wijkmaat buiten het raster valt; een hoog aandeel vraagt om een blik op de kaart.",
+    "controle_raster_uit_landelijke_export: de woningen binnen het raster opnieuw geteld uit de landelijke export; hoort gelijk te zijn aan raster_vanaf_1995.",
+    "Tabblad 'Wijken, raster en hele wijk': per gekoppelde CBS-wijk de woningen vanaf 1995 binnen het raster en in de hele wijk.",
 ]})
 
 uit = f"{MAP}/vinex_realisatie_20260710.xlsx"
@@ -159,7 +246,15 @@ with pd.ExcelWriter(uit, engine="openpyxl") as w:
     per_locatie.drop(columns=["bag_1995_2004"]).to_excel(w, sheet_name="Per locatie", index=False)
     niet.to_excel(w, sheet_name="Niet gekoppeld", index=False)
     pwj.to_excel(w, sheet_name="Per wijk per jaar", index=False)
+    per_locatie_wijk.to_excel(w, sheet_name="Per locatie, hele wijk", index=False)
+    wijken_rw.to_excel(w, sheet_name="Wijken, raster en hele wijk", index=False)
 print(f"geschreven: {uit}")
+
+# de woningen vanaf 1995 in de gekoppelde wijken, binnen en buiten het raster
+nw = nb.drop(columns=["loc_i"]).copy()
+nw["vinex_locatie"] = nb["loc_i"].map(lambda i: loc.loc[i, "locatie"])
+nw.to_csv(f"{MAP}/woonobjecten_hele_wijk_20260710_nl.csv", sep=";", decimal=",", index=False, encoding="utf-8-sig")
+print("geschreven: woonobjecten_hele_wijk_20260710_nl.csv")
 
 # de objecten voor een Nederlandse Excel: puntkomma en decimale komma
 nl = obj.drop(columns=["wijk_sleutel", "buurt_n", "loc_i", "bewijs"]).copy()
@@ -180,3 +275,15 @@ for _, r in per_locatie.sort_values("doel", ascending=False).iterrows():
           f"{str(r['doel_gehaald_in']):>6}  {r['bewijs'][:40]}")
 print("\ngrootste niet gekoppelde wijken (woningen vanaf 1995):")
 print(niet.head(15).to_string(index=False))
+
+pw = per_locatie_wijk.dropna(subset=["wijk_vanaf_1995"])
+afwijkend = pw[pw["controle_raster_uit_landelijke_export"] != pw["raster_vanaf_1995"]]
+print(f"\ncontrole: raster uit de landelijke export gelijk aan 'Per locatie' bij {len(pw) - len(afwijkend)} van {len(pw)} locaties")
+if len(afwijkend):
+    print(afwijkend[["locatie", "raster_vanaf_1995", "controle_raster_uit_landelijke_export"]].to_string(index=False))
+print(f"woningen vanaf 1995 in de gekoppelde wijken: {int(pw['wijk_vanaf_1995'].sum()):,}, "
+      f"waarvan buiten het raster {int(pw['buiten_raster_vanaf_1995'].sum()):,}")
+print("\nlocatie | doel | raster | hele wijk | aandeel buiten raster | doel gehaald: raster, hele wijk")
+for _, r in pw.sort_values("aandeel_buiten_raster", ascending=False).iterrows():
+    print(f"  {r['locatie'][:30]:<30} {r['doel']:>6.0f} {r['raster_vanaf_1995']:>7.0f} {r['wijk_vanaf_1995']:>7.0f} "
+          f"{r['aandeel_buiten_raster']:>6.0%}   {str(r['raster_doel_gehaald_in']):>6} {str(r['wijk_doel_gehaald_in']):>6}")

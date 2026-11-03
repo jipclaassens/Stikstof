@@ -4,6 +4,7 @@ container Vinex : using = "units;classifications;geography;classifications/bag"
 	parameter<string> Uitvoermap     := '%LocalDataProjDir%/Vinex',                                         Descr = "Hier komt de export; de map moet bestaan.";
 	parameter<string> GebiedenRaster := Uitvoermap + '/vinex_gebieden_100m.tif',                            Descr = "Nummer per aaneengesloten Vinex-gebied, 0 is geen Vinex. Afgeleid uit VinexPlans.tif, dat een masker van 0 en 1 is, op hetzelfde grid van 100 meter als deze configuratie.";
 	parameter<string> ExportDatum    := Parameters/BAG_file_date,                                           Descr = "De BAG-jaargang, in de bestandsnaam van de export.";
+	parameter<uint16> VanafBouwjaar  := 1995w,                                                              Descr = "Het eerste bouwjaar van de Vinex-periode; de landelijke export bevat de woningen in panden vanaf dit bouwjaar.";
 
 	attribute<int32> gebied (rdc_100m)
 	:	StorageName     = "= GebiedenRaster"
@@ -26,12 +27,44 @@ container Vinex : using = "units;classifications;geography;classifications/bag"
 		attribute<int32>      gebied_rel   (Bron/vbo) := gebied[cel_rel];
 		attribute<vbo_status> status_rel   (Bron/vbo) := rlookup(Bron/vbo/meta/Status, vbo_status/label);
 		attribute<bool>       is_eindstand (Bron/vbo) := Bron/vbo/meta/Einddatum == 0i, Descr = "De geldende versie van het object; afgesloten versies hebben een einddatum.";
-		attribute<bool>       selectie     (Bron/vbo) := is_eindstand && vbo_status/IsVoorraad[status_rel] && Bron/vbo/gebruiksdoelen/woon && gebied_rel > 0i;
+		attribute<bool>       is_woon      (Bron/vbo) := is_eindstand && vbo_status/IsVoorraad[status_rel] && Bron/vbo/gebruiksdoelen/woon, Descr = "Een woonobject dat nu in de voorraad staat.";
+		attribute<bool>       selectie     (Bron/vbo) := is_woon && gebied_rel > 0i;
 
 		unit<uint32> pand_eindstand := select_with_org_rel(Bron/pand/meta/Einddatum == 0i)
 		{
 			attribute<string> identificatie := org_rel -> identificatie;
 			attribute<uint16> bouwjaar      := org_rel -> Bouwjaar;
+		}
+
+		unit<uint32> woonvoorraad := select_with_org_rel(is_woon), Descr = "Alle woonobjecten in de voorraad in heel Nederland, met het bouwjaar van hun pand."
+		{
+			attribute<string> vbo_id        := org_rel -> identificatie;
+			attribute<string> pand_id       := rjoin(vbo_id, Bron/vbo/gerelateerdPand/identificatie, Bron/vbo/gerelateerdPand/pand_id);
+			attribute<uint16> pand_bouwjaar := rjoin(pand_id, pand_eindstand/identificatie, pand_eindstand/bouwjaar);
+		}
+
+		unit<uint32> nieuwbouw := select_with_org_rel(IsDefined(woonvoorraad/pand_bouwjaar) && woonvoorraad/pand_bouwjaar >= VanafBouwjaar)
+		{
+			attribute<Bron/vbo> vbo_rel  := woonvoorraad/org_rel[org_rel];
+			attribute<rdc>      punt     := Impl/geometry[vbo_rel];
+		}
+	}
+
+	container NieuwbouwNL
+	:	StorageName = "= Uitvoermap + '/woonobjecten_vanaf' + string(VanafBouwjaar) + '_' + ExportDatum + '.parquet'"
+	,	StorageType = "gdalwrite.vect"
+	,	Descr       = "Alle woonobjecten in de voorraad in heel Nederland met een pandbouwjaar vanaf VanafBouwjaar, binnen en buiten de Vinex-gebieden. Hiermee telt vinex/03_koppel_locaties.py naast de woningen in het raster ook alle nieuwbouw in de gekoppelde CBS-wijken, omdat het raster bij sommige locaties alleen een deel van de latere bebouwing dekt."
+	{
+		unit<uint32> woonobjecten := Impl/nieuwbouw
+		{
+			attribute<string>  vbo_id          := Impl/woonvoorraad/vbo_id[Impl/nieuwbouw/org_rel];
+			attribute<string>  pand_id         := Impl/woonvoorraad/pand_id[Impl/nieuwbouw/org_rel];
+			attribute<uint16>  pand_bouwjaar   := Impl/woonvoorraad/pand_bouwjaar[Impl/nieuwbouw/org_rel];
+			attribute<int32>   vinex_gebied    := Impl/gebied_rel[Impl/nieuwbouw/vbo_rel];
+			attribute<int32>   vbo_oppervlakte := Bron/vbo/oppervlakte[Impl/nieuwbouw/vbo_rel];
+			attribute<string>  vbo_status      := Bron/vbo/meta/Status[Impl/nieuwbouw/vbo_rel];
+			attribute<float64> x               := PointCol(Impl/nieuwbouw/punt);
+			attribute<float64> y               := PointRow(Impl/nieuwbouw/punt);
 		}
 	}
 

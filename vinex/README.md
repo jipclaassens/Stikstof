@@ -12,11 +12,15 @@ Telt per Vinex-locatie de woningen naar bouwjaar, van 1995 tot nu, als voortzett
    woonfunctie die nu in de voorraad staan en in een Vinex-gebied vallen, met het bouwjaar van hun pand,
    uit de volledige BAG-tabel. Getoetst met GeoDMS 20.23.1; de container leest de BAG-mmd's zelf,
    omdat `SourceData/BAG/VolledigeBAG` daar niet op draait.
-3. `02_buurten.py` (Python van QGIS): koppelt elk object aan zijn CBS-gemeente, -wijk en -buurt
+3. GeoDMS, item `/Analyse/Vinex/NieuwbouwNL`: dezelfde woonobjecten in heel Nederland, binnen en buiten
+   de Vinex-gebieden, met een pandbouwjaar vanaf 1995 (parameter `VanafBouwjaar`), als
+   `woonobjecten_vanaf1995_<BAG-datum>.parquet`. Ongeveer tien seconden met 20.23.1.
+4. `02_buurten.py` (Python van QGIS): koppelt elk object aan zijn CBS-gemeente, -wijk en -buurt
    (wijk- en buurtkaart 2024, opgehaald bij de OGC API van PDOK).
-4. `03_koppel_locaties.py` (Python van QGIS): koppelt de CBS-wijken aan de locaties in
+5. `03_koppel_locaties.py` (Python van QGIS): koppelt de CBS-wijken aan de locaties in
    `realisatie_VINEX.xlsx` en schrijft `vinex_realisatie_<BAG-datum>.xlsx` en een objectbestand met
-   puntkomma's voor een Nederlandse Excel.
+   puntkomma's voor een Nederlandse Excel. Met de export uit stap 3 telt het daarnaast alle woningen
+   vanaf 1995 in de gekoppelde wijken, en schrijft het die woningen ook als objectbestand.
 
 ## Wat de koppeling wel en niet doet
 
@@ -31,3 +35,22 @@ of verkeerd gekoppeld is, staat in het tabblad `Niet gekoppeld` en is via `Per w
 toe te wijzen.
 
 Bouwjaar is het bouwjaar van het pand; woningen die na de bouw zijn gesloopt, tellen niet mee.
+
+## Twee maten: binnen het raster en in de hele wijk
+
+`VinexPlans.tif` is een plangrens, en bij sommige locaties ligt een deel van de latere bebouwing
+erbuiten. Bij Waalsprong dekt het raster 297 hectare in de buurt Lent; Ressen en Oosterhout, in
+dezelfde wijk Nijmegen-Noord, vallen erbuiten. Binnen het raster staan daar 5.242 woningen vanaf 1995,
+in de hele wijk 9.645. Het doel van 6.500 is in de hele wijk in bouwjaar 2021 gehaald en binnen het
+raster nog niet.
+
+De werkmap houdt daarom twee maten naast elkaar. De tabbladen `Per locatie`, `Niet gekoppeld` en
+`Per wijk per jaar` tellen alleen binnen het raster, zoals in de eerste levering. `Per locatie, hele wijk`
+telt alle woningen vanaf 1995 in de gekoppelde CBS-wijken, met het aandeel buiten het raster, en
+`Wijken, raster en hele wijk` geeft hetzelfde per wijk. De wijkmaat telt ook nieuwbouw die geen Vinex is,
+zoals inbreiding of een dorpsuitbreiding in dezelfde wijk; bij kleine locaties in een grote wijk
+(Bloemendalerpolder, Rietlanden, Erica) valt hij daardoor vele malen hoger uit. Een hoog aandeel buiten
+het raster is dus een reden om op de kaart te kijken, niet een bewijs dat het raster te krap is.
+
+Controle: de woningen binnen het raster, opnieuw geteld uit de landelijke export, zijn per locatie gelijk
+aan `Per locatie` (kolom `controle_raster_uit_landelijke_export`).
