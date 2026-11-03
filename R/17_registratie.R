@@ -47,7 +47,7 @@ sink(file.path(PATHS$output, sprintf("registratie_%s.txt", EXTRACT)), split = TR
 t0 <- Sys.time()
 d <- read_derived("vbo_analyse")
 R <- list()
-EINDE <- as.Date(EXTRACT, "%Y%m%d")   # datum van het BAG-extract
+EINDE <- as.Date(BAG_DATUM, "%Y%m%d")   # de BAG-levering achter het extract (00_config.R), niet de exportdatum
 
 ## Zoals in 09_aanvragen.R: met PYTHON=python draait dit ook op een machine
 ## zonder 3.13. Beide scripts hieronder gebruiken alleen de standaardbibliotheek.

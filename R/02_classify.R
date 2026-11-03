@@ -221,9 +221,12 @@ d[, in_sample_nwb := cbs_nieuwbouw & projecttype != "admin_fout" &
 ## anders voor een cohort uit 2015 dan voor een uit 2024, en het verschil
 ## loopt niet gelijk op tussen nabij en ver (zie 03_checks.R CHECK 3).
 
-EXTRACT_DATUM <- as.Date(EXTRACT, format = "%Y%m%d")
+## Het vervolg loopt tot de BAG-levering achter het extract (BAG_DATUM in
+## 00_config.R), niet tot de exportdatum: wat er na de levering gebeurde,
+## staat niet in het extract.
+VERVOLG_EINDE <- as.Date(BAG_DATUM, format = "%Y%m%d")
 
-d[, opvolgtijd_dagen    := as.integer(EXTRACT_DATUM - vergunning_datum)]
+d[, opvolgtijd_dagen    := as.integer(VERVOLG_EINDE - vergunning_datum)]
 d[, opvolgtijd_jaar     := opvolgtijd_dagen / 365.25]
 d[, duur_tot_oplevering := as.integer(oplevering_eerste_datum - vergunning_datum)]
 
