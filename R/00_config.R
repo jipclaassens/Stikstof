@@ -47,9 +47,9 @@ dir.create(PATHS$output,  showWarnings = FALSE, recursive = TRUE)
 ## ---------------------------------------------------------------------
 ## Alle drie de exports moeten van dezelfde GeoDMS-run komen: de
 ## bestandsdatum in de naam is de exportdatum, BAG_file_date staat in de
-## bijbehorende .xml (20260730 -> BAG van 20260710).
+## bijbehorende .xml (20261103 -> BAG van 20261008; 20260730 -> BAG van 20260710).
 
-EXTRACT <- "20260730"
+EXTRACT <- "20261103"
 
 FILES <- list(
   pand_duur  = file.path(PATHS$raw, sprintf("Pand_VergunningDuur_%s.csv",            EXTRACT)),

@@ -1,13 +1,13 @@
 // Voegt de JSON-uitvoer van 06_rapport.R, 07_plannen.R, 08_strikt.R en
 // 09_aanvragen.R tot en met 26_samenstelling.R in de HTML-bron, plus versie- en
 // bouwinformatie, en schrijft het rapport weg.
-//   node R/rapport/bouw_rapport.js 20260730
+//   node R/rapport/bouw_rapport.js 20261103
 const fs = require("fs"), path = require("path"), cp = require("child_process");
 
 // Verhoog dit bij elke inhoudelijke wijziging van het rapport.
 const VERSIE = "3.19";
 
-const extract = process.argv[2] || "20260730";
+const extract = process.argv[2] || "20261103";
 const here = __dirname;
 const src = fs.readFileSync(path.join(here, "rapport_stikstof_src.html"), "utf8");
 

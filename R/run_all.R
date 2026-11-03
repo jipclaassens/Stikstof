@@ -40,7 +40,7 @@ scripts <- c("01_build_vbo.R",
              "25_omvang.R",         # het tweede kanaal: de projectomvang als uitkomst
              "26_samenstelling.R")  # roept 22a_habitat.py aan; na 11_ruimte.R en 21a_econlogic.R
 ## 09 tot en met 16 lezen de datamap van het vergunningenspoor (VERGUNNINGEN_DATA, zie 00_config.R).
-## Het rapport zelf: node R/rapport/bouw_rapport.js 20260730
+## Het rapport zelf: node R/rapport/bouw_rapport.js 20261103
 
 for (s in scripts) {
   message("\n>>> ", s, " ...")
