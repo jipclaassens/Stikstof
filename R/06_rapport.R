@@ -104,7 +104,8 @@ R$data <- list(
   bronnen = data.table(
     bestand = c("Object_BouwvergunningVerleend", "Object_Nieuwbouw", "Pand_VergunningDuur"),
     eenheid = c("verblijfsobject", "verblijfsobject", "pand"),
-    rijen = c(1313420L, 927382L, 620816L),
+    rijen = vapply(FILES[c("vergunning", "nieuwbouw", "pand_duur")], function(f) nrow(fread(f, select = 1L, showProgress = FALSE)),
+                   integer(1), USE.NAMES = FALSE),
     inhoud = c("elk object waarvoor een bouwvergunning is verleend, met eindstatus van object en pand",
                "elk object dat CBS als nieuwbouw telt, met de mutatiemaand",
                "tijdlijn per pand: eerste vergunning, bouwstart, oplevering, bouwjaar")),

@@ -259,6 +259,7 @@ R$stappen_varianten <- rbindlist(list(
 ))
 R$stappen_varianten[, pct := 100 * (exp(b) - 1)]
 R$meta$aandeel_meergezins_in_projecten_200 <- verg[type == "meergezins", mean(projectomvang >= 200L)]
+R$meta$aandeel_meergezins_in_projecten_200_binnen_1km <- verg[type == "meergezins" & ringk == "0 tot 1 km", mean(projectomvang >= 200L)]
 print(R$stappen_varianten[, .(variant, ring, stap, b = round(b, 3), se = round(se, 3), p = round(p, 3), pct = round(pct, 1))])
 
 ## ---------------------------------------------------------------------
